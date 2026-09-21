@@ -58,6 +58,7 @@ interface HomePageProps {
   onRegisterUser?: (newUser: UserAccount, newProgress?: StudentProgress) => void;
 }
 
+// Homepage visual update: preserves existing callbacks and tester functionality; only layout/assets are refined.
 export default function PForPencilHomePage({
   currentUser,
   allUsers,
@@ -534,22 +535,28 @@ export default function PForPencilHomePage({
         /* ---------------- HERO PHOTO ---------------- */
         .hero-photo {
           position: relative;
-          height: 420px;
+          width: 100%;
+          max-width: 500px;
+          aspect-ratio: 875 / 570;
+          justify-self: end;
           overflow: hidden;
-          border-radius: 0;
+          border-radius: 18px;
+          background: #f5f8ff;
+          box-shadow: 0 18px 45px rgba(33, 60, 120, .12);
         }
 
         .hero-photo img {
           width: 100%;
           height: 100%;
           object-fit: cover;
+          object-position: center;
           display: block;
         }
 
         .photo-note {
           position: absolute;
-          right: 26px;
-          top: 54px;
+          right: 18px;
+          top: 18px;
           max-width: 145px;
           color: var(--navy);
           font-family: Poppins, Inter, sans-serif;
@@ -837,11 +844,15 @@ export default function PForPencilHomePage({
         }
 
         @media (max-width: 1180px) {
-          .header { gap: 18px; }
-          .nav { gap: 18px; }
-          .nav button { font-size: 13px; }
-          .logo { width: 150px; }
-          .hero { grid-template-columns: 1fr .8fr 1fr; }
+          .header { gap: 14px; }
+          .nav { gap: 15px; }
+          .nav button { font-size: 12.5px; }
+          .logo { width: 145px; }
+          .header-actions { gap: 7px; }
+          .select { min-width: 104px; }
+          .select.small { min-width: 82px; }
+          .btn-login, .btn-signup { padding: 0 17px; }
+          .hero { grid-template-columns: minmax(0, 1.05fr) minmax(300px, .9fr) minmax(330px, 1.1fr); }
           .hero-title { font-size: 47px; }
         }
 
@@ -861,7 +872,13 @@ export default function PForPencilHomePage({
           .nav button.active::after { bottom: -4px; }
           .header-actions { margin-left: auto; }
           .hero { grid-template-columns: 1fr 1fr; }
-          .hero-photo { display: none; }
+          .hero-photo {
+            grid-column: 1 / -1;
+            justify-self: center;
+            width: min(100%, 620px);
+            max-width: 620px;
+            margin-top: 4px;
+          }
           .demo-card { max-width: 430px; }
           .grades { grid-template-columns: repeat(4, 1fr); }
           .feature-strip { grid-template-columns: repeat(2, 1fr); }
@@ -890,6 +907,17 @@ export default function PForPencilHomePage({
           .hero-title { font-size: 42px; }
           .hero-copy { font-size: 16px; }
           .demo-card { margin-top: 5px; }
+          .hero-photo {
+            width: 100%;
+            max-width: 100%;
+            margin-top: 4px;
+            border-radius: 14px;
+          }
+          .photo-note {
+            font-size: 16px;
+            right: 12px;
+            top: 12px;
+          }
           .feature-strip { grid-template-columns: 1fr; }
           .feature { border-right: 0; border-bottom: 1px solid #e1e6f1; }
           .grades { grid-template-columns: repeat(2, 1fr); }
@@ -908,7 +936,7 @@ export default function PForPencilHomePage({
             src="/assets/pforpencil-logo.png" 
             alt="P for Pencil" 
             onError={(e) => {
-              e.currentTarget.src = '/assets/pforpencil-logo.svg';
+              e.currentTarget.src = '/assets/logo.png';
             }}
           />
         </div>
@@ -1162,7 +1190,7 @@ export default function PForPencilHomePage({
               src="/assets/pforpencil-logo.png" 
               alt="P for Pencil" 
               onError={(e) => {
-                e.currentTarget.src = '/assets/pforpencil-logo.svg';
+                e.currentTarget.src = '/assets/logo.png';
               }}
             />
             <div style={{ color: '#6879a6', fontSize: 12 }}>

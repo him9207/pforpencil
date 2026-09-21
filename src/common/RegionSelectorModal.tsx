@@ -11,7 +11,7 @@ import {
   Compass
 } from 'lucide-react';
 import { sounds } from '../utils/audio';
-import { COUNTRIES, COUNTRY_STATE_MAP, COUNTRY_CURRICULUM_MAP } from '../data/curriculumData';
+import { COUNTRIES, COUNTRY_STATE_MAP, COUNTRY_CURRICULUM_MAP, COUNTRY_FLAG_MAP } from '../data/curriculumData';
 
 interface RegionSelectorModalProps {
   isOpen: boolean;
@@ -68,15 +68,7 @@ export default function RegionSelectorModal({
   };
 
   const getCountryFlag = (c: string) => {
-    switch (c) {
-      case 'India': return '🇮🇳';
-      case 'United States': return '🇺🇸';
-      case 'United Kingdom': return '🇬🇧';
-      case 'Canada': return '🇨🇦';
-      case 'Australia': return '🇦🇺';
-      case 'Global': return '🌍';
-      default: return '📍';
-    }
+    return COUNTRY_FLAG_MAP[c] || '🌐';
   };
 
   return (

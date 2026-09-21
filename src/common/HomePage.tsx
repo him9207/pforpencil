@@ -10,6 +10,11 @@ import {
   StudentProgress
 } from '../types';
 import { sounds } from '../utils/audio';
+import { 
+  COUNTRY_FLAG_MAP, 
+  COUNTRY_STATE_MAP, 
+  COUNTRY_CURRICULUM_MAP 
+} from '../data/curriculumData';
 
 type Grade = {
   label: string;
@@ -132,18 +137,6 @@ const demoQuestions = [
   { question: '15 − 6 = ?', options: ['7', '8', '9', '10'], answer: '9' },
 ];
 
-const countryFlags: Record<string, string> = {
-  Australia: '🇦🇺',
-  India: '🇮🇳',
-  'New Zealand': '🇳🇿',
-};
-
-const countries: Record<string, string[]> = {
-  Australia: ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'],
-  India: ['Delhi', 'Maharashtra', 'Karnataka', 'Tamil Nadu', 'Gujarat'],
-  'New Zealand': ['Auckland', 'Wellington', 'Canterbury', 'Waikato'],
-};
-
 interface HomePageProps {
   currentUser: UserAccount;
   allUsers: UserAccount[];
@@ -159,6 +152,7 @@ interface HomePageProps {
   onOpenSupabaseModal: () => void;
   onDirectLogin: (user: UserAccount) => void;
   onRegisterUser?: (newUser: UserAccount, newProgress?: StudentProgress) => void;
+  onSaveRegion?: (country: string, state: string, curriculum: string, grade?: string) => void;
 }
 
 // Homepage visual update: preserves existing callbacks and tester functionality; only layout/assets are refined.
@@ -171,14 +165,38 @@ export default function PForPencilHomePage({
   onOpenRegionModal,
   onOpenAuthModal,
   onOpenSupabaseModal,
+  onSaveRegion,
 }: HomePageProps) {
-  const [country, setCountry] = useState('Australia');
-  const [state, setState] = useState('NSW');
+  const [country, setCountry] = useState(currentUser?.country || 'Australia');
+  const [state, setState] = useState(currentUser?.state || 'NSW');
   const [questionIndex, setQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [xp, setXp] = useState(0);
   const [seconds, setSeconds] = useState(24);
   const [openRegion, setOpenRegion] = useState<'country' | 'state' | null>(null);
+
+  // Synchronize country and state whenever currentUser changes (e.g. via Register modal or Region selector)
+  useEffect(() => {
+    if (currentUser?.country && COUNTRY_STATE_MAP[currentUser.country]) {
+      setCountry(currentUser.country);
+      if (currentUser.state) {
+        setState(currentUser.state);
+      }
+    }
+  }, [currentUser?.country, currentUser?.state]);
+
+  // Close dropdown on clicking outside
+  useEffect(() => {
+    if (!openRegion) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.region-menu')) {
+        setOpenRegion(null);
+      }
+    };
+    window.addEventListener('mousedown', handleClickOutside);
+    return () => window.removeEventListener('mousedown', handleClickOutside);
+  }, [openRegion]);
 
   const question = demoQuestions[questionIndex];
 
@@ -197,14 +215,19 @@ export default function PForPencilHomePage({
 
   const handleCountryChange = (value: string) => {
     setCountry(value);
-    const nextStates = countries[value] || [];
-    setState(nextStates[0] || '');
+    const nextStates = COUNTRY_STATE_MAP[value] || ['All Regions'];
+    const nextState = nextStates[0] || '';
+    setState(nextState);
     setOpenRegion(null);
+    const defaultCurriculum = COUNTRY_CURRICULUM_MAP[value]?.[0] || 'Universal Foundational';
+    onSaveRegion?.(value, nextState, defaultCurriculum);
   };
 
   const handleStateChange = (value: string) => {
     setState(value);
     setOpenRegion(null);
+    const defaultCurriculum = COUNTRY_CURRICULUM_MAP[country]?.[0] || 'Universal Foundational';
+    onSaveRegion?.(country, value, defaultCurriculum);
   };
 
   const chooseAnswer = (answer: string) => {
@@ -1202,21 +1225,21 @@ export default function PForPencilHomePage({
               aria-expanded={openRegion === 'country'}
             >
               <span className="region-left">
-                <span className="flag">{countryFlags[country] || '🌐'}</span>
+                <span className="flag">{COUNTRY_FLAG_MAP[country] || '🌐'}</span>
                 <span>{country}</span>
               </span>
               <span className="region-chevron">⌄</span>
             </button>
             {openRegion === 'country' && (
               <div className="region-dropdown" role="listbox">
-                {Object.keys(countries).map((item) => (
+                {Object.keys(COUNTRY_STATE_MAP).map((item) => (
                   <button
                     type="button"
                     key={item}
                     className={`region-option ${country === item ? 'selected' : ''}`}
                     onClick={() => handleCountryChange(item)}
                   >
-                    <span className="flag">{countryFlags[item] || '🌐'}</span>
+                    <span className="flag">{COUNTRY_FLAG_MAP[item] || '🌐'}</span>
                     <span>{item}</span>
                   </button>
                 ))}
@@ -1237,7 +1260,7 @@ export default function PForPencilHomePage({
             </button>
             {openRegion === 'state' && (
               <div className="region-dropdown state-dropdown" role="listbox">
-                {(countries[country] || []).map((item) => (
+                {(COUNTRY_STATE_MAP[country] || []).map((item) => (
                   <button
                     type="button"
                     key={item}

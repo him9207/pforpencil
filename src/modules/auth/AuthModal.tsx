@@ -22,6 +22,11 @@ import {
 } from 'lucide-react';
 import { sounds } from '../../utils/audio';
 import { generateAccountId, generateSchoolCode } from '../../utils/idAndUsernameGenerator';
+import { 
+  COUNTRY_FLAG_MAP, 
+  COUNTRY_STATE_MAP, 
+  COUNTRY_CURRICULUM_MAP 
+} from '../../data/curriculumData';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -36,6 +41,7 @@ interface AuthModalProps {
   state?: string;
   curriculum?: string;
   onOpenRegionModal?: () => void;
+  onSaveRegion?: (country: string, state: string, curriculum: string, grade?: string) => void;
 }
 
 export default function AuthModal({
@@ -47,14 +53,42 @@ export default function AuthModal({
   initialScreen = 'signin',
   initialRole = 'parent',
   grades = [],
-  country = 'United States',
-  state = 'California',
-  curriculum = 'Common Core (US)',
-  onOpenRegionModal
+  country = 'Australia',
+  state = 'NSW',
+  curriculum = 'Australian Curriculum (ACARA)',
+  onOpenRegionModal,
+  onSaveRegion
 }: AuthModalProps) {
   // Main view: 'signin' or 'register'
   const [activeScreen, setActiveScreen] = useState<'signin' | 'register'>(initialScreen);
   const [authMode, setAuthMode] = useState<'student' | 'adult'>('student');
+
+  // Active region state synchronized with Home Page & platform
+  const [selectedCountry, setSelectedCountry] = useState<string>(country);
+  const [selectedState, setSelectedState] = useState<string>(state);
+  const [selectedCurriculum, setSelectedCurriculum] = useState<string>(curriculum);
+  const [isEditingRegion, setIsEditingRegion] = useState<boolean>(false);
+
+  React.useEffect(() => {
+    setSelectedCountry(country);
+    setSelectedState(state);
+    setSelectedCurriculum(curriculum);
+  }, [country, state, curriculum, isOpen]);
+
+  const handleCountryChange = (newC: string) => {
+    setSelectedCountry(newC);
+    const nextStates = COUNTRY_STATE_MAP[newC] || ['All Regions'];
+    const nextS = nextStates[0] || '';
+    setSelectedState(nextS);
+    const nextCur = COUNTRY_CURRICULUM_MAP[newC]?.[0] || 'Universal Foundational';
+    setSelectedCurriculum(nextCur);
+    onSaveRegion?.(newC, nextS, nextCur);
+  };
+
+  const handleStateChange = (newS: string) => {
+    setSelectedState(newS);
+    onSaveRegion?.(selectedCountry, newS, selectedCurriculum);
+  };
 
   React.useEffect(() => {
     if (isOpen) {
@@ -165,9 +199,9 @@ export default function AuthModal({
       name: regName.trim(),
       email: regEmail.trim().toLowerCase(),
       avatar: regRole === 'parent' ? '👨‍👧‍👦' : '🏫',
-      country: country,
-      state: state,
-      curriculum: curriculum,
+      country: selectedCountry,
+      state: selectedState,
+      curriculum: selectedCurriculum,
       schoolName: finalSchoolName,
       schoolCode: schoolCode,
       organizationId: regRole === 'school' ? newId : undefined,
@@ -265,34 +299,102 @@ export default function AuthModal({
             /* REGISTRATION SCREEN (Clean Parent / School with inherited Region) */
             /* ========================================================================= */
             <form onSubmit={handleRegisterSubmit} className="space-y-4 text-xs">
-              {/* Inherited Region Summary Banner - No re-asking for country/state/curriculum */}
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-sm shrink-0">
-                    <Globe className="w-4 h-4 text-blue-600" />
+              {/* Inherited Region Summary Banner - mapped directly with home page & platform */}
+              <div className="bg-[#f8faff] border border-[#d7def0] rounded-2xl p-3.5 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-10 h-10 rounded-2xl bg-white border border-[#d7def0] shadow-xs flex items-center justify-center text-xl shrink-0">
+                      <span>{COUNTRY_FLAG_MAP[selectedCountry] || '🌐'}</span>
+                    </div>
+                    <div className="truncate">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-[#59627a] flex items-center gap-1">
+                        <span>Enrolling under active region:</span>
+                      </div>
+                      <div className="font-extrabold text-[#10246f] text-xs sm:text-sm flex items-center gap-1.5 truncate">
+                        <span>{COUNTRY_FLAG_MAP[selectedCountry] || '🌐'}</span>
+                        <span>{selectedCountry}</span>
+                        <span className="text-[#a0aec0]">•</span>
+                        <span>{selectedState}</span>
+                      </div>
+                      <div className="text-[11px] font-semibold text-[#f20b86] truncate">
+                        {selectedCurriculum}
+                      </div>
+                    </div>
                   </div>
-                  <div className="truncate">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                      Enrolling under active region:
-                    </div>
-                    <div className="font-black text-slate-900 text-xs truncate">
-                      {country} • {state}
-                    </div>
-                    <div className="text-[11px] font-semibold text-blue-600 truncate">
-                      {curriculum}
-                    </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingRegion(!isEditingRegion)}
+                      className="px-3 py-1.5 rounded-full border border-[#bfcbe8] bg-white hover:bg-[#eef4ff] text-[#10246f] font-bold text-[11px] shrink-0 transition-all cursor-pointer flex items-center gap-1 shadow-xs hover:scale-105 active:scale-95"
+                      title="Select Country or State"
+                    >
+                      <SlidersHorizontal className="w-3 h-3 text-[#f20b86]" />
+                      <span>{isEditingRegion ? 'Done' : 'Change'}</span>
+                    </button>
+                    {onOpenRegionModal && (
+                      <button
+                        type="button"
+                        onClick={onOpenRegionModal}
+                        className="p-1.5 rounded-full border border-[#bfcbe8] bg-white hover:bg-[#eef4ff] text-[#59627a] hover:text-[#10246f] text-[11px] transition-all cursor-pointer shadow-xs"
+                        title="Open Advanced Curriculum Frameworks"
+                      >
+                        <Globe className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
-                {onOpenRegionModal && (
-                  <button
-                    type="button"
-                    onClick={onOpenRegionModal}
-                    className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-bold text-[11px] shrink-0 transition-all cursor-pointer flex items-center gap-1"
-                    title="Change Country, State or Curriculum"
-                  >
-                    <SlidersHorizontal className="w-3 h-3" />
-                    <span>Change</span>
-                  </button>
+
+                {/* Inline Region & Country Selector mapped with Home Page */}
+                {isEditingRegion && (
+                  <div className="pt-2.5 border-t border-[#e1e6f1] grid grid-cols-1 sm:grid-cols-2 gap-2 animate-in fade-in duration-150">
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#59627a] uppercase mb-1">
+                        Country
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={selectedCountry}
+                          onChange={(e) => handleCountryChange(e.target.value)}
+                          className="w-full pl-8 pr-7 py-2 rounded-xl bg-white border border-[#bfcbe8] text-xs font-bold text-[#10246f] appearance-none cursor-pointer focus:outline-none focus:border-[#f20b86]"
+                        >
+                          {Object.keys(COUNTRY_STATE_MAP).map((c) => (
+                            <option key={c} value={c}>
+                              {COUNTRY_FLAG_MAP[c] || '🌐'} {c}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-base">
+                          {COUNTRY_FLAG_MAP[selectedCountry] || '🌐'}
+                        </span>
+                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#59627a] text-[10px]">
+                          ▼
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#59627a] uppercase mb-1">
+                        State / Region
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={selectedState}
+                          onChange={(e) => handleStateChange(e.target.value)}
+                          className="w-full px-3 pr-7 py-2 rounded-xl bg-white border border-[#bfcbe8] text-xs font-bold text-[#10246f] appearance-none cursor-pointer focus:outline-none focus:border-[#f20b86]"
+                        >
+                          {(COUNTRY_STATE_MAP[selectedCountry] || ['All Regions']).map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#59627a] text-[10px]">
+                          ▼
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
 

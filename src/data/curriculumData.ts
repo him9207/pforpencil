@@ -51,24 +51,36 @@ export const INITIAL_FRAMEWORKS: CurriculumFramework[] = [
   }
 ];
 
-export const COUNTRIES = ['India', 'United States', 'United Kingdom', 'Canada', 'Australia', 'Global'] as const;
+export const COUNTRY_FLAG_MAP: Record<string, string> = {
+  'Australia': '🇦🇺',
+  'India': '🇮🇳',
+  'United States': '🇺🇸',
+  'United Kingdom': '🇬🇧',
+  'Canada': '🇨🇦',
+  'New Zealand': '🇳🇿',
+  'Global': '🌐'
+};
+
+export const COUNTRIES = ['Australia', 'India', 'United States', 'United Kingdom', 'Canada', 'New Zealand', 'Global'] as const;
 
 export const COUNTRY_STATE_MAP: Record<string, string[]> = {
-  'India': ['All India / Central', 'Delhi NCR', 'Maharashtra', 'Karnataka', 'Tamil Nadu', 'Uttar Pradesh', 'West Bengal'],
-  'United States': ['National / All States', 'California', 'Texas', 'New York', 'Florida', 'Illinois', 'Washington'],
+  'Australia': ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'],
+  'India': ['Delhi', 'Maharashtra', 'Karnataka', 'Tamil Nadu', 'Gujarat', 'Uttar Pradesh'],
+  'United States': ['California', 'Texas', 'New York', 'Florida', 'Washington', 'Illinois'],
   'United Kingdom': ['England', 'Scotland', 'Wales', 'Northern Ireland'],
   'Canada': ['Ontario', 'British Columbia', 'Quebec', 'Alberta'],
-  'Australia': ['New South Wales', 'Victoria', 'Queensland', 'Western Australia'],
+  'New Zealand': ['Auckland', 'Wellington', 'Canterbury', 'Waikato'],
   'Global': ['Worldwide', 'International Schools', 'Universal Standards']
 };
 
 export const COUNTRY_CURRICULUM_MAP: Record<string, string[]> = {
+  'Australia': ['Australian Curriculum (ACARA)', 'NSW Syllabus', 'VCAA'],
   'India': ['CBSE', 'ICSE', 'State Board', 'Cambridge Primary (India)'],
   'United States': ['Common Core (US)', 'State Standards (TEKS/FL)'],
   'United Kingdom': ['National Curriculum (UK)', 'Scottish Curriculum for Excellence', 'Cambridge Primary'],
   'Canada': ['Provincial Curriculum (Ontario)', 'Western Canadian Protocol'],
-  'Australia': ['Australian Curriculum (ACARA)', 'NSW Syllabus'],
-  'Global': ['IB PYP', 'Cambridge Primary', 'Universal Foundational']
+  'New Zealand': ['New Zealand Curriculum (NZC)', 'NCEA'],
+  'Global': ['Universal Foundational', 'IB PYP', 'Cambridge Primary']
 };
 
 // Rich comprehensive Grade-wise Mathematics Questions (Preschool, Foundation, Grade 1 to 6)

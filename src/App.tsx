@@ -68,8 +68,28 @@ function generateLogId(): string {
 export default function App() {
   // Core Platform State
   const [allUsers, setAllUsers] = useState<UserAccount[]>(INITIAL_USERS);
-  // Default to Emma Watson (Student STU00001) for instant delightful kid experience
-  const [currentUser, setCurrentUser] = useState<UserAccount>(INITIAL_USERS[5]); 
+  // Default to Emma Watson (Student STU00001) with active region preference (defaults to Australia / NSW)
+  const [currentUser, setCurrentUser] = useState<UserAccount>(() => {
+    const base = INITIAL_USERS[5];
+    try {
+      const saved = localStorage.getItem('pforpencil_active_region');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          ...base,
+          country: parsed.country || 'Australia',
+          state: parsed.state || 'NSW',
+          curriculum: parsed.curriculum || 'Australian Curriculum (ACARA)'
+        };
+      }
+    } catch {}
+    return {
+      ...base,
+      country: 'Australia',
+      state: 'NSW',
+      curriculum: 'Australian Curriculum (ACARA)'
+    };
+  }); 
   const [questions, setQuestions] = useState<Question[]>(() => {
     try {
       const saved = localStorage.getItem('pforpencil_question_bank_v1') || localStorage.getItem('funlearn_question_bank_v3');
@@ -130,6 +150,9 @@ export default function App() {
 
   // Update user regional and curriculum preferences
   const handleSaveRegion = (country: string, state: string, curriculum: string, grade?: string) => {
+    try {
+      localStorage.setItem('pforpencil_active_region', JSON.stringify({ country, state, curriculum }));
+    } catch {}
     const updatedUser: UserAccount = {
       ...currentUser,
       country,
@@ -1295,6 +1318,7 @@ export default function App() {
           onNavigateView={(v) => setCurrentView(v)}
           onOpenPricing={() => setCurrentView('pricing')}
           onOpenRegionModal={() => setRegionModalOpen(true)}
+          onSaveRegion={handleSaveRegion}
           onOpenAuthModal={(options) => {
             setAuthModalConfig({
               isOpen: true,
@@ -1584,13 +1608,14 @@ export default function App() {
         initialScreen={authModalConfig.initialScreen}
         initialRole={authModalConfig.initialRole}
         grades={grades}
-        country={currentUser.country || 'United States'}
-        state={currentUser.state || 'California'}
-        curriculum={currentUser.curriculum || 'Common Core (US)'}
+        country={currentUser.country || 'Australia'}
+        state={currentUser.state || 'NSW'}
+        curriculum={currentUser.curriculum || 'Australian Curriculum (ACARA)'}
         onOpenRegionModal={() => {
           setAuthModalConfig(prev => ({ ...prev, isOpen: false }));
           setRegionModalOpen(true);
         }}
+        onSaveRegion={handleSaveRegion}
         onLoginSuccess={(user) => {
           setCurrentUser(user);
           setCurrentView('dashboard');

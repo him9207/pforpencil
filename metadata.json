@@ -1,0 +1,6 @@
+{
+  "name": "PforPencil - Interactive Learning Platform",
+  "description": "PforPencil online learning platform with role-based portals for Parents, Teachers, Students, Schools, Content Managers, and Admins featuring interactive quests, skill analytics, and curriculum standards.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

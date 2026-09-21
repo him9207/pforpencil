@@ -9,6 +9,7 @@ import { fixMojibake, parseVisualObjectsString } from '../../../utils/visualUtil
 import { generateQuestionMasterExcel, parseQuestionExcelFile } from '../../../utils/questionExcelHelper';
 import { CLIPART_LIBRARY } from '../../../data/clipartLibraryData';
 import QuestionPreviewModal from './QuestionPreviewModal';
+import QuestionEditModal from './QuestionEditModal';
 
 interface Props {
   isOpen: boolean; onClose: () => void; availableGrades: string[]; availableSubjects: string[]; questions?: Question[];
@@ -66,6 +67,22 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
   const [difficulty,setDifficulty]=useState<'Easy'|'Medium'|'Hard'>('Easy');
   const [questionType,setQuestionType]=useState<QuestionType>('multiple_choice');
   const [prompt,setPrompt]=useState(''); const [options,setOptions]=useState(['','','','']); const [correctIndex,setCorrectIndex]=useState(0); const [openAnswer,setOpenAnswer]=useState('');
+  const [matchPairs, setMatchPairs] = useState<{ left: string; right: string }[]>([
+    { left: '🐱 Cat', right: 'Meow' },
+    { left: '🐶 Dog', right: 'Woof' },
+    { left: '🐮 Cow', right: 'Moo' }
+  ]);
+  const [dragItems, setDragItems] = useState<{ item: string; target: string }[]>([
+    { item: '🍎 Apple', target: '🧺 Fruit Basket' },
+    { item: '🚗 Toy Car', target: '🧸 Toy Box' },
+    { item: '🍌 Banana', target: '🧺 Fruit Basket' }
+  ]);
+  const [orderSequence, setOrderSequence] = useState<string[]>(['1', '2', '3', '4']);
+  const [sortBuckets, setSortBuckets] = useState<{ bucketName: string; items: string[] }[]>([
+    { bucketName: '🧺 Fruit Basket', items: ['🍎 Apple', '🍌 Banana', '🍓 Berry'] },
+    { bucketName: '🧸 Toy Box', items: ['🚗 Toy Car', '⚽ Ball', '🎈 Balloon'] }
+  ]);
+  const [selectObjectsGoal, setSelectObjectsGoal] = useState<number>(4);
   const [visualClipart,setVisualClipart]=useState(''); const [mediaUrl,setMediaUrl]=useState('');
   const [visualEnabled,setVisualEnabled]=useState(false); const [visualTemplate,setVisualTemplate]=useState<VisualQuestionTemplate>('picture_counting');
   const [visualAnimation,setVisualAnimation]=useState<VisualAnimation>('bounce'); const [visualInteraction,setVisualInteraction]=useState<VisualQuestionConfig['interaction']>('tap');
@@ -82,6 +99,22 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
     setOptions(['','','','']);
     setCorrectIndex(0);
     setOpenAnswer('');
+    setMatchPairs([
+      { left: '🐱 Cat', right: 'Meow' },
+      { left: '🐶 Dog', right: 'Woof' },
+      { left: '🐮 Cow', right: 'Moo' }
+    ]);
+    setDragItems([
+      { item: '🍎 Apple', target: '🧺 Fruit Basket' },
+      { item: '🚗 Toy Car', target: '🧸 Toy Box' },
+      { item: '🍌 Banana', target: '🧺 Fruit Basket' }
+    ]);
+    setOrderSequence(['1', '2', '3', '4']);
+    setSortBuckets([
+      { bucketName: '🧺 Fruit Basket', items: ['🍎 Apple', '🍌 Banana', '🍓 Berry'] },
+      { bucketName: '🧸 Toy Box', items: ['🚗 Toy Car', '⚽ Ball', '🎈 Balloon'] }
+    ]);
+    setSelectObjectsGoal(4);
     setVisualClipart('');
     setMediaUrl('');
     setVisualEnabled(false);
@@ -136,14 +169,95 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
       audioUrl:visualAudioUrl.trim()||undefined, background:visualBackground, autoPlay:visualAutoPlay,
       objects: visualObjects.trim() ? visualObjects.split('|').map((item,index)=>({id:`obj-${index+1}`,label:item.trim(),emoji:item.trim()})).filter(x=>x.label) : (visualClipart.trim() ? visualClipart.trim().split(/\s+/).map((item,index)=>({id:`obj-${index+1}`,label:item.trim(),emoji:item.trim()})).filter(x=>x.label) : undefined)
     } : undefined);
-    return {id,subject,grade,category:names.category,skill:names.skill,prompt:p,options:opts,correctIndex:correct,explanation:extra.explanation||explanation||'Review the answer and try again.',hint:extra.hint||hint||undefined,points:extra.points||points,difficulty:diff,type,country:names.country,state:names.region,curriculum:names.curriculum,countryId,regionId,curriculumId,subjectId:selectedSubject?.id,gradeId:selectedGrade?.id,categoryId:selectedCategory?.id,categoryCode:selectedCategory?.code,skillId:selectedSkill?.id,skillCode:selectedSkill?.code,curriculumReference:selectedSkill?.curriculumReference,status:'Draft',visualClipart:visualEnabled ? (extra.visualClipart || visualClipart.trim() || undefined) : undefined,mediaUrl:extra.mediaUrl||mediaUrl||undefined,openBoxAnswer:extra.openBoxAnswer,visualConfig};
+    return {
+      id,
+      subject,
+      grade,
+      category:names.category,
+      skill:names.skill,
+      prompt:p,
+      options:opts,
+      correctIndex:correct,
+      explanation:extra.explanation||explanation||'Review the answer and try again.',
+      hint:extra.hint||hint||undefined,
+      points:extra.points||points,
+      difficulty:diff,
+      type,
+      country:names.country,
+      state:names.region,
+      curriculum:names.curriculum,
+      countryId,
+      regionId,
+      curriculumId,
+      subjectId:selectedSubject?.id,
+      gradeId:selectedGrade?.id,
+      categoryId:selectedCategory?.id,
+      categoryCode:selectedCategory?.code,
+      skillId:selectedSkill?.id,
+      skillCode:selectedSkill?.code,
+      curriculumReference:selectedSkill?.curriculumReference,
+      status:'Draft',
+      visualClipart:visualEnabled ? (extra.visualClipart || visualClipart.trim() || undefined) : undefined,
+      mediaUrl:extra.mediaUrl||mediaUrl||undefined,
+      openBoxAnswer:extra.openBoxAnswer,
+      matchPairs:extra.matchPairs,
+      dragItems:extra.dragItems,
+      orderSequence:extra.orderSequence,
+      sortBuckets:extra.sortBuckets,
+      visualConfig
+    };
   };
 
   const saveSingle=(e:React.FormEvent)=>{
     e.preventDefault();
     if(!canCreate||!prompt.trim())return;
     const id=getNextQuestionId(grade,questions,0,subject);
-    const q=buildQuestion(id,prompt.trim(),questionType==='open_box'||questionType==='fill_blank'?[openAnswer.trim()]:options.map(x=>x.trim()),questionType==='open_box'||questionType==='fill_blank'?0:correctIndex,difficulty,questionType,{openBoxAnswer:(questionType==='open_box'||questionType==='fill_blank')?openAnswer.trim():undefined});
+    
+    let finalOptions = options.map(x=>x.trim()).filter(Boolean);
+    if (finalOptions.length === 0) finalOptions = ['Option 1', 'Option 2'];
+    let finalCorrectIndex = correctIndex;
+    let finalOpenAnswer: string | undefined = undefined;
+    let extraPairs: any = undefined;
+    let extraDrag: any = undefined;
+    let extraOrder: any = undefined;
+    let extraBuckets: any = undefined;
+
+    if (questionType === 'open_box' || questionType === 'fill_blank') {
+      finalOptions = [openAnswer.trim()];
+      finalCorrectIndex = 0;
+      finalOpenAnswer = openAnswer.trim();
+    } else if (questionType === 'true_false') {
+      finalOptions = ['True', 'False'];
+      finalCorrectIndex = correctIndex === 1 ? 1 : 0;
+    } else if (questionType === 'select_objects') {
+      finalOptions = [String(selectObjectsGoal)];
+      finalCorrectIndex = 0;
+      finalOpenAnswer = String(selectObjectsGoal);
+    } else if (questionType === 'match_making') {
+      finalOptions = matchPairs.map(p => `${p.left.trim()} -> ${p.right.trim()}`);
+      finalCorrectIndex = 0;
+      extraPairs = matchPairs;
+    } else if (questionType === 'drag_and_drop') {
+      finalOptions = dragItems.map(d => `${d.item.trim()} -> ${d.target.trim()}`);
+      finalCorrectIndex = 0;
+      extraDrag = dragItems;
+    } else if (questionType === 'ordering') {
+      finalOptions = orderSequence.map(s => s.trim());
+      finalCorrectIndex = 0;
+      extraOrder = orderSequence;
+    } else if (questionType === 'sorting') {
+      finalOptions = sortBuckets.map(b => `${b.bucketName}: ${b.items.join(', ')}`);
+      finalCorrectIndex = 0;
+      extraBuckets = sortBuckets;
+    }
+
+    const q=buildQuestion(id,prompt.trim(),finalOptions,finalCorrectIndex,difficulty,questionType,{
+      openBoxAnswer: finalOpenAnswer,
+      matchPairs: extraPairs,
+      dragItems: extraDrag,
+      orderSequence: extraOrder,
+      sortBuckets: extraBuckets
+    });
     onAddQuestion(q);
     resetSingleForm();
     onSuccess();
@@ -516,7 +630,51 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
           </select>
         </label>
         <label className="font-semibold">Question Type
-          <select value={questionType} onChange={e=>setQuestionType(e.target.value as QuestionType)} className="w-full mt-1 p-2 rounded-xl border">
+          <select
+            value={questionType}
+            onChange={e => {
+              const nextType = e.target.value as QuestionType;
+              setQuestionType(nextType);
+              if (nextType === 'true_false') {
+                setOptions(['True', 'False']);
+                if (correctIndex > 1) setCorrectIndex(0);
+              } else if (nextType === 'open_box' || nextType === 'fill_blank') {
+                if (!openAnswer && options[correctIndex]) setOpenAnswer(options[correctIndex]);
+              } else if (nextType === 'match_making') {
+                if (!matchPairs || matchPairs.length === 0) {
+                  setMatchPairs([
+                    { left: '🐱 Cat', right: 'Meow' },
+                    { left: '🐶 Dog', right: 'Woof' },
+                    { left: '🐮 Cow', right: 'Moo' }
+                  ]);
+                }
+              } else if (nextType === 'drag_and_drop') {
+                if (!dragItems || dragItems.length === 0) {
+                  setDragItems([
+                    { item: '🍎 Apple', target: '🧺 Fruit Basket' },
+                    { item: '🚗 Toy Car', target: '🧸 Toy Box' },
+                    { item: '🍌 Banana', target: '🧺 Fruit Basket' }
+                  ]);
+                }
+              } else if (nextType === 'ordering') {
+                if (!orderSequence || orderSequence.length === 0) {
+                  setOrderSequence(['1', '2', '3', '4']);
+                }
+              } else if (nextType === 'sorting') {
+                if (!sortBuckets || sortBuckets.length === 0) {
+                  setSortBuckets([
+                    { bucketName: '🧺 Fruit Basket', items: ['🍎 Apple', '🍌 Banana', '🍓 Berry'] },
+                    { bucketName: '🧸 Toy Box', items: ['🚗 Toy Car', '⚽ Ball', '🎈 Balloon'] }
+                  ]);
+                }
+              } else {
+                if (!options || options.length < 2) {
+                  setOptions(['Option A', 'Option B', 'Option C', 'Option D']);
+                }
+              }
+            }}
+            className="w-full mt-1 p-2 rounded-xl border bg-white"
+          >
             {TYPES.map(t=><option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
         </label>
@@ -527,15 +685,387 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
         <textarea required value={prompt} onChange={e=>setPrompt(e.target.value)} rows={3} className="w-full mt-1 p-3 rounded-xl border" placeholder="Enter the student-facing question..."/>
       </label>
 
-      {(questionType==='open_box'||questionType==='fill_blank')?(
-        <label className="font-semibold block">Correct Answer
-          <input required value={openAnswer} onChange={e=>setOpenAnswer(e.target.value)} className="w-full mt-1 p-2.5 rounded-xl border" placeholder="Enter the exact answer"/>
+      {/* DEDICATED BUILDER ACCORDING TO QUESTION TYPE */}
+      {questionType === 'open_box' || questionType === 'fill_blank' ? (
+        <label className="font-semibold block p-3.5 rounded-2xl bg-amber-50/50 border border-amber-200">
+          <span className="text-xs font-bold text-amber-950 block mb-1">Expected Correct Answer:</span>
+          <input
+            required
+            value={openAnswer}
+            onChange={e => setOpenAnswer(e.target.value)}
+            className="w-full p-2.5 rounded-xl border border-stone-200 bg-white font-bold outline-none focus:border-amber-400 text-sm"
+            placeholder="e.g. 9 or Cat or 4 + 5 = 9"
+          />
         </label>
-      ):(
+      ) : questionType === 'true_false' ? (
+        /* TRUE / FALSE BUILDER */
+        <div className="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-200 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="font-bold text-emerald-950 text-xs flex items-center gap-1.5">
+              <Check className="w-3.5 h-3.5 text-emerald-600" />
+              True / False Answer Selection
+            </div>
+            <div className="text-[10px] text-emerald-700">
+              Click the correct answer statement below
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setCorrectIndex(0);
+                setOptions(['True', 'False']);
+              }}
+              className={`p-3.5 rounded-2xl border-2 text-center transition-all cursor-pointer font-bold flex flex-col items-center justify-center gap-1.5 ${
+                correctIndex === 0
+                  ? 'bg-emerald-100 border-emerald-500 text-emerald-950 ring-3 ring-emerald-300 shadow-xs'
+                  : 'bg-white border-stone-200 text-stone-700 hover:border-emerald-300'
+              }`}
+            >
+              <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center text-sm font-black shadow-xs">
+                ✓
+              </div>
+              <span className="text-sm font-black">TRUE</span>
+              <span className="text-[10px] font-semibold text-stone-500">
+                {correctIndex === 0 ? '★ Correct Answer' : 'Click to set correct'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setCorrectIndex(1);
+                setOptions(['True', 'False']);
+              }}
+              className={`p-3.5 rounded-2xl border-2 text-center transition-all cursor-pointer font-bold flex flex-col items-center justify-center gap-1.5 ${
+                correctIndex === 1
+                  ? 'bg-rose-100 border-rose-500 text-rose-950 ring-3 ring-rose-300 shadow-xs'
+                  : 'bg-white border-stone-200 text-stone-700 hover:border-rose-300'
+              }`}
+            >
+              <div className="w-8 h-8 rounded-full bg-rose-500 text-white flex items-center justify-center text-sm font-black shadow-xs">
+                ✕
+              </div>
+              <span className="text-sm font-black">FALSE</span>
+              <span className="text-[10px] font-semibold text-stone-500">
+                {correctIndex === 1 ? '★ Correct Answer' : 'Click to set correct'}
+              </span>
+            </button>
+          </div>
+        </div>
+      ) : questionType === 'match_making' ? (
+        /* MATCH MAKING BUILDER */
+        <div className="p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-200 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-bold text-indigo-950 text-xs flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                Match Pairs (Left Item ➔ Right Target Match)
+              </div>
+              <div className="text-[10px] text-indigo-700 mt-0.5">
+                Students will match items on the left with their corresponding match on the right.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setMatchPairs(prev => [...prev, { left: '', right: '' }])}
+              className="px-2 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] flex items-center gap-1 cursor-pointer transition shadow-2xs"
+            >
+              + Add Pair
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {matchPairs.map((pair, pIdx) => (
+              <div key={pIdx} className="flex items-center gap-2 bg-white p-2 rounded-xl border border-indigo-200 shadow-2xs">
+                <span className="font-mono font-bold text-indigo-900 text-xs w-6 text-center">
+                  #{pIdx + 1}
+                </span>
+                <input
+                  value={pair.left}
+                  onChange={e => {
+                    const next = [...matchPairs];
+                    next[pIdx].left = e.target.value;
+                    setMatchPairs(next);
+                  }}
+                  placeholder="Left item (e.g. 🐱 Cat)"
+                  className="flex-1 p-2 rounded-lg border border-stone-200 text-xs font-semibold outline-none focus:border-indigo-400"
+                />
+                <span className="text-stone-400 font-bold text-sm">➔</span>
+                <input
+                  value={pair.right}
+                  onChange={e => {
+                    const next = [...matchPairs];
+                    next[pIdx].right = e.target.value;
+                    setMatchPairs(next);
+                  }}
+                  placeholder="Right match (e.g. Meow)"
+                  className="flex-1 p-2 rounded-lg border border-stone-200 text-xs font-semibold outline-none focus:border-indigo-400"
+                />
+                {matchPairs.length > 2 && (
+                  <button
+                    type="button"
+                    onClick={() => setMatchPairs(prev => prev.filter((_, i) => i !== pIdx))}
+                    className="text-stone-300 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition"
+                    title="Remove pair"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : questionType === 'drag_and_drop' ? (
+        /* DRAG AND DROP BUILDER */
+        <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-bold text-amber-950 text-xs flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                Drag & Drop Items & Targets
+              </div>
+              <div className="text-[10px] text-amber-700 mt-0.5">
+                Define the draggable items and their designated target drop zones.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDragItems(prev => [...prev, { item: '', target: '' }])}
+              className="px-2 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] flex items-center gap-1 cursor-pointer transition shadow-2xs"
+            >
+              + Add Item
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {dragItems.map((item, dIdx) => (
+              <div key={dIdx} className="flex items-center gap-2 bg-white p-2 rounded-xl border border-amber-200 shadow-2xs">
+                <span className="font-mono font-bold text-amber-900 text-xs w-6 text-center">
+                  #{dIdx + 1}
+                </span>
+                <input
+                  value={item.item}
+                  onChange={e => {
+                    const next = [...dragItems];
+                    next[dIdx].item = e.target.value;
+                    setDragItems(next);
+                  }}
+                  placeholder="Draggable Item (e.g. 🍎 Apple)"
+                  className="flex-1 p-2 rounded-lg border border-stone-200 text-xs font-semibold outline-none focus:border-amber-400"
+                />
+                <span className="text-stone-400 font-bold text-sm">➔ Drop Zone:</span>
+                <input
+                  value={item.target}
+                  onChange={e => {
+                    const next = [...dragItems];
+                    next[dIdx].target = e.target.value;
+                    setDragItems(next);
+                  }}
+                  placeholder="Target Container (e.g. 🧺 Fruit Basket)"
+                  className="flex-1 p-2 rounded-lg border border-stone-200 text-xs font-semibold outline-none focus:border-amber-400"
+                />
+                {dragItems.length > 2 && (
+                  <button
+                    type="button"
+                    onClick={() => setDragItems(prev => prev.filter((_, i) => i !== dIdx))}
+                    className="text-stone-300 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition"
+                    title="Remove item"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : questionType === 'ordering' ? (
+        /* ORDERING / SEQUENCING BUILDER */
+        <div className="p-3.5 rounded-2xl bg-purple-50/60 border border-purple-200 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-bold text-purple-950 text-xs flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                Ordering Sequence (Correct Chronological / Numerical Order)
+              </div>
+              <div className="text-[10px] text-purple-700 mt-0.5">
+                List the items below in the exact correct sequence from first to last.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOrderSequence(prev => [...prev, `Item ${prev.length + 1}`])}
+              className="px-2 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-[11px] flex items-center gap-1 cursor-pointer transition shadow-2xs"
+            >
+              + Add Step
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {orderSequence.map((step, sIdx) => (
+              <div key={sIdx} className="flex items-center gap-2 bg-white p-2 rounded-xl border border-purple-200 shadow-2xs">
+                <span className="font-black text-purple-700 text-xs w-16 text-center bg-purple-100/70 py-1 rounded-md">
+                  Step {sIdx + 1}
+                </span>
+                <input
+                  value={step}
+                  onChange={e => {
+                    const next = [...orderSequence];
+                    next[sIdx] = e.target.value;
+                    setOrderSequence(next);
+                  }}
+                  placeholder={`Correct step #${sIdx + 1}`}
+                  className="flex-1 p-2 rounded-lg border border-stone-200 text-xs font-semibold outline-none focus:border-purple-400"
+                />
+                {orderSequence.length > 2 && (
+                  <button
+                    type="button"
+                    onClick={() => setOrderSequence(prev => prev.filter((_, i) => i !== sIdx))}
+                    className="text-stone-300 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition"
+                    title="Remove step"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : questionType === 'select_objects' ? (
+        /* SELECT OBJECTS (TAP TO COUNT) BUILDER */
+        <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-bold text-amber-950 text-xs flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                Select Objects (Tap to Count Goal)
+              </div>
+              <div className="text-[10px] text-amber-700 mt-0.5">
+                Define the target number of objects the student needs to tap or count.
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white p-3 rounded-xl border border-amber-200">
+            <div>
+              <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider block mb-1">
+                Target Count Goal
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="20"
+                value={selectObjectsGoal}
+                onChange={e => setSelectObjectsGoal(Number(e.target.value) || 1)}
+                className="w-full p-2 rounded-lg border border-stone-200 text-sm font-bold outline-none focus:border-amber-400"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider block mb-1">
+                Objects to Count (Emojis / Badges)
+              </label>
+              <input
+                value={visualObjects || visualClipart}
+                onChange={e => {
+                  setVisualObjects(e.target.value);
+                  if (!visualClipart) setVisualClipart(e.target.value);
+                }}
+                placeholder="e.g. 🍎 🍎 🍎 🍎 or 🐶|🐶|🐶"
+                className="w-full p-2 rounded-lg border border-stone-200 text-sm font-bold outline-none focus:border-amber-400"
+              />
+            </div>
+          </div>
+        </div>
+      ) : questionType === 'sorting' ? (
+        /* SORTING INTO BUCKETS BUILDER */
+        <div className="p-3.5 rounded-2xl bg-teal-50/60 border border-teal-200 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-bold text-teal-950 text-xs flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+                Sorting Buckets & Items
+              </div>
+              <div className="text-[10px] text-teal-700 mt-0.5">
+                Configure target buckets and the items assigned to each bucket.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSortBuckets(prev => [...prev, { bucketName: `Bucket ${prev.length + 1}`, items: [] }])}
+              className="px-2 py-1 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold text-[11px] flex items-center gap-1 cursor-pointer transition shadow-2xs"
+            >
+              + Add Bucket
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {sortBuckets.map((bucket, bIdx) => (
+              <div key={bIdx} className="p-3 bg-white rounded-xl border border-teal-200 space-y-2 shadow-2xs">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-1">
+                    <span className="font-black text-xs text-teal-800">
+                      Bucket #{bIdx + 1}:
+                    </span>
+                    <input
+                      value={bucket.bucketName}
+                      onChange={e => {
+                        const next = [...sortBuckets];
+                        next[bIdx].bucketName = e.target.value;
+                        setSortBuckets(next);
+                      }}
+                      placeholder="Bucket name (e.g. 🧺 Fruit Basket)"
+                      className="flex-1 p-1.5 rounded-lg border border-stone-200 text-xs font-bold outline-none focus:border-teal-400"
+                    />
+                  </div>
+                  {sortBuckets.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setSortBuckets(prev => prev.filter((_, i) => i !== bIdx))}
+                      className="text-stone-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition"
+                      title="Delete bucket"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider block mb-1">
+                    Assigned Items (comma-separated):
+                  </label>
+                  <input
+                    value={bucket.items.join(', ')}
+                    onChange={e => {
+                      const next = [...sortBuckets];
+                      next[bIdx].items = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                      setSortBuckets(next);
+                    }}
+                    placeholder="e.g. 🍎 Apple, 🍌 Banana, 🍓 Berry"
+                    className="w-full p-2 rounded-lg border border-stone-200 text-xs font-semibold outline-none focus:border-teal-400"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        /* MULTIPLE CHOICE / GENERAL OPTIONS BUILDER */
         <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200 space-y-2.5">
           <div className="flex items-center justify-between">
             <div className="font-bold text-stone-900 text-xs">Answer Options (Select the correct radio button)</div>
-            <div className="text-[10px] text-stone-500">Click clipart chips below any option to insert emoji</div>
+            <div className="flex items-center gap-2">
+              <div className="text-[10px] text-stone-500">Radio button indicates correct answer</div>
+              {options.length < 6 && (
+                <button
+                  type="button"
+                  onClick={() => setOptions(prev => [...prev, ''])}
+                  className="px-2 py-0.5 rounded-md bg-stone-200 hover:bg-stone-300 text-stone-800 text-[10px] font-bold cursor-pointer"
+                >
+                  + Add Option
+                </button>
+              )}
+            </div>
           </div>
           {options.map((o,i)=>(
             <div key={i} className="p-2 bg-white rounded-xl border border-stone-200 space-y-1.5">
@@ -558,6 +1088,22 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
                     title="Clear this option"
                   >
                     ✕
+                  </button>
+                )}
+                {options.length > 2 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = options.filter((_, idx) => idx !== i);
+                      setOptions(next);
+                      if (correctIndex >= next.length) {
+                        setCorrectIndex(0);
+                      }
+                    }}
+                    className="text-stone-300 hover:text-rose-600 p-1 rounded hover:bg-rose-50 transition"
+                    title="Remove option"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
@@ -791,188 +1337,98 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
           <div className="max-h-[380px] overflow-y-auto divide-y divide-stone-200 p-2 space-y-2">
             {generated.map((q,i)=>(
               <div key={q.id || i} className="p-3 bg-white rounded-xl border border-stone-200 shadow-2xs">
-                {editingBatchIndex === i && editingDraft ? (
-                  /* INLINE EDITOR FOR GENERATED QUESTION */
-                  <div className="space-y-3 p-2 bg-amber-50/30 rounded-lg border border-amber-200">
-                    <div className="flex items-center justify-between text-xs font-bold text-stone-900">
-                      <span>Editing Question #{i+1} ({q.id})</span>
-                      <span className="text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md">Draft Edit Mode</span>
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-[10px] font-bold text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded">
+                        #{i+1} · {q.id}
+                      </span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        q.difficulty==='Easy'?'bg-emerald-100 text-emerald-800':q.difficulty==='Hard'?'bg-rose-100 text-rose-800':'bg-amber-100 text-amber-800'
+                      }`}>
+                        {q.difficulty}
+                      </span>
+                      <span className="text-[10px] text-stone-500 font-semibold bg-stone-100 px-1.5 py-0.5 rounded">
+                        {typeLabel(q)}
+                      </span>
+                      {q.visualClipart && (
+                        <span className="text-xs px-1.5 py-0.5 bg-amber-50 border border-amber-200 rounded">
+                          {q.visualClipart}
+                        </span>
+                      )}
                     </div>
 
-                    <label className="block text-xs font-semibold">
-                      Prompt:
-                      <textarea
-                        value={editingDraft.prompt}
-                        onChange={e => setEditingDraft({ ...editingDraft, prompt: e.target.value })}
-                        rows={2}
-                        className="w-full mt-1 p-2 border rounded-lg bg-white text-xs"
-                      />
-                    </label>
-
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <label className="font-semibold">
-                        Difficulty:
-                        <select
-                          value={editingDraft.difficulty}
-                          onChange={e => setEditingDraft({ ...editingDraft, difficulty: e.target.value as any })}
-                          className="w-full mt-1 p-1.5 border rounded-lg bg-white text-xs"
-                        >
-                          <option>Easy</option><option>Medium</option><option>Hard</option>
-                        </select>
-                      </label>
-                      <label className="font-semibold">
-                        Question Header Clipart:
-                        <input
-                          value={editingDraft.visualClipart || ''}
-                          onChange={e => setEditingDraft({ ...editingDraft, visualClipart: e.target.value })}
-                          placeholder="e.g. 🍎 🍎"
-                          className="w-full mt-1 p-1.5 border rounded-lg bg-white text-xs"
-                        />
-                      </label>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <div className="text-[11px] font-bold text-stone-700">Answer Options (Select the correct radio button):</div>
-                      {editingDraft.options.map((opt, optIdx) => (
-                        <div key={optIdx} className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            name={`batchEditCorrect_${i}`}
-                            checked={editingDraft.correctIndex === optIdx}
-                            onChange={() => setEditingDraft({ ...editingDraft, correctIndex: optIdx })}
-                            className="cursor-pointer"
-                          />
-                          <span className="font-bold text-xs text-stone-500 w-4">{String.fromCharCode(65 + optIdx)}</span>
-                          <input
-                            value={opt}
-                            onChange={e => {
-                              const nextOpts = [...editingDraft.options];
-                              nextOpts[optIdx] = e.target.value;
-                              setEditingDraft({ ...editingDraft, options: nextOpts });
-                            }}
-                            className="flex-1 p-1.5 border rounded-lg bg-white text-xs"
-                          />
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="flex justify-end gap-2 pt-2 border-t border-amber-200">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         type="button"
-                        onClick={() => { setEditingBatchIndex(null); setEditingDraft(null); }}
-                        className="px-3 py-1.5 rounded-lg border border-stone-300 text-stone-700 font-semibold text-xs"
+                        onClick={() => setPreviewQuestion(q)}
+                        className="px-2 py-1 rounded-md border border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-700 text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+                        title="Preview Question in Student Mode"
                       >
-                        Cancel
+                        <Eye className="w-3 h-3"/> Preview
                       </button>
                       <button
                         type="button"
                         onClick={() => {
-                          setGenerated(prev => prev.map((item, idx) => idx === i ? editingDraft : item));
-                          setEditingBatchIndex(null);
-                          setEditingDraft(null);
-                          sounds.click();
+                          setEditingBatchIndex(i);
+                          setEditingDraft({ ...q });
                         }}
-                        className="px-3.5 py-1.5 rounded-lg bg-stone-900 text-white font-bold text-xs flex items-center gap-1"
+                        className="px-2 py-1 rounded-md border border-stone-200 bg-stone-50 hover:bg-amber-50 hover:border-amber-300 text-stone-700 text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+                        title="Edit Question"
                       >
-                        <Check className="w-3.5 h-3.5"/> Save Changes
+                        <Edit3 className="w-3 h-3 text-amber-600"/> Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const cloneId = `${q.id}-CLONE-${Date.now().toString().slice(-4)}`;
+                          const clone = { ...q, id: cloneId, prompt: `${q.prompt} (Copy)` };
+                          const next = [...generated];
+                          next.splice(i + 1, 0, clone);
+                          setGenerated(next);
+                        }}
+                        className="p-1 rounded-md border border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-600 cursor-pointer"
+                        title="Duplicate Question"
+                      >
+                        <Copy className="w-3 h-3"/>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setGenerated(prev => prev.filter((_, idx) => idx !== i))}
+                        className="p-1 rounded-md border border-stone-200 bg-stone-50 hover:bg-rose-50 text-rose-600 cursor-pointer"
+                        title="Delete from batch"
+                      >
+                        <Trash2 className="w-3 h-3"/>
                       </button>
                     </div>
                   </div>
-                ) : (
-                  /* READ-ONLY VIEW WITH EDIT & PREVIEW ACTIONS */
-                  <div>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono text-[10px] font-bold text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded">
-                          #{i+1} · {q.id}
-                        </span>
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                          q.difficulty==='Easy'?'bg-emerald-100 text-emerald-800':q.difficulty==='Hard'?'bg-rose-100 text-rose-800':'bg-amber-100 text-amber-800'
-                        }`}>
-                          {q.difficulty}
-                        </span>
-                        <span className="text-[10px] text-stone-500 font-semibold bg-stone-100 px-1.5 py-0.5 rounded">
-                          {typeLabel(q)}
-                        </span>
-                        {q.visualClipart && (
-                          <span className="text-xs px-1.5 py-0.5 bg-amber-50 border border-amber-200 rounded">
-                            {q.visualClipart}
-                          </span>
-                        )}
-                      </div>
 
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => setPreviewQuestion(q)}
-                          className="px-2 py-1 rounded-md border border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-700 text-[11px] font-semibold flex items-center gap-1"
-                          title="Preview Question in Student Mode"
-                        >
-                          <Eye className="w-3 h-3"/> Preview
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingBatchIndex(i);
-                            setEditingDraft({ ...q });
-                          }}
-                          className="px-2 py-1 rounded-md border border-stone-200 bg-stone-50 hover:bg-amber-50 hover:border-amber-300 text-stone-700 text-[11px] font-semibold flex items-center gap-1"
-                          title="Edit Question"
-                        >
-                          <Edit3 className="w-3 h-3 text-amber-600"/> Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const cloneId = `${q.id}-CLONE-${Date.now().toString().slice(-4)}`;
-                            const clone = { ...q, id: cloneId, prompt: `${q.prompt} (Copy)` };
-                            const next = [...generated];
-                            next.splice(i + 1, 0, clone);
-                            setGenerated(next);
-                          }}
-                          className="p-1 rounded-md border border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-600"
-                          title="Duplicate Question"
-                        >
-                          <Copy className="w-3 h-3"/>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setGenerated(prev => prev.filter((_, idx) => idx !== i))}
-                          className="p-1 rounded-md border border-stone-200 bg-stone-50 hover:bg-rose-50 text-rose-600"
-                          title="Delete from batch"
-                        >
-                          <Trash2 className="w-3 h-3"/>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="font-bold text-xs text-stone-900 mt-2">
-                      {q.prompt}
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
-                      {q.options.map((opt, optIdx) => {
-                        const isCorrect = q.correctIndex === optIdx;
-                        return (
-                          <div
-                            key={optIdx}
-                            className={`p-1.5 rounded-lg border text-[11px] flex items-center gap-1.5 ${
-                              isCorrect
-                                ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-bold'
-                                : 'bg-stone-50 border-stone-200 text-stone-700'
-                            }`}
-                          >
-                            <span className="font-mono text-[10px] text-stone-400">
-                              {String.fromCharCode(65 + optIdx)}:
-                            </span>
-                            <span className="truncate">{opt || '(empty)'}</span>
-                            {isCorrect && <Check className="w-3 h-3 text-emerald-600 ml-auto shrink-0"/>}
-                          </div>
-                        );
-                      })}
-                    </div>
+                  <div className="font-bold text-xs text-stone-900 mt-2">
+                    {q.prompt}
                   </div>
-                )}
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+                    {q.options.map((opt, optIdx) => {
+                      const isCorrect = q.correctIndex === optIdx;
+                      return (
+                        <div
+                          key={optIdx}
+                          className={`p-1.5 rounded-lg border text-[11px] flex items-center gap-1.5 ${
+                            isCorrect
+                              ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-bold'
+                              : 'bg-stone-50 border-stone-200 text-stone-700'
+                          }`}
+                        >
+                          <span className="font-mono text-[10px] text-stone-400">
+                            {String.fromCharCode(65 + optIdx)}:
+                          </span>
+                          <span className="truncate">{opt || '(empty)'}</span>
+                          {isCorrect && <Check className="w-3 h-3 text-emerald-600 ml-auto shrink-0"/>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -1134,5 +1590,20 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
     </div>}
   </div></div>
   <QuestionPreviewModal question={previewQuestion} onClose={()=>setPreviewQuestion(null)} />
+  <QuestionEditModal
+    question={editingDraft}
+    isOpen={Boolean(editingDraft)}
+    onClose={() => {
+      setEditingDraft(null);
+      setEditingBatchIndex(null);
+    }}
+    onSave={(updated) => {
+      if (editingBatchIndex !== null) {
+        setGenerated(prev => prev.map((item, idx) => idx === editingBatchIndex ? updated : item));
+      }
+      setEditingDraft(null);
+      setEditingBatchIndex(null);
+    }}
+  />
   </div>;
 }

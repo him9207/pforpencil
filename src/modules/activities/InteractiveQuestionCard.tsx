@@ -458,9 +458,9 @@ export default function InteractiveQuestionCard({
               <span>{question.visualConfig.visualInstructions}</span>
             </div>
           ) : (
-            <div className="inline-flex items-center gap-1.5 text-stone-600 font-bold text-xs sm:text-sm">
+            <div className="inline-flex items-center gap-1.5 text-amber-950 font-bold text-xs sm:text-sm">
               <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
-              <span>Fun Learning Activity</span>
+              <span>{question.skill || question.category || 'PforPencil Learning Activity'}</span>
             </div>
           )}
 

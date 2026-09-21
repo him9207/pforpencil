@@ -38,7 +38,7 @@ function sqlBool(val: boolean | null | undefined, defaultVal: boolean = true): s
  */
 export function getCompleteSupabaseSchemaSql(): string {
   return `-- =========================================================
--- FUNLEARN: Supabase PostgreSQL Complete Schema & RLS Setup
+-- PFORPENCIL: Supabase PostgreSQL Complete Schema & RLS Setup
 -- Multi-Role Education Platform (Admin, School, Teacher, Parent, Student)
 -- =========================================================
 
@@ -365,7 +365,7 @@ export function getCompleteSupabaseSeedSql(
 ): string {
   const lines: string[] = [
     '-- =========================================================',
-    '-- FUNLEARN: Initial Data Population (Seed Records)',
+    '-- PFORPENCIL: Initial Data Population (Seed Records)',
     '-- =========================================================\n'
   ];
 

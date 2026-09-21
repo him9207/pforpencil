@@ -6,8 +6,8 @@ export interface SupabaseConfig {
 }
 
 export function getSupabaseCredentials(): SupabaseConfig {
-  const localUrl = localStorage.getItem('FUNLEARN_SUPABASE_URL');
-  const localKey = localStorage.getItem('FUNLEARN_SUPABASE_ANON_KEY');
+  const localUrl = localStorage.getItem('PFORPENCIL_SUPABASE_URL') || localStorage.getItem('FUNLEARN_SUPABASE_URL');
+  const localKey = localStorage.getItem('PFORPENCIL_SUPABASE_ANON_KEY') || localStorage.getItem('FUNLEARN_SUPABASE_ANON_KEY');
 
   const url = (localUrl || (import.meta as any).env?.VITE_SUPABASE_URL || 'https://ycmfuudgxutmkhhhpciu.supabase.co').trim();
   const anonKey = (localKey || (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '').trim();
@@ -16,6 +16,8 @@ export function getSupabaseCredentials(): SupabaseConfig {
 }
 
 export function saveSupabaseCredentials(url: string, anonKey: string) {
+  localStorage.setItem('PFORPENCIL_SUPABASE_URL', url.trim());
+  localStorage.setItem('PFORPENCIL_SUPABASE_ANON_KEY', anonKey.trim());
   localStorage.setItem('FUNLEARN_SUPABASE_URL', url.trim());
   localStorage.setItem('FUNLEARN_SUPABASE_ANON_KEY', anonKey.trim());
 }

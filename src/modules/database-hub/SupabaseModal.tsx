@@ -133,7 +133,7 @@ export default function SupabaseModal({
     }
   };
 
-  const sqlSchemaCode = `-- FUNLEARN EDU: SUPABASE POSTGRESQL SCHEMA (WITH COUNTRY, STATE, CURRICULUM & RLS)
+  const sqlSchemaCode = `-- PFORPENCIL EDU: SUPABASE POSTGRESQL SCHEMA (WITH COUNTRY, STATE, CURRICULUM & RLS)
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- 1. Organizations / Schools Table

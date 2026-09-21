@@ -385,7 +385,7 @@ export default function SubscriptionsView({
                   Subscription Active!
                 </h3>
                 <p className="text-xs text-stone-600">
-                  Your payment was recorded. Thank you for empowering kids with FUNLEARN!
+                  Your payment was recorded. Thank you for empowering kids with PforPencil!
                 </p>
               </div>
             )}

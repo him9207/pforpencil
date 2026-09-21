@@ -664,7 +664,7 @@ export default function AdminPortal({
   const handleExportFullJSON = () => {
     const fullDataset = {
       exportedAt: new Date().toISOString(),
-      platform: 'FUNLEARN Unified Learning Cloud',
+      platform: 'PforPencil Unified Learning Cloud',
       counts: {
         users: allUsers.length,
         schools: schools.length,
@@ -718,7 +718,7 @@ export default function AdminPortal({
               Full System Access & Master Data
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              FUNLEARN Super Admin Console
+              PforPencil Super Admin Console
             </h1>
             <p className="text-xs text-stone-400 font-mono mt-0.5">
               Admin: {currentUser.name} • ID: {currentUser.id} • All Platform Data & RBAC Oversight
@@ -3059,7 +3059,7 @@ export default function AdminPortal({
               <span className="text-[10px] text-stone-400 font-mono">Row Level Security: Enabled</span>
             </div>
             <pre className="text-[11px] font-mono text-stone-300 overflow-x-auto p-2 bg-stone-950 rounded-xl max-h-48">
-{`-- FUNLEARN Schema Overview
+{`-- PforPencil Schema Overview
 CREATE TABLE public.users (id text PRIMARY KEY, role text, name text, email text, username text, pin text, grade text);
 CREATE TABLE public.schools (id text PRIMARY KEY, name text, admin_email text, total_seats int, allocated_seats int);
 CREATE TABLE public.classes (id text PRIMARY KEY, name text, grade text, teacher_id text, student_ids text[]);

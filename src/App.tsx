@@ -545,7 +545,7 @@ export default function App() {
         },
         recentActivities: [],
         badges: [
-          { id: 'B_NEW', name: 'Welcome Adventurer', icon: '🌟', description: resolvedSchoolName ? `Enrolled in ${resolvedSchoolName}` : 'Joined FUNLEARN platform!', unlockedAt: new Date().toISOString().slice(0, 10) }
+          { id: 'B_NEW', name: 'Welcome Adventurer', icon: '🌟', description: resolvedSchoolName ? `Enrolled in ${resolvedSchoolName}` : 'Joined PforPencil platform!', unlockedAt: new Date().toISOString().slice(0, 10) }
         ]
       };
       setStudentProgressMap((prev) => ({

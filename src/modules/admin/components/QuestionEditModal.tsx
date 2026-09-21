@@ -74,6 +74,9 @@ export default function QuestionEditModal({ question, isOpen, onClose, onSave }:
           { bucketName: '🧸 Toy Box', items: ['🚗 Toy Car', '⚽ Ball', '🎈 Balloon'] }
         ]
   );
+  const [selectObjectsGoal, setSelectObjectsGoal] = useState<number>(
+    Number(question.openBoxAnswer || question.options?.[0]) || 4
+  );
   const [explanation, setExplanation] = useState<string>(question.explanation || '');
   const [hint, setHint] = useState<string>(question.hint || '');
   const [points, setPoints] = useState<number>(question.points || 20);
@@ -140,24 +143,56 @@ export default function QuestionEditModal({ question, isOpen, onClose, onSave }:
     setVisualBackground(question.visualConfig?.background || 'playful');
     setVisualAutoPlay(question.visualConfig?.autoPlay ?? true);
 
+    if (question.type === 'true_false') {
+      const isFalse = question.correctIndex === 1 || (question.options && question.options[question.correctIndex]?.toLowerCase() === 'false');
+      setCorrectIndex(isFalse ? 1 : 0);
+      setOptions(['True', 'False']);
+    } else if (question.type === 'select_objects') {
+      setSelectObjectsGoal(Number(question.openBoxAnswer || question.options?.[0]) || 4);
+    }
+
     if (question.matchPairs && question.matchPairs.length) {
       setMatchPairs([...question.matchPairs]);
     } else if (question.type === 'match_making') {
-      setMatchPairs([
-        { left: '🐱 Cat', right: 'Meow' },
-        { left: '🐶 Dog', right: 'Woof' },
-        { left: '🐮 Cow', right: 'Moo' }
-      ]);
+      if (question.options && question.options.some(o => o.includes('->'))) {
+        const parsed = question.options.filter(o => o.includes('->')).map(o => {
+          const parts = o.split('->').map(s => s.trim());
+          return { left: parts[0] || '', right: parts[1] || '' };
+        });
+        setMatchPairs(parsed.length ? parsed : [
+          { left: '🐱 Cat', right: 'Meow' },
+          { left: '🐶 Dog', right: 'Woof' },
+          { left: '🐮 Cow', right: 'Moo' }
+        ]);
+      } else {
+        setMatchPairs([
+          { left: '🐱 Cat', right: 'Meow' },
+          { left: '🐶 Dog', right: 'Woof' },
+          { left: '🐮 Cow', right: 'Moo' }
+        ]);
+      }
     }
 
     if (question.dragItems && question.dragItems.length) {
       setDragItems([...question.dragItems]);
     } else if (question.type === 'drag_and_drop') {
-      setDragItems([
-        { item: '🍎 Apple', target: '🧺 Fruit Basket' },
-        { item: '🚗 Toy Car', target: '🧸 Toy Box' },
-        { item: '🍌 Banana', target: '🧺 Fruit Basket' }
-      ]);
+      if (question.options && question.options.some(o => o.includes('->'))) {
+        const parsed = question.options.filter(o => o.includes('->')).map(o => {
+          const parts = o.split('->').map(s => s.trim());
+          return { item: parts[0] || '', target: parts[1] || '' };
+        });
+        setDragItems(parsed.length ? parsed : [
+          { item: '🍎 Apple', target: '🧺 Fruit Basket' },
+          { item: '🚗 Toy Car', target: '🧸 Toy Box' },
+          { item: '🍌 Banana', target: '🧺 Fruit Basket' }
+        ]);
+      } else {
+        setDragItems([
+          { item: '🍎 Apple', target: '🧺 Fruit Basket' },
+          { item: '🚗 Toy Car', target: '🧸 Toy Box' },
+          { item: '🍌 Banana', target: '🧺 Fruit Basket' }
+        ]);
+      }
     }
 
     if (question.orderSequence && question.orderSequence.length) {
@@ -198,7 +233,8 @@ export default function QuestionEditModal({ question, isOpen, onClose, onSave }:
       };
     }
 
-    let finalOptions = options.map(o => o.trim());
+    let finalOptions = options.map(o => o.trim()).filter(Boolean);
+    if (finalOptions.length === 0) finalOptions = ['Option 1', 'Option 2'];
     let finalCorrectIndex = correctIndex;
     let finalOpenAnswer: string | undefined = undefined;
 
@@ -206,6 +242,13 @@ export default function QuestionEditModal({ question, isOpen, onClose, onSave }:
       finalOptions = [openAnswer.trim()];
       finalCorrectIndex = 0;
       finalOpenAnswer = openAnswer.trim();
+    } else if (type === 'true_false') {
+      finalOptions = ['True', 'False'];
+      finalCorrectIndex = correctIndex === 1 ? 1 : 0;
+    } else if (type === 'select_objects') {
+      finalOptions = [String(selectObjectsGoal)];
+      finalCorrectIndex = 0;
+      finalOpenAnswer = String(selectObjectsGoal);
     } else if (type === 'match_making') {
       finalOptions = matchPairs.map(p => `${p.left.trim()} -> ${p.right.trim()}`);
       finalCorrectIndex = 0;
@@ -214,6 +257,9 @@ export default function QuestionEditModal({ question, isOpen, onClose, onSave }:
       finalCorrectIndex = 0;
     } else if (type === 'ordering') {
       finalOptions = orderSequence.map(s => s.trim());
+      finalCorrectIndex = 0;
+    } else if (type === 'sorting') {
+      finalOptions = sortBuckets.map(b => `${b.bucketName}: ${b.items.join(', ')}`);
       finalCorrectIndex = 0;
     }
 
@@ -326,7 +372,47 @@ export default function QuestionEditModal({ question, isOpen, onClose, onSave }:
                 Question Type
                 <select
                   value={type}
-                  onChange={e => setType(e.target.value as QuestionType)}
+                  onChange={e => {
+                    const nextType = e.target.value as QuestionType;
+                    setType(nextType);
+                    if (nextType === 'true_false') {
+                      setOptions(['True', 'False']);
+                      if (correctIndex > 1) setCorrectIndex(0);
+                    } else if (nextType === 'open_box' || nextType === 'fill_blank') {
+                      if (!openAnswer && options[correctIndex]) setOpenAnswer(options[correctIndex]);
+                    } else if (nextType === 'match_making') {
+                      if (!matchPairs || matchPairs.length === 0) {
+                        setMatchPairs([
+                          { left: '🐱 Cat', right: 'Meow' },
+                          { left: '🐶 Dog', right: 'Woof' },
+                          { left: '🐮 Cow', right: 'Moo' }
+                        ]);
+                      }
+                    } else if (nextType === 'drag_and_drop') {
+                      if (!dragItems || dragItems.length === 0) {
+                        setDragItems([
+                          { item: '🍎 Apple', target: '🧺 Fruit Basket' },
+                          { item: '🚗 Toy Car', target: '🧸 Toy Box' },
+                          { item: '🍌 Banana', target: '🧺 Fruit Basket' }
+                        ]);
+                      }
+                    } else if (nextType === 'ordering') {
+                      if (!orderSequence || orderSequence.length === 0) {
+                        setOrderSequence(['1', '2', '3', '4']);
+                      }
+                    } else if (nextType === 'sorting') {
+                      if (!sortBuckets || sortBuckets.length === 0) {
+                        setSortBuckets([
+                          { bucketName: '🧺 Fruit Basket', items: ['🍎 Apple', '🍌 Banana', '🍓 Berry'] },
+                          { bucketName: '🧸 Toy Box', items: ['🚗 Toy Car', '⚽ Ball', '🎈 Balloon'] }
+                        ]);
+                      }
+                    } else {
+                      if (!options || options.length < 2) {
+                        setOptions(['Option A', 'Option B', 'Option C', 'Option D']);
+                      }
+                    }
+                  }}
                   className="w-full mt-1 p-2 rounded-xl border border-stone-200 bg-white font-semibold outline-none"
                 >
                   {TYPES.map(t => (
@@ -615,15 +701,200 @@ export default function QuestionEditModal({ question, isOpen, onClose, onSave }:
                   ))}
                 </div>
               </div>
+            ) : type === 'true_false' ? (
+              /* TRUE / FALSE BUILDER */
+              <div className="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="font-bold text-emerald-950 text-xs flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    True / False Answer Selection
+                  </div>
+                  <div className="text-[10px] text-emerald-700">
+                    Click the correct answer statement below
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCorrectIndex(0);
+                      setOptions(['True', 'False']);
+                    }}
+                    className={`p-3.5 rounded-2xl border-2 text-center transition-all cursor-pointer font-bold flex flex-col items-center justify-center gap-1.5 ${
+                      correctIndex === 0
+                        ? 'bg-emerald-100 border-emerald-500 text-emerald-950 ring-3 ring-emerald-300 shadow-xs'
+                        : 'bg-white border-stone-200 text-stone-700 hover:border-emerald-300'
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center text-sm font-black shadow-xs">
+                      ✓
+                    </div>
+                    <span className="text-sm font-black">TRUE</span>
+                    <span className="text-[10px] font-semibold text-stone-500">
+                      {correctIndex === 0 ? '★ Correct Answer' : 'Click to set correct'}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCorrectIndex(1);
+                      setOptions(['True', 'False']);
+                    }}
+                    className={`p-3.5 rounded-2xl border-2 text-center transition-all cursor-pointer font-bold flex flex-col items-center justify-center gap-1.5 ${
+                      correctIndex === 1
+                        ? 'bg-rose-100 border-rose-500 text-rose-950 ring-3 ring-rose-300 shadow-xs'
+                        : 'bg-white border-stone-200 text-stone-700 hover:border-rose-300'
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-rose-500 text-white flex items-center justify-center text-sm font-black shadow-xs">
+                      ✕
+                    </div>
+                    <span className="text-sm font-black">FALSE</span>
+                    <span className="text-[10px] font-semibold text-stone-500">
+                      {correctIndex === 1 ? '★ Correct Answer' : 'Click to set correct'}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            ) : type === 'select_objects' ? (
+              /* SELECT OBJECTS (TAP TO COUNT) BUILDER */
+              <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-bold text-amber-950 text-xs flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                      Select Objects (Tap to Count Goal)
+                    </div>
+                    <div className="text-[10px] text-amber-700 mt-0.5">
+                      Define the target number of objects the student needs to tap or count.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white p-3 rounded-xl border border-amber-200">
+                  <div>
+                    <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider block mb-1">
+                      Target Count Goal
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="20"
+                      value={selectObjectsGoal}
+                      onChange={e => setSelectObjectsGoal(Number(e.target.value) || 1)}
+                      className="w-full p-2 rounded-lg border border-stone-200 text-sm font-bold outline-none focus:border-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider block mb-1">
+                      Objects to Count (Emojis / Badges)
+                    </label>
+                    <input
+                      value={visualObjects || visualClipart}
+                      onChange={e => {
+                        setVisualObjects(e.target.value);
+                        if (!visualClipart) setVisualClipart(e.target.value);
+                      }}
+                      placeholder="e.g. 🍎 🍎 🍎 🍎 or 🐶|🐶|🐶"
+                      className="w-full p-2 rounded-lg border border-stone-200 text-sm font-bold outline-none focus:border-amber-400"
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : type === 'sorting' ? (
+              /* SORTING INTO BUCKETS BUILDER */
+              <div className="p-3.5 rounded-2xl bg-teal-50/60 border border-teal-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-bold text-teal-950 text-xs flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+                      Sorting Buckets & Items
+                    </div>
+                    <div className="text-[10px] text-teal-700 mt-0.5">
+                      Configure target buckets and the items assigned to each bucket.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSortBuckets(prev => [...prev, { bucketName: `Bucket ${prev.length + 1}`, items: [] }])}
+                    className="px-2 py-1 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold text-[11px] flex items-center gap-1 cursor-pointer transition shadow-2xs"
+                  >
+                    + Add Bucket
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {sortBuckets.map((bucket, bIdx) => (
+                    <div key={bIdx} className="p-3 bg-white rounded-xl border border-teal-200 space-y-2 shadow-2xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-1">
+                          <span className="font-black text-xs text-teal-800">
+                            Bucket #{bIdx + 1}:
+                          </span>
+                          <input
+                            value={bucket.bucketName}
+                            onChange={e => {
+                              const next = [...sortBuckets];
+                              next[bIdx].bucketName = e.target.value;
+                              setSortBuckets(next);
+                            }}
+                            placeholder="Bucket name (e.g. 🧺 Fruit Basket)"
+                            className="flex-1 p-1.5 rounded-lg border border-stone-200 text-xs font-bold outline-none focus:border-teal-400"
+                          />
+                        </div>
+                        {sortBuckets.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setSortBuckets(prev => prev.filter((_, i) => i !== bIdx))}
+                            className="text-stone-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition"
+                            title="Delete bucket"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider block mb-1">
+                          Assigned Items (comma-separated):
+                        </label>
+                        <input
+                          value={bucket.items.join(', ')}
+                          onChange={e => {
+                            const next = [...sortBuckets];
+                            next[bIdx].items = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                            setSortBuckets(next);
+                          }}
+                          placeholder="e.g. 🍎 Apple, 🍌 Banana, 🍓 Berry"
+                          className="w-full p-2 rounded-lg border border-stone-200 text-xs font-semibold outline-none focus:border-teal-400"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : (
-              /* MULTIPLE CHOICE / IMAGE CHOICE / TRUE FALSE BUILDER */
+              /* MULTIPLE CHOICE / STANDARD OPTIONS BUILDER */
               <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div className="font-bold text-stone-900 text-xs">
                     Answer Options (Select the correct radio button)
                   </div>
-                  <div className="text-[10px] text-stone-500">
-                    Radio button indicates the correct answer
+                  <div className="flex items-center gap-2">
+                    <div className="text-[10px] text-stone-500">
+                      Radio button indicates correct answer
+                    </div>
+                    {options.length < 6 && (
+                      <button
+                        type="button"
+                        onClick={() => setOptions(prev => [...prev, ''])}
+                        className="px-2 py-0.5 rounded-md bg-stone-200 hover:bg-stone-300 text-stone-800 text-[10px] font-bold cursor-pointer"
+                      >
+                        + Add Option
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -662,6 +933,22 @@ export default function QuestionEditModal({ question, isOpen, onClose, onSave }:
                           title="Clear option"
                         >
                           ✕
+                        </button>
+                      )}
+                      {options.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = options.filter((_, idx) => idx !== i);
+                            setOptions(next);
+                            if (correctIndex >= next.length) {
+                              setCorrectIndex(0);
+                            }
+                          }}
+                          className="text-stone-300 hover:text-rose-600 p-1 rounded hover:bg-rose-50 transition"
+                          title="Remove option"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       )}
                     </div>

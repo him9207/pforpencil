@@ -399,17 +399,26 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
 
   const downloadExcelMasterWorkbook = () => {
     const curObj = cm.curricula.find(c => c.id === curriculumId);
+    const targetGrdCode = selectedGrade?.id || 'GRD_G1';
+    const targetGrdName = selectedGrade?.name || 'Grade 1';
+    const cleanGrdName = targetGrdName.toLowerCase().replace(/\s+/g, '_');
     const blob = generateQuestionMasterExcel({
-      curriculumCode: curObj?.code || 'CUR-VCAA20',
+      curriculumCode: curObj?.code || curObj?.id || 'CUR-VCAA20',
       subjectCode: selectedSubject?.id || 'SUB_MTH',
-      gradeCode: selectedGrade?.id || 'GRD_G1',
+      gradeCode: targetGrdCode,
       categoryCode: selectedCategory?.code || 'CAT-NUM',
-      skillCode: selectedSkill?.code || 'SK-NUM-01'
+      skillCode: selectedSkill?.code || 'SK-NUM-01',
+      targetGradeName: targetGrdName,
+      masterCategories: categoryMasters,
+      masterSkills: skillMasters,
+      gradesList: grades,
+      subjectsList: subjects,
+      curriculaList: cm.curricula
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'pforpencil_grade1_all_types_master_workbook.xlsx';
+    a.download = `pforpencil_${cleanGrdName}_all_types_master_workbook.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -639,7 +648,12 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
           defaultSkillName: selectedSkill?.name,
           defaultSkillCode: selectedSkill?.code,
           defaultCurriculumReference: selectedSkill?.curriculumReference,
-          useSelectedHierarchy: useSelectedForCsv
+          useSelectedHierarchy: useSelectedForCsv,
+          masterCategories: categoryMasters,
+          masterSkills: skillMasters,
+          gradesList: grades,
+          subjectsList: subjects,
+          curriculaList: cm.curricula
         });
         setCsvErrors(result.errors);
         setParsed(result.questions);
@@ -1513,7 +1527,7 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
           <span className="text-[10px] bg-emerald-600 text-white px-2.5 py-0.5 rounded-full font-bold shadow-xs">Standard Format: Excel (.xlsx)</span>
         </div>
         <p className="text-[11px] text-emerald-900 mt-1 leading-relaxed">
-          Standardized <strong>Microsoft Excel (.xlsx)</strong> workbook with 100 Grade 1 questions across all 10 question types, instructions, and full Clipart Library references.
+          Standardized <strong>Microsoft Excel (.xlsx)</strong> workbook with 100 sample questions for <strong>{selectedGrade?.name || 'Grade 1'}</strong> across all 10 question types, complete instructions, dynamic category/skill code mappings, and full Clipart Library references.
           You never need to embed or paste image files: just reference clipart names like <code>apple</code>, <code>star</code>, <code>cookie</code>, or <code>car</code>!
         </p>
       </div>
@@ -1524,7 +1538,7 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
         </div>
         <div className="flex flex-wrap gap-2.5">
           <button onClick={downloadExcelMasterWorkbook} className="px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-xs transition flex items-center gap-2">
-            <FileSpreadsheet className="w-4 h-4" /> Download Grade 1 Master Excel Workbook (100 Sample Questions & Clipart Catalog)
+            <FileSpreadsheet className="w-4 h-4" /> Download {selectedGrade?.name || 'Grade 1'} Master Excel Workbook (100 Sample Questions & Full Catalog)
           </button>
         </div>
       </div>

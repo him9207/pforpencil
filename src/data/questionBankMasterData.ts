@@ -338,6 +338,92 @@ const STANDARD_CURRICULUM_TEMPLATES: Record<string, CurriculumStandardTemplate[]
       skills: [
         { name: 'Perimeter & Area', code: 'SK-GEO-04' }
       ]
+    },
+    {
+      category: 'Word Problems & Data',
+      categoryCode: 'CAT-DATA',
+      skills: [
+        { name: 'Reading Bar Graphs', code: 'SK-DATA-01' },
+        { name: 'Two-Step Word Problems', code: 'SK-DATA-02' }
+      ]
+    }
+  ],
+  grade4: [
+    {
+      category: 'Multi-Digit Operations',
+      categoryCode: 'CAT-OPS',
+      skills: [
+        { name: 'Multi-Digit Multiplication', code: 'SK-OPS-04' },
+        { name: 'Long Division with Quotients', code: 'SK-OPS-05' }
+      ]
+    },
+    {
+      category: 'Fractions & Decimals',
+      categoryCode: 'CAT-FRAC',
+      skills: [
+        { name: 'Adding Fractions with Like Denominators', code: 'SK-FRAC-04' },
+        { name: 'Decimals and Tenths/Hundredths', code: 'SK-FRAC-05' }
+      ]
+    },
+    {
+      category: 'Angles & Geometry',
+      categoryCode: 'CAT-GEO',
+      skills: [
+        { name: 'Measuring Angles (Protractor)', code: 'SK-GEO-05' },
+        { name: 'Classifying Triangles and Quadrilaterals', code: 'SK-GEO-06' }
+      ]
+    }
+  ],
+  grade5: [
+    {
+      category: 'Fractions & Operations',
+      categoryCode: 'CAT-FRAC',
+      skills: [
+        { name: 'Adding & Subtracting Unlike Fractions', code: 'SK-FRAC-06' },
+        { name: 'Multiplying Fractions', code: 'SK-FRAC-07' }
+      ]
+    },
+    {
+      category: 'Decimals & Percentages',
+      categoryCode: 'CAT-DEC',
+      skills: [
+        { name: 'Decimal Multiplication and Division', code: 'SK-DEC-01' },
+        { name: 'Introduction to Percentages', code: 'SK-DEC-02' }
+      ]
+    },
+    {
+      category: 'Volume & Measurement',
+      categoryCode: 'CAT-MEAS',
+      skills: [
+        { name: 'Volume of Rectangular Prisms', code: 'SK-MEAS-01' },
+        { name: 'Metric Unit Conversions', code: 'SK-MEAS-02' }
+      ]
+    }
+  ],
+  grade6: [
+    {
+      category: 'Ratios & Proportions',
+      categoryCode: 'CAT-RATIO',
+      skills: [
+        { name: 'Understanding Ratios and Unit Rates', code: 'SK-RAT-01' },
+        { name: 'Solving Proportions and Percent Problems', code: 'SK-RAT-02' }
+      ]
+    },
+    {
+      category: 'Algebraic Expressions & Equations',
+      categoryCode: 'CAT-ALG',
+      skills: [
+        { name: 'Writing Algebraic Expressions', code: 'SK-ALG-01' },
+        { name: 'One-Step Linear Equations', code: 'SK-ALG-02' }
+      ]
+    },
+    {
+      category: 'Negative Numbers & Coordinate Plane',
+      categoryCode: 'CAT-NUM',
+      skills: [
+        { name: 'Integers and Absolute Value', code: 'SK-NUM-04' },
+        { name: 'Four-Quadrant Coordinate Graphing', code: 'SK-NUM-05' }
+      ]
     }
   ]
 };
@@ -367,10 +453,13 @@ function ensureCurriculumStandards(data: QuestionBankMasterData, grades: Curricu
     const gradeNameLower = grade.name.toLowerCase();
     let templateKey: string | null = null;
     if (gradeNameLower.includes('pre')) templateKey = 'preschool';
-    else if (gradeNameLower.includes('found')) templateKey = 'foundation';
+    else if (gradeNameLower.includes('found') || gradeNameLower.includes('kinder')) templateKey = 'foundation';
     else if (gradeNameLower.includes('1') || gradeNameLower.includes('one')) templateKey = 'grade1';
     else if (gradeNameLower.includes('2') || gradeNameLower.includes('two')) templateKey = 'grade2';
     else if (gradeNameLower.includes('3') || gradeNameLower.includes('three')) templateKey = 'grade3';
+    else if (gradeNameLower.includes('4') || gradeNameLower.includes('four')) templateKey = 'grade4';
+    else if (gradeNameLower.includes('5') || gradeNameLower.includes('five')) templateKey = 'grade5';
+    else if (gradeNameLower.includes('6') || gradeNameLower.includes('six')) templateKey = 'grade6';
 
     if (!templateKey || !STANDARD_CURRICULUM_TEMPLATES[templateKey]) return;
 

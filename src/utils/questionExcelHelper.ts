@@ -8,11 +8,7 @@ export interface ParsedExcelResult {
   warnings: string[];
 }
 
-/**
- * Generate a complete, teacher-friendly Excel Workbook (.xlsx)
- * with Clipart Library, Master Codes, and Ready-to-Test Question Types.
- */
-export function generateQuestionMasterExcel(options: {
+export interface ExcelGenerationOptions {
   countryCode?: string;
   regionCode?: string;
   curriculumCode?: string;
@@ -20,7 +16,242 @@ export function generateQuestionMasterExcel(options: {
   gradeCode?: string;
   categoryCode?: string;
   skillCode?: string;
-}): Blob {
+  targetGradeName?: string;
+  masterCategories?: any[];
+  masterSkills?: any[];
+  gradesList?: any[];
+  subjectsList?: any[];
+  curriculaList?: any[];
+}
+
+export const MASTER_CATEGORY_SKILL_CATALOG = [
+  // Numbers & Quantities
+  { catCode: 'CAT-NUM', catName: 'Numbers & Quantities', skCode: 'SK-NUM-01', skName: 'Recognizing Numbers & Counting', subject: 'SUB_MTH', grades: 'Preschool, Foundation, Grade 1' },
+  { catCode: 'CAT-NUM', catName: 'Numbers & Quantities', skCode: 'SK-NUM-02', skName: 'Number Sequencing & Order', subject: 'SUB_MTH', grades: 'Preschool, Foundation, Grade 1' },
+  { catCode: 'CAT-NUM', catName: 'Numbers & Quantities', skCode: 'SK-NUM-03', skName: 'Number Line Counting', subject: 'SUB_MTH', grades: 'Preschool, Foundation, Grade 1, Grade 2' },
+  { catCode: 'CAT-NUM', catName: 'Numbers & Quantities', skCode: 'SK-NUM-04', skName: 'Integers and Absolute Value', subject: 'SUB_MTH', grades: 'Grade 6' },
+  { catCode: 'CAT-NUM', catName: 'Numbers & Quantities', skCode: 'SK-NUM-05', skName: 'Four-Quadrant Coordinate Graphing', subject: 'SUB_MTH', grades: 'Grade 6' },
+  // Counting & Cardinality
+  { catCode: 'CAT-CNT', catName: 'Counting & Cardinality', skCode: 'SK-CNT-01', skName: 'Counting 1 to 5', subject: 'SUB_MTH', grades: 'Preschool' },
+  { catCode: 'CAT-CNT', catName: 'Counting & Cardinality', skCode: 'SK-CNT-02', skName: 'One-to-One Correspondence', subject: 'SUB_MTH', grades: 'Preschool' },
+  { catCode: 'CAT-CNT', catName: 'Counting & Cardinality', skCode: 'SK-CNT-03', skName: 'Counting Objects to 5', subject: 'SUB_MTH', grades: 'Preschool' },
+  { catCode: 'CAT-CNT', catName: 'Counting & Cardinality', skCode: 'SK-CNT-04', skName: 'Counting 1 to 10', subject: 'SUB_MTH', grades: 'Foundation' },
+  { catCode: 'CAT-CNT', catName: 'Counting & Cardinality', skCode: 'SK-CNT-05', skName: 'Counting Objects to 10', subject: 'SUB_MTH', grades: 'Foundation' },
+  { catCode: 'CAT-CNT', catName: 'Counting & Cardinality', skCode: 'SK-CNT-06', skName: 'Comparing Quantities', subject: 'SUB_MTH', grades: 'Foundation' },
+  // Addition & Subtraction / Operations
+  { catCode: 'CAT-OPS', catName: 'Operations & Algebraic Thinking', skCode: 'SK-OPS-01', skName: 'Basic Addition within 5', subject: 'SUB_MTH', grades: 'Foundation, Grade 1' },
+  { catCode: 'CAT-OPS', catName: 'Operations & Algebraic Thinking', skCode: 'SK-OPS-02', skName: 'Basic Subtraction within 5', subject: 'SUB_MTH', grades: 'Foundation, Grade 1' },
+  { catCode: 'CAT-OPS', catName: 'Operations & Algebraic Thinking', skCode: 'SK-OPS-03', skName: 'Addition within 10', subject: 'SUB_MTH', grades: 'Foundation, Grade 1' },
+  { catCode: 'CAT-OPS', catName: 'Multi-Digit Operations', skCode: 'SK-OPS-04', skName: 'Multi-Digit Multiplication', subject: 'SUB_MTH', grades: 'Grade 4' },
+  { catCode: 'CAT-OPS', catName: 'Multi-Digit Operations', skCode: 'SK-OPS-05', skName: 'Long Division with Quotients', subject: 'SUB_MTH', grades: 'Grade 4' },
+  { catCode: 'CAT-ADD', catName: 'Addition & Subtraction', skCode: 'SK-ADD-01', skName: 'Addition within 20', subject: 'SUB_MTH', grades: 'Grade 1, Grade 2' },
+  { catCode: 'CAT-ADD', catName: 'Addition & Subtraction', skCode: 'SK-ADD-02', skName: 'Subtraction within 20', subject: 'SUB_MTH', grades: 'Grade 1, Grade 2' },
+  { catCode: 'CAT-ADD', catName: 'Addition & Subtraction', skCode: 'SK-ADD-03', skName: 'Two-Digit Addition', subject: 'SUB_MTH', grades: 'Grade 2, Grade 3' },
+  { catCode: 'CAT-ADD', catName: 'Addition & Subtraction', skCode: 'SK-ADD-04', skName: 'Word Problems', subject: 'SUB_MTH', grades: 'Grade 2, Grade 3' },
+  // Place Value
+  { catCode: 'CAT-PV', catName: 'Place Value & Base Ten', skCode: 'SK-PV-01', skName: 'Tens and Ones', subject: 'SUB_MTH', grades: 'Grade 1, Grade 2' },
+  { catCode: 'CAT-PV', catName: 'Place Value & Base Ten', skCode: 'SK-PV-02', skName: 'Hundreds, Tens and Ones', subject: 'SUB_MTH', grades: 'Grade 2, Grade 3' },
+  // Multiplication & Division
+  { catCode: 'CAT-MUL', catName: 'Multiplication & Division', skCode: 'SK-MUL-01', skName: 'Repeated Addition', subject: 'SUB_MTH', grades: 'Grade 2' },
+  { catCode: 'CAT-MUL', catName: 'Multiplication & Division', skCode: 'SK-MUL-02', skName: 'Equal Groups', subject: 'SUB_MTH', grades: 'Grade 2, Grade 3' },
+  { catCode: 'CAT-MUL', catName: 'Multiplication & Division', skCode: 'SK-MUL-03', skName: 'Times Tables Mastery', subject: 'SUB_MTH', grades: 'Grade 3, Grade 4' },
+  { catCode: 'CAT-MUL', catName: 'Multiplication & Division', skCode: 'SK-MUL-04', skName: 'Division with Remainders', subject: 'SUB_MTH', grades: 'Grade 3, Grade 4' },
+  // Fractions
+  { catCode: 'CAT-FRAC', catName: 'Fractions Foundations', skCode: 'SK-FRAC-01', skName: 'Halves and Quarters', subject: 'SUB_MTH', grades: 'Grade 2' },
+  { catCode: 'CAT-FRAC', catName: 'Fractions', skCode: 'SK-FRAC-02', skName: 'Visual Fractions', subject: 'SUB_MTH', grades: 'Grade 3' },
+  { catCode: 'CAT-FRAC', catName: 'Fractions', skCode: 'SK-FRAC-03', skName: 'Equivalent Fractions', subject: 'SUB_MTH', grades: 'Grade 3, Grade 4' },
+  { catCode: 'CAT-FRAC', catName: 'Fractions & Decimals', skCode: 'SK-FRAC-04', skName: 'Adding Fractions with Like Denominators', subject: 'SUB_MTH', grades: 'Grade 4' },
+  { catCode: 'CAT-FRAC', catName: 'Fractions & Decimals', skCode: 'SK-FRAC-05', skName: 'Decimals and Tenths/Hundredths', subject: 'SUB_MTH', grades: 'Grade 4' },
+  { catCode: 'CAT-FRAC', catName: 'Fractions & Operations', skCode: 'SK-FRAC-06', skName: 'Adding & Subtracting Unlike Fractions', subject: 'SUB_MTH', grades: 'Grade 5' },
+  { catCode: 'CAT-FRAC', catName: 'Fractions & Operations', skCode: 'SK-FRAC-07', skName: 'Multiplying Fractions', subject: 'SUB_MTH', grades: 'Grade 5' },
+  // Geometry & Shapes
+  { catCode: 'CAT-SHP', catName: 'Shapes & Colors', skCode: 'SK-SHP-01', skName: 'Circle Recognition', subject: 'SUB_MTH', grades: 'Preschool' },
+  { catCode: 'CAT-SHP', catName: 'Shapes & Colors', skCode: 'SK-SHP-02', skName: 'Shape Sorting', subject: 'SUB_MTH', grades: 'Preschool' },
+  { catCode: 'CAT-GEO', catName: 'Geometry & Shapes', skCode: 'SK-GEO-01', skName: 'Square vs Rectangle', subject: 'SUB_MTH', grades: 'Foundation, Grade 1' },
+  { catCode: 'CAT-GEO', catName: 'Geometry & Shapes', skCode: 'SK-GEO-02', skName: 'Identifying Triangles', subject: 'SUB_MTH', grades: 'Foundation, Grade 1' },
+  { catCode: 'CAT-GEO', catName: 'Geometry & Shapes', skCode: 'SK-GEO-03', skName: '2D and 3D Shapes', subject: 'SUB_MTH', grades: 'Grade 1, Grade 2' },
+  { catCode: 'CAT-GEO', catName: 'Geometry & Measurement', skCode: 'SK-GEO-04', skName: 'Perimeter & Area', subject: 'SUB_MTH', grades: 'Grade 3, Grade 4' },
+  { catCode: 'CAT-GEO', catName: 'Angles & Geometry', skCode: 'SK-GEO-05', skName: 'Measuring Angles (Protractor)', subject: 'SUB_MTH', grades: 'Grade 4' },
+  { catCode: 'CAT-GEO', catName: 'Angles & Geometry', skCode: 'SK-GEO-06', skName: 'Classifying Triangles and Quadrilaterals', subject: 'SUB_MTH', grades: 'Grade 4' },
+  // Patterns & Comparison
+  { catCode: 'CAT-PAT', catName: 'Patterns & Logic', skCode: 'SK-PAT-01', skName: 'AB Color Pattern', subject: 'SUB_MTH', grades: 'Preschool, Foundation' },
+  { catCode: 'CAT-PAT', catName: 'Patterns & Logic', skCode: 'SK-PAT-02', skName: 'Object Classification', subject: 'SUB_MTH', grades: 'Preschool, Foundation' },
+  { catCode: 'CAT-PAT', catName: 'Patterns & Logic', skCode: 'SK-PAT-03', skName: 'Number & Shape Patterns', subject: 'SUB_MTH', grades: 'Grade 1, Grade 2' },
+  { catCode: 'CAT-CMP', catName: 'Size & Comparison', skCode: 'SK-CMP-01', skName: 'Big vs Small', subject: 'SUB_MTH', grades: 'Preschool' },
+  { catCode: 'CAT-CMP', catName: 'Size & Comparison', skCode: 'SK-CMP-02', skName: 'Length Comparison', subject: 'SUB_MTH', grades: 'Preschool, Foundation' },
+  { catCode: 'CAT-CMP', catName: 'Comparison & Sorting', skCode: 'SK-CMP-03', skName: 'Greater Than / Less Than', subject: 'SUB_MTH', grades: 'Foundation, Grade 1' },
+  // Time & Measurement
+  { catCode: 'CAT-TIME', catName: 'Time & Measurement', skCode: 'SK-TIME-01', skName: 'Telling Time (Hour)', subject: 'SUB_MTH', grades: 'Preschool, Foundation' },
+  { catCode: 'CAT-TIME', catName: 'Time & Measurement', skCode: 'SK-TIME-02', skName: 'Reading Clocks to the Half Hour', subject: 'SUB_MTH', grades: 'Grade 1, Grade 2' },
+  { catCode: 'CAT-MNY', catName: 'Money & Currency', skCode: 'SK-MNY-01', skName: 'Coins and Notes Value', subject: 'SUB_MTH', grades: 'Grade 2, Grade 3' },
+  { catCode: 'CAT-MEAS', catName: 'Volume & Measurement', skCode: 'SK-MEAS-01', skName: 'Volume of Rectangular Prisms', subject: 'SUB_MTH', grades: 'Grade 5' },
+  { catCode: 'CAT-MEAS', catName: 'Volume & Measurement', skCode: 'SK-MEAS-02', skName: 'Metric Unit Conversions', subject: 'SUB_MTH', grades: 'Grade 5' },
+  // Decimals & Percentages & Ratios
+  { catCode: 'CAT-DEC', catName: 'Decimals & Percentages', skCode: 'SK-DEC-01', skName: 'Decimal Multiplication and Division', subject: 'SUB_MTH', grades: 'Grade 5' },
+  { catCode: 'CAT-DEC', catName: 'Decimals & Percentages', skCode: 'SK-DEC-02', skName: 'Introduction to Percentages', subject: 'SUB_MTH', grades: 'Grade 5' },
+  { catCode: 'CAT-RATIO', catName: 'Ratios & Proportions', skCode: 'SK-RAT-01', skName: 'Understanding Ratios and Unit Rates', subject: 'SUB_MTH', grades: 'Grade 6' },
+  { catCode: 'CAT-RATIO', catName: 'Ratios & Proportions', skCode: 'SK-RAT-02', skName: 'Solving Proportions and Percent Problems', subject: 'SUB_MTH', grades: 'Grade 6' },
+  { catCode: 'CAT-ALG', catName: 'Algebraic Expressions & Equations', skCode: 'SK-ALG-01', skName: 'Writing Algebraic Expressions', subject: 'SUB_MTH', grades: 'Grade 6' },
+  { catCode: 'CAT-ALG', catName: 'Algebraic Expressions & Equations', skCode: 'SK-ALG-02', skName: 'One-Step Linear Equations', subject: 'SUB_MTH', grades: 'Grade 6' },
+  { catCode: 'CAT-DATA', catName: 'Word Problems & Data', skCode: 'SK-DATA-01', skName: 'Reading Bar Graphs', subject: 'SUB_MTH', grades: 'Grade 3' },
+  { catCode: 'CAT-DATA', catName: 'Word Problems & Data', skCode: 'SK-DATA-02', skName: 'Two-Step Word Problems', subject: 'SUB_MTH', grades: 'Grade 3' },
+  // Science & Nature
+  { catCode: 'CAT-SCI', catName: 'Living Things & Science', skCode: 'SK-SCI-01', skName: 'Animal & Nature Characteristics', subject: 'SUB_SCI', grades: 'Preschool, Foundation, Grade 1' },
+  { catCode: 'CAT-SCI', catName: 'Living Things & Science', skCode: 'SK-SCI-02', skName: 'Habitats & Living Things', subject: 'SUB_SCI', grades: 'Preschool, Foundation, Grade 1' },
+  { catCode: 'CAT-BIO', catName: 'Living Things & Nature', skCode: 'SK-BIO-01', skName: 'Baby Animals', subject: 'SUB_SCI', grades: 'Preschool' },
+  { catCode: 'CAT-BIO', catName: 'Living Things & Nature', skCode: 'SK-BIO-02', skName: 'Animal Habitats', subject: 'SUB_SCI', grades: 'Preschool' },
+  { catCode: 'CAT-BIO', catName: 'Living Things & Nature', skCode: 'SK-BIO-03', skName: 'Animal Families', subject: 'SUB_SCI', grades: 'Preschool' },
+  { catCode: 'CAT-BIO', catName: 'Living Things & Nature', skCode: 'SK-BIO-04', skName: 'Animal Diets', subject: 'SUB_SCI', grades: 'Preschool' },
+  // English & Phonics
+  { catCode: 'CAT-ENG', catName: 'English & Phonics', skCode: 'SK-ENG-01', skName: 'Letter Sounds & Phonics', subject: 'SUB_ENG', grades: 'Preschool, Foundation, Grade 1' },
+  { catCode: 'CAT-ENG', catName: 'English & Phonics', skCode: 'SK-ENG-02', skName: 'Vocabulary & Sight Words', subject: 'SUB_ENG', grades: 'Preschool, Foundation, Grade 1' },
+  // Art & Creativity
+  { catCode: 'CAT-ART', catName: 'Art & Creativity', skCode: 'SK-ART-01', skName: 'Color Mixing & Primary Colors', subject: 'SUB_ART', grades: 'Preschool, Foundation, Grade 1' },
+  { catCode: 'CAT-ART', catName: 'Art & Creativity', skCode: 'SK-ART-02', skName: 'Drawing Basic Shapes', subject: 'SUB_ART', grades: 'Foundation, Grade 1, Grade 2' }
+];
+
+export function resolveGradeMapping(raw: string, gradesList?: Array<{ id: string; name: string }>): { id: string; name: string } {
+  const trimmed = (raw || '').trim();
+  const lower = trimmed.toLowerCase().replace(/[\s_-]+/g, '');
+  
+  if (gradesList && gradesList.length > 0) {
+    const matched = gradesList.find(g => 
+      g.id.toLowerCase() === trimmed.toLowerCase() ||
+      g.name.toLowerCase() === trimmed.toLowerCase() ||
+      g.id.toLowerCase().replace(/[\s_-]+/g, '') === lower ||
+      g.name.toLowerCase().replace(/[\s_-]+/g, '') === lower
+    );
+    if (matched) return { id: matched.id, name: matched.name };
+  }
+
+  if (lower.includes('pre') || lower === 'pk' || lower === 'grdpre' || lower === 'grdprek' || lower === 'preschool') {
+    return { id: 'GRD_PRE_K', name: 'Preschool' };
+  }
+  if (lower.includes('found') || lower.includes('kinder') || lower === 'kg' || lower === 'fnd' || lower === 'grdkg' || lower === 'grdfnd') {
+    return { id: 'GRD_KG', name: 'Foundation' };
+  }
+  if (lower === 'grdg1' || lower === 'g1' || lower === 'grade1' || lower === '1' || lower === 'year1' || lower === 'class1') {
+    return { id: 'GRD_G1', name: 'Grade 1' };
+  }
+  if (lower === 'grdg2' || lower === 'g2' || lower === 'grade2' || lower === '2' || lower === 'year2' || lower === 'class2') {
+    return { id: 'GRD_G2', name: 'Grade 2' };
+  }
+  if (lower === 'grdg3' || lower === 'g3' || lower === 'grade3' || lower === '3' || lower === 'year3' || lower === 'class3') {
+    return { id: 'GRD_G3', name: 'Grade 3' };
+  }
+  if (lower === 'grdg4' || lower === 'g4' || lower === 'grade4' || lower === '4' || lower === 'year4' || lower === 'class4') {
+    return { id: 'GRD_G4', name: 'Grade 4' };
+  }
+  if (lower === 'grdg5' || lower === 'g5' || lower === 'grade5' || lower === '5' || lower === 'year5' || lower === 'class5') {
+    return { id: 'GRD_G5', name: 'Grade 5' };
+  }
+  if (lower === 'grdg6' || lower === 'g6' || lower === 'grade6' || lower === '6' || lower === 'year6' || lower === 'class6') {
+    return { id: 'GRD_G6', name: 'Grade 6' };
+  }
+
+  return { id: trimmed || 'GRD_G1', name: trimmed || 'Grade 1' };
+}
+
+export function resolveSubjectMapping(raw: string, subjectsList?: Array<{ id: string; name: string }>): { id: string; name: string } {
+  const trimmed = (raw || '').trim();
+  const lower = trimmed.toLowerCase();
+  if (subjectsList && subjectsList.length > 0) {
+    const matched = subjectsList.find(s => 
+      s.id.toLowerCase() === lower || s.name.toLowerCase() === lower
+    );
+    if (matched) return { id: matched.id, name: matched.name };
+  }
+  if (lower.includes('math') || lower === 'sub_mth') return { id: 'SUB_MTH', name: 'Mathematics' };
+  if (lower.includes('sci') || lower === 'sub_sci') return { id: 'SUB_SCI', name: 'Science' };
+  if (lower.includes('eng') || lower.includes('phon') || lower.includes('lang') || lower === 'sub_eng') return { id: 'SUB_ENG', name: 'English' };
+  if (lower.includes('art') || lower === 'sub_art') return { id: 'SUB_ART', name: 'Art' };
+  return { id: trimmed || 'SUB_MTH', name: trimmed || 'Mathematics' };
+}
+
+export function resolveCurriculumMapping(raw: string, curriculaList?: Array<{ id: string; code?: string; name: string }>): { id: string; code: string; name: string } {
+  const trimmed = (raw || '').trim();
+  const lower = trimmed.toLowerCase();
+  if (curriculaList && curriculaList.length > 0) {
+    const matched = curriculaList.find(c => 
+      c.id.toLowerCase() === lower || (c.code && c.code.toLowerCase() === lower) || c.name.toLowerCase() === lower
+    );
+    if (matched) return { id: matched.id, code: matched.code || matched.id, name: matched.name };
+  }
+  if (lower.includes('vcaa')) return { id: 'CUR-VCAA20', code: 'CUR-VCAA20', name: 'Victorian Curriculum 2.0 (Australia)' };
+  if (lower.includes('acara') || lower.includes('aust')) return { id: 'CUR-ACARA', code: 'CUR-ACARA', name: 'Australian Curriculum (ACARA)' };
+  if (lower.includes('ccss') || lower.includes('common core') || lower.includes('us')) return { id: 'CUR-CCSS', code: 'CUR-CCSS', name: 'Common Core (US)' };
+  if (lower.includes('cbse') || lower.includes('india')) return { id: 'CUR-CBSE', code: 'CUR-CBSE', name: 'CBSE (India)' };
+  if (lower.includes('uk') || lower.includes('national')) return { id: 'CUR-UKNC', code: 'CUR-UKNC', name: 'UK National Curriculum' };
+  if (lower.includes('pyp') || lower.includes('ib')) return { id: 'CUR-IBPYP', code: 'CUR-IBPYP', name: 'IB Primary Years Programme' };
+  if (lower.includes('ontario') || lower.includes('canada')) return { id: 'CUR-ON', code: 'CUR-ON', name: 'Ontario Curriculum (Canada)' };
+  return { id: trimmed || 'CUR-GLOBAL', code: trimmed || 'CUR-GLOBAL', name: trimmed || 'Global Standard Framework' };
+}
+
+export function resolveCategoryAndSkill(
+  catInput: string,
+  skInput: string,
+  gradeId?: string,
+  masterCategories?: any[],
+  masterSkills?: any[]
+): {
+  categoryId: string;
+  categoryCode: string;
+  categoryName: string;
+  skillId: string;
+  skillCode: string;
+  skillName: string;
+} {
+  const trimmedCat = (catInput || '').trim();
+  const trimmedSk = (skInput || '').trim();
+  const catLower = trimmedCat.toLowerCase();
+  const skLower = trimmedSk.toLowerCase();
+
+  // 1. Try matching in live master categories/skills if available
+  let matchedCat = masterCategories?.find(c => 
+    c.code?.toLowerCase() === catLower ||
+    c.id?.toLowerCase() === catLower ||
+    c.name?.toLowerCase() === catLower
+  );
+
+  let matchedSk = masterSkills?.find(s => 
+    s.code?.toLowerCase() === skLower ||
+    s.id?.toLowerCase() === skLower ||
+    s.name?.toLowerCase() === skLower
+  );
+
+  // 2. Try matching from comprehensive catalog
+  const catalogMatch = MASTER_CATEGORY_SKILL_CATALOG.find(entry => 
+    (entry.catCode.toLowerCase() === catLower || entry.catName.toLowerCase() === catLower) &&
+    (entry.skCode.toLowerCase() === skLower || entry.skName.toLowerCase() === skLower)
+  ) || MASTER_CATEGORY_SKILL_CATALOG.find(entry => 
+    entry.skCode.toLowerCase() === skLower || entry.skName.toLowerCase() === skLower
+  ) || MASTER_CATEGORY_SKILL_CATALOG.find(entry => 
+    entry.catCode.toLowerCase() === catLower || entry.catName.toLowerCase() === catLower
+  );
+
+  const categoryCode = matchedCat?.code || catalogMatch?.catCode || trimmedCat || 'CAT-NUM';
+  const categoryName = matchedCat?.name || catalogMatch?.catName || trimmedCat || 'Numbers & Quantities';
+  const categoryId = matchedCat?.id || `CAT-${categoryCode}`;
+
+  const skillCode = matchedSk?.code || catalogMatch?.skCode || trimmedSk || 'SK-NUM-01';
+  const skillName = matchedSk?.name || catalogMatch?.skName || trimmedSk || 'Recognizing Numbers & Counting';
+  const skillId = matchedSk?.id || `SKL-${categoryId}-${skillCode}`;
+
+  return {
+    categoryId,
+    categoryCode,
+    categoryName,
+    skillId,
+    skillCode,
+    skillName
+  };
+}
+
+/**
+ * Generate a complete, teacher-friendly Excel Workbook (.xlsx)
+ * with Clipart Library, Master Codes, and Ready-to-Test Question Types.
+ */
+export function generateQuestionMasterExcel(options: ExcelGenerationOptions = {}): Blob {
   const wb = XLSX.utils.book_new();
 
   // -------------------------------------------------------------
@@ -30,7 +261,7 @@ export function generateQuestionMasterExcel(options: {
     ['PforPencil Question Bank - Excel Master Template & Guide'],
     [''],
     ['HOW TO USE THIS EXCEL TEMPLATE:'],
-    ['1. Go to the "Questions" sheet to add or edit questions.'],
+    ['1. Go to the "Questions" sheet to add or edit questions for ANY Grade, Category, or Skill.'],
     ['2. For visual questions, you do NOT need to upload or paste images!'],
     ['   Simply use the "Clipart Reference" column with codes from the "Clipart_Library" sheet (e.g. "apple", "star", "cookie").'],
     ['3. Specify the "Visual Count" (e.g. 3) and "Animation" (bounce, pulse, pop, float, spin).'],
@@ -60,8 +291,10 @@ export function generateQuestionMasterExcel(options: {
     ['Question Type       : One of the supported question types listed above.'],
     ['Difficulty          : "Easy", "Medium", or "Hard".'],
     ['Curriculum Code     : Reference code from Master_Codes sheet (e.g. "CUR-VCAA20", "CUR-CCSS").'],
-    ['Subject Code        : e.g. "SUB_MTH", "SUB_ENG".'],
-    ['Grade Code          : e.g. "GRD_G1", "GRD_G2", "GRD_PRE_K".']
+    ['Subject Code        : Reference code (e.g. "SUB_MTH", "SUB_SCI", "SUB_ENG", "SUB_ART").'],
+    ['Grade Code          : Reference code (e.g. "GRD_PRE_K", "GRD_KG", "GRD_G1", "GRD_G2", "GRD_G3", "GRD_G4", "GRD_G5", "GRD_G6").'],
+    ['Category Code       : Category Code from Master_Codes sheet (e.g. "CAT-NUM", "CAT-ADD", "CAT-GEO").'],
+    ['Skill Code          : Skill Code from Master_Codes sheet (e.g. "SK-NUM-01", "SK-ADD-01").']
   ];
 
   const wsInstructions = XLSX.utils.aoa_to_sheet(instructionsData);
@@ -1182,75 +1415,113 @@ export function generateQuestionMasterExcel(options: {
   // -------------------------------------------------------------
   // Sheet 4: Master Reference Codes & Category/Skill Mappings
   // -------------------------------------------------------------
-  const masterRefData = [
-    ['CURRICULUM CODES', 'Curriculum Name', 'SUBJECT CODES', 'Subject Name', 'GRADE CODES', 'Grade Level'],
-    ['CUR-VCAA20', 'Victorian Curriculum 2.0 (Australia)', 'SUB_MTH', 'Mathematics', 'GRD_PRE_K', 'Pre-Kindergarten'],
-    ['CUR-ACARA', 'Australian Curriculum (ACARA)', 'SUB_ENG', 'English / Language Arts', 'GRD_KG', 'Kindergarten'],
-    ['CUR-CCSS', 'US Common Core State Standards', 'SUB_SCI', 'Science & Nature', 'GRD_G1', 'Grade 1'],
-    ['CUR-CBSE', 'CBSE (India)', 'SUB_ART', 'Art & Creativity', 'GRD_G2', 'Grade 2'],
-    ['CUR-UKNC', 'UK National Curriculum', '', '', 'GRD_G3', 'Grade 3'],
-    ['CUR-GLOBAL', 'Global Standard Framework', '', '', 'GRD_G4', 'Grade 4'],
-    ['', '', '', '', 'GRD_G5', 'Grade 5'],
-    ['', '', '', '', '', ''],
-    ['CATEGORY & SKILL CODE MAPPINGS', '', '', '', '', ''],
-    ['Category Code', 'Category Name', 'Skill Code', 'Skill Name', 'Subject', 'Target Grades'],
-    ['CAT-NUM', 'Numbers & Quantities', 'SK-NUM-01', 'Recognizing Numbers & Counting', 'SUB_MTH', 'Preschool, Foundation, Grade 1'],
-    ['CAT-NUM', 'Numbers & Quantities', 'SK-NUM-02', 'Number Sequencing & Order', 'SUB_MTH', 'Preschool, Foundation, Grade 1'],
-    ['CAT-NUM', 'Numbers & Quantities', 'SK-NUM-03', 'Number Line Counting', 'SUB_MTH', 'Preschool, Foundation, Grade 1, 2'],
-    ['CAT-ADD', 'Addition & Subtraction', 'SK-ADD-01', 'Addition within 20', 'SUB_MTH', 'Grade 1, Grade 2'],
-    ['CAT-ADD', 'Addition & Subtraction', 'SK-ADD-02', 'Subtraction within 20', 'SUB_MTH', 'Grade 1, Grade 2'],
-    ['CAT-ADD', 'Addition & Subtraction', 'SK-ADD-03', 'Two-Digit Addition', 'SUB_MTH', 'Grade 2, Grade 3'],
-    ['CAT-ADD', 'Addition & Subtraction', 'SK-ADD-04', 'Word Problems', 'SUB_MTH', 'Grade 2, Grade 3'],
-    ['CAT-CNT', 'Counting & Cardinality', 'SK-CNT-01', 'Counting 1 to 5', 'SUB_MTH', 'Preschool'],
-    ['CAT-CNT', 'Counting & Cardinality', 'SK-CNT-02', 'One-to-One Correspondence', 'SUB_MTH', 'Preschool'],
-    ['CAT-CNT', 'Counting & Cardinality', 'SK-CNT-03', 'Counting Objects to 5', 'SUB_MTH', 'Preschool'],
-    ['CAT-CNT', 'Counting & Cardinality', 'SK-CNT-04', 'Counting 1 to 10', 'SUB_MTH', 'Foundation'],
-    ['CAT-CNT', 'Counting & Cardinality', 'SK-CNT-05', 'Counting Objects to 10', 'SUB_MTH', 'Foundation'],
-    ['CAT-CNT', 'Counting & Cardinality', 'SK-CNT-06', 'Comparing Quantities', 'SUB_MTH', 'Foundation'],
-    ['CAT-OPS', 'Operations & Algebraic Thinking', 'SK-OPS-01', 'Basic Addition within 5', 'SUB_MTH', 'Foundation, Grade 1'],
-    ['CAT-OPS', 'Operations & Algebraic Thinking', 'SK-OPS-02', 'Basic Subtraction within 5', 'SUB_MTH', 'Foundation, Grade 1'],
-    ['CAT-OPS', 'Operations & Algebraic Thinking', 'SK-OPS-03', 'Addition within 10', 'SUB_MTH', 'Foundation, Grade 1'],
-    ['CAT-GEO', 'Geometry & Shapes', 'SK-GEO-01', '2D Shape Identification', 'SUB_MTH', 'Foundation, Grade 1'],
-    ['CAT-GEO', 'Geometry & Shapes', 'SK-GEO-02', 'Identifying Triangles & Polygons', 'SUB_MTH', 'Foundation, Grade 1'],
-    ['CAT-GEO', 'Geometry & Shapes', 'SK-GEO-03', '2D and 3D Shapes', 'SUB_MTH', 'Grade 1, Grade 2'],
-    ['CAT-GEO', 'Geometry & Shapes', 'SK-GEO-04', 'Perimeter & Area', 'SUB_MTH', 'Grade 3, Grade 4'],
-    ['CAT-PAT', 'Patterns & Logic', 'SK-PAT-01', 'AB Color Pattern', 'SUB_MTH', 'Preschool, Foundation'],
-    ['CAT-PAT', 'Patterns & Logic', 'SK-PAT-02', 'Object Classification', 'SUB_MTH', 'Preschool, Foundation'],
-    ['CAT-PAT', 'Patterns & Logic', 'SK-PAT-03', 'Number & Shape Patterns', 'SUB_MTH', 'Grade 1, Grade 2'],
-    ['CAT-CMP', 'Comparison & Sorting', 'SK-CMP-01', 'Big vs Small Comparison', 'SUB_MTH', 'Preschool'],
-    ['CAT-CMP', 'Comparison & Sorting', 'SK-CMP-02', 'Length & Height Comparison', 'SUB_MTH', 'Preschool, Foundation'],
-    ['CAT-CMP', 'Comparison & Sorting', 'SK-CMP-03', 'Greater Than / Less Than', 'SUB_MTH', 'Foundation, Grade 1'],
-    ['CAT-TIME', 'Time & Measurement', 'SK-TIME-01', 'Telling Time (Exact Hour)', 'SUB_MTH', 'Preschool, Foundation'],
-    ['CAT-TIME', 'Time & Measurement', 'SK-TIME-02', 'Reading Clocks to the Half Hour', 'SUB_MTH', 'Grade 1, Grade 2'],
-    ['CAT-PV', 'Place Value & Base Ten', 'SK-PV-01', 'Tens and Ones', 'SUB_MTH', 'Grade 1, Grade 2'],
-    ['CAT-PV', 'Place Value & Base Ten', 'SK-PV-02', 'Hundreds, Tens and Ones', 'SUB_MTH', 'Grade 2, Grade 3'],
-    ['CAT-MUL', 'Multiplication & Division', 'SK-MUL-01', 'Repeated Addition', 'SUB_MTH', 'Grade 2'],
-    ['CAT-MUL', 'Multiplication & Division', 'SK-MUL-02', 'Equal Groups', 'SUB_MTH', 'Grade 2, Grade 3'],
-    ['CAT-MUL', 'Multiplication & Division', 'SK-MUL-03', 'Times Tables Mastery', 'SUB_MTH', 'Grade 3, Grade 4'],
-    ['CAT-MUL', 'Multiplication & Division', 'SK-MUL-04', 'Division with Remainders', 'SUB_MTH', 'Grade 3, Grade 4'],
-    ['CAT-FRAC', 'Fractions Foundations', 'SK-FRAC-01', 'Halves and Quarters', 'SUB_MTH', 'Grade 2'],
-    ['CAT-FRAC', 'Fractions Foundations', 'SK-FRAC-02', 'Visual Fractions', 'SUB_MTH', 'Grade 3'],
-    ['CAT-FRAC', 'Fractions Foundations', 'SK-FRAC-03', 'Equivalent Fractions', 'SUB_MTH', 'Grade 3, Grade 4'],
-    ['CAT-MNY', 'Money & Currency', 'SK-MNY-01', 'Coins and Notes Value', 'SUB_MTH', 'Grade 2, Grade 3'],
-    ['CAT-SCI', 'Living Things & Science', 'SK-SCI-01', 'Animal & Nature Characteristics', 'SUB_SCI', 'Preschool, Foundation, Grade 1'],
-    ['CAT-SCI', 'Living Things & Science', 'SK-SCI-02', 'Habitats & Living Things', 'SUB_SCI', 'Preschool, Foundation, Grade 1'],
-    ['CAT-SCI', 'Living Things & Science', 'SK-SCI-03', 'Animal Families & Babies', 'SUB_SCI', 'Preschool, Foundation, Grade 1'],
-    ['CAT-SCI', 'Living Things & Science', 'SK-SCI-04', 'Animal Diets (Herbivores/Carnivores)', 'SUB_SCI', 'Preschool, Foundation, Grade 1'],
-    ['CAT-ENG', 'English & Phonics', 'SK-ENG-01', 'Letter Sounds & Phonics', 'SUB_ENG', 'Preschool, Foundation, Grade 1'],
-    ['CAT-ENG', 'English & Phonics', 'SK-ENG-02', 'Vocabulary & Sight Words', 'SUB_ENG', 'Preschool, Foundation, Grade 1'],
-    ['', '', '', '', '', ''],
-    ['ANIMATION OPTIONS', 'Description', 'DIFFICULTY OPTIONS', 'Description', 'QUESTION TYPE OPTIONS', 'Description'],
-    ['bounce', 'Bounces up and down', 'Easy', 'Primary / Beginner level', 'multiple_choice', 'Standard multiple choice (A, B, C, D)'],
-    ['pulse', 'Gentle pulsing scale effect', 'Medium', 'Intermediate level', 'picture_counting', 'Count interactive bouncing objects'],
-    ['pop', 'Snappy popping entrance', 'Hard', 'Advanced challenge', 'picture_choice', 'Choose from picture tiles'],
-    ['float', 'Floating wave motion', '', '', 'open_box', 'Type answer with number pad'],
-    ['spin', 'Gentle 360 degree spin', '', '', 'true_false', 'True or False choice'],
-    ['none', 'Static display', '', '', 'drag_and_drop', 'Drag items to targets'],
-    ['', '', '', '', 'ordering', 'Number or item sequencing'],
-    ['', '', '', '', 'sorting', 'Sort items into buckets'],
-    ['', '', '', '', 'match_making', 'Connect matching pairs'],
-    ['', '', '', '', 'select_objects', 'Interactive object counting & target tagging']
+  const currList = options.curriculaList && options.curriculaList.length > 0
+    ? options.curriculaList.map(c => [c.code || c.id, c.name])
+    : [
+        ['CUR-VCAA20', 'Victorian Curriculum 2.0 (Australia)'],
+        ['CUR-ACARA', 'Australian Curriculum (ACARA)'],
+        ['CUR-CCSS', 'US Common Core State Standards'],
+        ['CUR-CBSE', 'CBSE (India)'],
+        ['CUR-UKNC', 'UK National Curriculum'],
+        ['CUR-IBPYP', 'IB Primary Years Programme'],
+        ['CUR-ON', 'Ontario Curriculum (Canada)'],
+        ['CUR-GLOBAL', 'Global Standard Framework']
+      ];
+
+  const subjList = options.subjectsList && options.subjectsList.length > 0
+    ? options.subjectsList.map(s => [s.id, s.name])
+    : [
+        ['SUB_MTH', 'Mathematics'],
+        ['SUB_SCI', 'Science & Nature'],
+        ['SUB_ENG', 'English / Language Arts'],
+        ['SUB_ART', 'Art & Creativity']
+      ];
+
+  const gradeList = options.gradesList && options.gradesList.length > 0
+    ? options.gradesList.map(g => [g.id, g.name])
+    : [
+        ['GRD_PRE_K', 'Preschool (Ages 3-4)'],
+        ['GRD_KG', 'Foundation / Kindergarten (Ages 5-6)'],
+        ['GRD_G1', 'Grade 1 (Ages 6-7)'],
+        ['GRD_G2', 'Grade 2 (Ages 7-8)'],
+        ['GRD_G3', 'Grade 3 (Ages 8-9)'],
+        ['GRD_G4', 'Grade 4 (Ages 9-10)'],
+        ['GRD_G5', 'Grade 5 (Ages 10-11)'],
+        ['GRD_G6', 'Grade 6 (Ages 11-12)']
+      ];
+
+  // Dynamic Category & Skill List (Combined catalog + any system master categories)
+  const categorySkillRows: string[][] = [];
+  const addedCodes = new Set<string>();
+
+  if (options.masterCategories && options.masterCategories.length > 0 && options.masterSkills && options.masterSkills.length > 0) {
+    options.masterCategories.forEach(cat => {
+      const skills = options.masterSkills!.filter(s => s.categoryId === cat.id || s.categoryCode === cat.code);
+      skills.forEach(sk => {
+        const key = `${cat.code || cat.id}:${sk.code || sk.id}`;
+        if (!addedCodes.has(key)) {
+          addedCodes.add(key);
+          categorySkillRows.push([
+            cat.code || cat.id,
+            cat.name,
+            sk.code || sk.id,
+            sk.name,
+            cat.subjectId || 'SUB_MTH',
+            cat.gradeId || 'All Grades'
+          ]);
+        }
+      });
+    });
+  }
+
+  // Add all comprehensive catalog mappings
+  MASTER_CATEGORY_SKILL_CATALOG.forEach(entry => {
+    const key = `${entry.catCode}:${entry.skCode}`;
+    if (!addedCodes.has(key)) {
+      addedCodes.add(key);
+      categorySkillRows.push([
+        entry.catCode,
+        entry.catName,
+        entry.skCode,
+        entry.skName,
+        entry.subject,
+        entry.grades
+      ]);
+    }
+  });
+
+  const maxTopRows = Math.max(currList.length, subjList.length, gradeList.length);
+  const masterRefData: any[][] = [
+    ['CURRICULUM CODES', 'Curriculum Name', 'SUBJECT CODES', 'Subject Name', 'GRADE CODES', 'Grade Level']
   ];
+
+  for (let i = 0; i < maxTopRows; i++) {
+    const c = currList[i] || ['', ''];
+    const s = subjList[i] || ['', ''];
+    const g = gradeList[i] || ['', ''];
+    masterRefData.push([c[0], c[1], s[0], s[1], g[0], g[1]]);
+  }
+
+  masterRefData.push(['', '', '', '', '', '']);
+  masterRefData.push(['CATEGORY & SKILL CODE MAPPINGS (DYNAMIC ACROSS ALL GRADES)', '', '', '', '', '']);
+  masterRefData.push(['Category Code', 'Category Name', 'Skill Code', 'Skill Name', 'Subject', 'Target Grades']);
+
+  categorySkillRows.forEach(row => {
+    masterRefData.push(row);
+  });
+
+  masterRefData.push(['', '', '', '', '', '']);
+  masterRefData.push(['ANIMATION OPTIONS', 'Description', 'DIFFICULTY OPTIONS', 'Description', 'QUESTION TYPE OPTIONS', 'Description']);
+  masterRefData.push(['bounce', 'Bounces up and down', 'Easy', 'Primary / Beginner level', 'multiple_choice', 'Standard multiple choice (A, B, C, D)']);
+  masterRefData.push(['pulse', 'Gentle pulsing scale effect', 'Medium', 'Intermediate level', 'picture_counting', 'Count interactive bouncing objects']);
+  masterRefData.push(['pop', 'Snappy popping entrance', 'Hard', 'Advanced challenge', 'picture_choice', 'Choose from picture tiles']);
+  masterRefData.push(['float', 'Floating wave motion', '', '', 'open_box', 'Type answer with number pad']);
+  masterRefData.push(['spin', 'Gentle 360 degree spin', '', '', 'true_false', 'True or False choice']);
+  masterRefData.push(['none', 'Static display', '', '', 'drag_and_drop', 'Drag items to targets']);
+  masterRefData.push(['', '', '', '', 'ordering', 'Number or item sequencing']);
+  masterRefData.push(['', '', '', '', 'sorting', 'Sort items into buckets']);
+  masterRefData.push(['', '', '', '', 'match_making', 'Connect matching pairs']);
+  masterRefData.push(['', '', '', '', 'select_objects', 'Interactive object counting & target tagging']);
 
   const wsMaster = XLSX.utils.aoa_to_sheet(masterRefData);
   wsMaster['!cols'] = [{ wch: 18 }, { wch: 36 }, { wch: 18 }, { wch: 36 }, { wch: 18 }, { wch: 36 }];
@@ -1261,10 +1532,7 @@ export function generateQuestionMasterExcel(options: {
   return new Blob([wbOut], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 }
 
-/**
- * Parse an uploaded Excel (.xlsx or .xls) file
- */
-export async function parseQuestionExcelFile(file: File, context: {
+export interface ExcelParseContext {
   existingQuestions: Question[];
   getNextId: (grade: string, existing: Question[], offset: number, subject: string) => string;
   defaultCurriculumId?: string;
@@ -1285,7 +1553,17 @@ export async function parseQuestionExcelFile(file: File, context: {
   defaultSkillCode?: string;
   defaultCurriculumReference?: string;
   useSelectedHierarchy?: boolean;
-}): Promise<ParsedExcelResult> {
+  masterCategories?: any[];
+  masterSkills?: any[];
+  gradesList?: any[];
+  subjectsList?: any[];
+  curriculaList?: any[];
+}
+
+/**
+ * Parse an uploaded Excel (.xlsx or .xls) file
+ */
+export async function parseQuestionExcelFile(file: File, context: ExcelParseContext): Promise<ParsedExcelResult> {
   const questions: Question[] = [];
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -1370,6 +1648,7 @@ export async function parseQuestionExcelFile(file: File, context: {
       const optB = getVal(colOptB);
       const optC = getVal(colOptC);
       const optD = getVal(colOptD);
+
       let options = [optA, optB, optC, optD].filter(Boolean);
 
       const rawType = getVal(colType).toLowerCase();
@@ -1421,11 +1700,73 @@ export async function parseQuestionExcelFile(file: File, context: {
       const explanation = getVal(colExp) || `The correct answer is ${options[correctIndex] || rawCorrect || 'Option A'}.`;
       const hint = getVal(colHint);
 
-      const currCode = (context.useSelectedHierarchy ? context.defaultCurriculumId : getVal(colCurr)) || context.defaultCurriculumId || 'CUR-VCAA20';
-      const subCode = (context.useSelectedHierarchy ? context.defaultSubjectId : getVal(colSub)) || context.defaultSubjectId || 'SUB_MTH';
-      const grdCode = (context.useSelectedHierarchy ? context.defaultGradeId : getVal(colGrd)) || context.defaultGradeId || 'GRD_G1';
-      const catCode = (context.useSelectedHierarchy ? context.defaultCategoryId : getVal(colCat)) || context.defaultCategoryId || 'CAT-NUM';
-      const skCode = (context.useSelectedHierarchy ? context.defaultSkillId : getVal(colSk)) || context.defaultSkillId || 'SK-NUM-01';
+      // Dynamic Hierarchy Resolution
+      let currId = context.defaultCurriculumId || 'CUR-VCAA20';
+      let currName = context.defaultCurriculumName || 'Victorian Curriculum 2.0';
+      let subId = context.defaultSubjectId || 'SUB_MTH';
+      let subName = context.defaultSubjectName || 'Mathematics';
+      let grdId = context.defaultGradeId || 'GRD_G1';
+      let grdName = context.defaultGradeName || 'Grade 1';
+      let catId = context.defaultCategoryId || 'CAT-NUM';
+      let catCode = context.defaultCategoryCode || 'CAT-NUM';
+      let catName = context.defaultCategoryName || 'Numbers & Quantities';
+      let skId = context.defaultSkillId || 'SK-NUM-01';
+      let skCode = context.defaultSkillCode || 'SK-NUM-01';
+      let skName = context.defaultSkillName || 'Recognizing Numbers & Counting';
+
+      if (context.useSelectedHierarchy) {
+        currId = context.defaultCurriculumId || currId;
+        currName = context.defaultCurriculumName || currName;
+        subId = context.defaultSubjectId || subId;
+        subName = context.defaultSubjectName || subName;
+        grdId = context.defaultGradeId || grdId;
+        grdName = context.defaultGradeName || grdName;
+        catId = context.defaultCategoryId || catId;
+        catCode = context.defaultCategoryCode || catCode;
+        catName = context.defaultCategoryName || catName;
+        skId = context.defaultSkillId || skId;
+        skCode = context.defaultSkillCode || skCode;
+        skName = context.defaultSkillName || skName;
+      } else {
+        const rowCurr = getVal(colCurr);
+        if (rowCurr) {
+          const resolvedCurr = resolveCurriculumMapping(rowCurr, context.curriculaList);
+          currId = resolvedCurr.id;
+          currName = resolvedCurr.name;
+        }
+
+        const rowSub = getVal(colSub);
+        if (rowSub) {
+          const resolvedSub = resolveSubjectMapping(rowSub, context.subjectsList);
+          subId = resolvedSub.id;
+          subName = resolvedSub.name;
+        }
+
+        const rowGrd = getVal(colGrd);
+        if (rowGrd) {
+          const resolvedGrd = resolveGradeMapping(rowGrd, context.gradesList);
+          grdId = resolvedGrd.id;
+          grdName = resolvedGrd.name;
+        }
+
+        const rowCat = getVal(colCat);
+        const rowSk = getVal(colSk);
+        if (rowCat || rowSk) {
+          const resolvedCatSk = resolveCategoryAndSkill(
+            rowCat,
+            rowSk,
+            grdId,
+            context.masterCategories,
+            context.masterSkills
+          );
+          catId = resolvedCatSk.categoryId;
+          catCode = resolvedCatSk.categoryCode;
+          catName = resolvedCatSk.categoryName;
+          skId = resolvedCatSk.skillId;
+          skCode = resolvedCatSk.skillCode;
+          skName = resolvedCatSk.skillName;
+        }
+      }
 
       // Build visual config if clipart reference is provided
       let visualClipart: string | undefined = undefined;
@@ -1495,26 +1836,26 @@ export async function parseQuestionExcelFile(file: File, context: {
         }
       }
 
-      const qId = context.getNextId(grdCode, existingTracker, 0, subCode);
+      const qId = context.getNextId(grdId, existingTracker, 0, subId);
 
       const q: Question = {
         id: qId,
         country: context.defaultCountryName || 'Australia',
         state: context.defaultRegionName || 'Victoria',
-        curriculum: context.defaultCurriculumName || 'Victorian Curriculum 2.0',
+        curriculum: currName,
         countryId: context.defaultCountryId || 'CNT-AU',
         regionId: context.defaultRegionId || 'REG-VIC',
-        curriculumId: currCode,
-        subject: context.defaultSubjectName || subCode,
-        subjectId: subCode,
-        grade: context.defaultGradeName || grdCode,
-        gradeId: grdCode,
-        category: context.defaultCategoryName || catCode,
-        categoryId: catCode,
-        categoryCode: context.defaultCategoryCode || catCode,
-        skill: context.defaultSkillName || skCode,
-        skillId: skCode,
-        skillCode: context.defaultSkillCode || skCode,
+        curriculumId: currId,
+        subject: subName,
+        subjectId: subId,
+        grade: grdName,
+        gradeId: grdId,
+        category: catName,
+        categoryId: catId,
+        categoryCode: catCode,
+        skill: skName,
+        skillId: skId,
+        skillCode: skCode,
         curriculumReference: context.defaultCurriculumReference || '',
         difficulty,
         type,

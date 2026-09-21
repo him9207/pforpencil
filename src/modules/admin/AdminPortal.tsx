@@ -2342,7 +2342,7 @@ export default function AdminPortal({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-stone-100 gap-3">
               <div>
                 <h3 className="text-base font-black text-stone-900 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-blue-600" />
+                  <Sparkles className="w-4 h-4 text-[#f20b86]" />
                   <span>Interactive Activities Library ({activities.length})</span>
                 </h3>
                 <p className="text-xs text-stone-500">
@@ -2351,8 +2351,8 @@ export default function AdminPortal({
               </div>
 
               <div className="flex items-center gap-2 self-start sm:self-auto">
-                <span className="text-xs font-bold text-blue-900 bg-blue-100 px-3 py-1.5 rounded-2xl flex items-center gap-1.5 border border-blue-200">
-                  <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                <span className="text-xs font-bold text-[#10246f] bg-[#eef4ff] px-3 py-1.5 rounded-2xl flex items-center gap-1.5 border border-[#d7def0]">
+                  <Sparkles className="w-3.5 h-3.5 text-[#f20b86]" />
                   <span>{filteredActivities.length} Displayed</span>
                 </span>
                 <button
@@ -2360,7 +2360,7 @@ export default function AdminPortal({
                     sounds.click();
                     setShowInteractiveActivityModal(true);
                   }}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-[#10246f] hover:bg-[#0c1b54] text-white font-bold text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
                   <span>+ Create Activity</span>
@@ -2381,7 +2381,7 @@ export default function AdminPortal({
                       placeholder="Search activities by title, grade, or subject..."
                       value={activitySearchQuery}
                       onChange={(e) => setActivitySearchQuery(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 rounded-xl border border-stone-200 text-xs text-stone-800 font-medium focus:border-purple-500 outline-none transition-all bg-white"
+                      className="w-full pl-9 pr-3 py-2 rounded-xl border border-stone-200 text-xs text-stone-800 font-medium focus:border-[#10246f] outline-none transition-all bg-white"
                     />
                   </div>
 
@@ -2476,7 +2476,7 @@ export default function AdminPortal({
                   onClick={() => setActivityGradeFilter('all')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
                     activityGradeFilter === 'all'
-                      ? 'bg-blue-600 text-white shadow-xs font-black'
+                      ? 'bg-[#10246f] text-white shadow-xs font-black'
                       : 'bg-white text-stone-700 hover:bg-stone-100 border border-stone-200'
                   }`}
                 >
@@ -2500,13 +2500,13 @@ export default function AdminPortal({
                       onClick={() => setActivityGradeFilter(item.name)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
                         activityGradeFilter === item.name
-                          ? 'bg-blue-600 text-white shadow-xs font-black'
+                          ? 'bg-[#10246f] text-white shadow-xs font-black'
                           : 'bg-white text-stone-700 hover:bg-stone-100 border border-stone-200'
                       }`}
                     >
                       <span>{label}</span>
                       <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                        activityGradeFilter === item.name ? 'bg-purple-800 text-purple-100' : 'bg-stone-100 text-stone-600'
+                        activityGradeFilter === item.name ? 'bg-[#0c1b54] text-white' : 'bg-stone-100 text-stone-600'
                       }`}>
                         {count}
                       </span>
@@ -2519,7 +2519,7 @@ export default function AdminPortal({
             {/* Activities Cards Grid */}
             {filteredActivities.length === 0 ? (
               <div className="p-10 rounded-2xl bg-stone-50 border border-dashed border-stone-300 text-center space-y-3">
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 text-2xl flex items-center justify-center mx-auto text-blue-600">
+                <div className="w-12 h-12 rounded-2xl bg-[#eef4ff] border border-[#d7def0] text-2xl flex items-center justify-center mx-auto text-[#10246f]">
                   🎯
                 </div>
                 <h4 className="text-sm font-black text-stone-800">No activities match your filters</h4>
@@ -2533,7 +2533,7 @@ export default function AdminPortal({
                     setActivityTypeFilter('all');
                     setActivitySearchQuery('');
                   }}
-                  className="px-3.5 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition"
+                  className="px-3.5 py-1.5 rounded-xl bg-[#10246f] text-white font-bold text-xs hover:bg-[#0c1b54] transition cursor-pointer"
                 >
                   Reset All Filters
                 </button>
@@ -2563,7 +2563,7 @@ export default function AdminPortal({
                     act.grade === 'Grade 6' ? '👑' : '🎓';
 
                   return (
-                    <div key={act.id} className="p-5 rounded-2xl bg-stone-50 border border-stone-200 hover:border-blue-300 transition-all space-y-3 text-xs flex flex-col justify-between shadow-2xs">
+                    <div key={act.id} className="p-5 rounded-2xl bg-stone-50 border border-stone-200 hover:border-[#10246f] transition-all space-y-3 text-xs flex flex-col justify-between shadow-2xs">
                       <div>
                         <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2">
                           <div className="flex items-center gap-1.5 flex-wrap">

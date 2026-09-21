@@ -138,47 +138,11 @@ export default function MasterQuestionBank({grades,subjects,questions,onAddQuest
   const handleRegion=(id:string)=>{setRegionId(id);const c=curriculumMaster.curricula.find(x=>x.active&&x.regionId===id);setCurriculumId(c?.id||'');setSelectedCategoryId(null);setSelectedSkillId(null);};
   const handleCurriculum=(id:string)=>{setCurriculumId(id);setSelectedCategoryId(null);setSelectedSkillId(null);};
 
-  const jumpToPreschool=()=>{
-    const preG=activeGrades.find(g=>g.name.toLowerCase().includes('pre'))||activeGrades[0];
-    if(preG) setSelectedGradeId(preG.id);
-    const mathS=activeSubjects.find(s=>s.name.toLowerCase().includes('math'))||activeSubjects[0];
-    if(mathS) setSelectedSubjectId(mathS.id);
-    const preCat=masters.categories.find(c=>c.name.toLowerCase()==='preschool wonder world');
-    if(preCat) setSelectedCategoryId(preCat.id);
-    const preSkl=masters.skills.find(s=>s.name.toLowerCase()==='early discovery & play quest');
-    if(preSkl) setSelectedSkillId(preSkl.id);
-    onSuccessMessage?.('Directly switched to Preschool Wonder World → Early Discovery & Play Quest');
-  };
-
   return <div className="space-y-5">
-    <div className="bg-white rounded-3xl border border-stone-200 shadow-xs p-5"><div className="flex flex-col gap-4"><div><div className="flex items-center gap-2 text-xs font-bold text-stone-700 uppercase tracking-wider"><Layers3 className="w-4 h-4"/> Master Question Bank</div><h2 className="text-2xl font-black text-stone-900 mt-1">Curriculum → Category → Skill → Questions</h2><p className="text-xs text-stone-500 mt-1">One dynamic hierarchy powers manual creation, batch generation and Excel/CSV import.</p></div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-indigo-50/60 border border-indigo-100 rounded-2xl"><label className="text-[11px] font-bold">Country<select value={countryId} onChange={e=>handleCountry(e.target.value)} className="w-full mt-1 p-2 rounded-xl border border-stone-200 bg-white">{activeCountries.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label><label className="text-[11px] font-bold">State / Region<select value={regionId} onChange={e=>handleRegion(e.target.value)} className="w-full mt-1 p-2 rounded-xl border border-stone-200 bg-white">{regions.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label><label className="text-[11px] font-bold">Curriculum<select value={curriculumId} onChange={e=>handleCurriculum(e.target.value)} className="w-full mt-1 p-2 rounded-xl border border-stone-200 bg-white">{curricula.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label></div>
+    <div className="bg-white rounded-3xl border border-stone-200 shadow-xs p-5"><div className="flex flex-col gap-4"><div><div className="flex items-center gap-2 text-xs font-bold text-[#10246f] uppercase tracking-wider"><Layers3 className="w-4 h-4 text-[#f20b86]"/> Master Question Bank</div><h2 className="text-2xl font-black text-stone-900 mt-1">Curriculum → Category → Skill → Questions</h2><p className="text-xs text-stone-500 mt-1">One dynamic hierarchy powers manual creation, batch generation and Excel/CSV import.</p></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-[#f8faff] border border-[#d7def0] rounded-2xl"><label className="text-[11px] font-bold text-[#10246f]">Country<select value={countryId} onChange={e=>handleCountry(e.target.value)} className="w-full mt-1 p-2 rounded-xl border border-stone-200 bg-white text-stone-800">{activeCountries.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label><label className="text-[11px] font-bold text-[#10246f]">State / Region<select value={regionId} onChange={e=>handleRegion(e.target.value)} className="w-full mt-1 p-2 rounded-xl border border-stone-200 bg-white text-stone-800">{regions.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label><label className="text-[11px] font-bold text-[#10246f]">Curriculum<select value={curriculumId} onChange={e=>handleCurriculum(e.target.value)} className="w-full mt-1 p-2 rounded-xl border border-stone-200 bg-white text-stone-800">{curricula.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label></div>
 
-      {/* Preschool Fast Access Callout */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-amber-50 via-rose-50 to-indigo-50 border border-amber-200/80 rounded-2xl">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">🧸</span>
-          <div>
-            <div className="text-xs font-black text-stone-900 flex items-center gap-2">
-              Preschool Wonder World
-              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">11 Interactive Formats</span>
-            </div>
-            <div className="text-[11px] text-stone-600">
-              Category: <strong className="text-stone-900">Preschool Wonder World</strong> · Skill: <strong className="text-stone-900">Early Discovery & Play Quest</strong> (All 11 Question Formats)
-            </div>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={jumpToPreschool}
-          className="px-4 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
-        >
-          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-          View Preschool Questions
-        </button>
-      </div>
-
-      <div className="flex flex-wrap gap-2"><button onClick={()=>setShowCategoryForm(true)} className="px-3 py-2 rounded-xl border border-stone-200 bg-white text-xs font-bold flex items-center gap-1.5"><FolderPlus className="w-3.5 h-3.5"/> + Category</button><button onClick={()=>setShowSkillForm(true)} disabled={!selectedCategory||!selectedGrade||!selectedCategory.active} className="px-3 py-2 rounded-xl border border-stone-200 bg-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-40 transition"><Plus className="w-3.5 h-3.5"/> + Skill</button><button onClick={()=>setShowCreator(true)} disabled={!selectedCategory||!selectedSkill||!selectedCategory.active||!selectedSkill.active} className="px-3 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-40 transition"><HelpCircle className="w-3.5 h-3.5"/> + Create Question</button></div><div className="text-[10px] text-stone-500 mt-2">Inactive categories and skills remain visible here so you can activate them again. Only active Category + Skill combinations can receive new questions.</div>
+      <div className="flex flex-wrap gap-2"><button onClick={()=>setShowCategoryForm(true)} className="px-3 py-2 rounded-xl border border-stone-200 bg-white text-xs font-bold flex items-center gap-1.5 hover:bg-stone-50 transition cursor-pointer"><FolderPlus className="w-3.5 h-3.5"/> + Category</button><button onClick={()=>setShowSkillForm(true)} disabled={!selectedCategory||!selectedGrade||!selectedCategory.active} className="px-3 py-2 rounded-xl border border-stone-200 bg-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-40 transition cursor-pointer hover:bg-stone-50"><Plus className="w-3.5 h-3.5"/> + Skill</button><button onClick={()=>setShowCreator(true)} disabled={!selectedCategory||!selectedSkill||!selectedCategory.active||!selectedSkill.active} className="px-4 py-2 rounded-xl bg-[#10246f] hover:bg-[#0c1b54] text-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-40 transition cursor-pointer shadow-xs"><HelpCircle className="w-3.5 h-3.5"/> + Create Question</button></div><div className="text-[10px] text-stone-500 mt-2">Inactive categories and skills remain visible here so you can activate them again. Only active Category + Skill combinations can receive new questions.</div>
     </div></div>
     <div className="flex flex-wrap gap-2">{activeGrades.map(g=>{
       const isPre=g.name.toLowerCase().includes('pre');

@@ -166,6 +166,19 @@ export default function Navbar({
             </button>
           )}
 
+          {/* Database Hub (Supabase Test & Sync) Button */}
+          {onOpenSupabaseModal && (
+            <button
+              id="nav-supabase-btn"
+              onClick={onOpenSupabaseModal}
+              title="Supabase Database Hub: Test Connection & Verify Live Data Sync"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full bg-[#f8faff] text-[#10246f] border border-[#d7def0] hover:bg-[#eef4ff] hover:border-[#10246f] transition-all cursor-pointer shadow-2xs group"
+            >
+              <Database className="w-3.5 h-3.5 text-emerald-600 group-hover:scale-110 transition-transform" />
+              <span className="hidden sm:inline">Supabase</span>
+            </button>
+          )}
+
           {/* Sound FX Toggle */}
           <button
             id="nav-sound-btn"

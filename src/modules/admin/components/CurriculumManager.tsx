@@ -178,7 +178,7 @@ export default function CurriculumManager({
                 sounds.click();
                 setShowSubjectModal(true);
               }}
-              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-[#10246f] hover:bg-[#0c1b54] text-white font-bold text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer"
             >
               <FolderPlus className="w-4 h-4" />
               <span>+ Create Subject</span>
@@ -206,7 +206,7 @@ export default function CurriculumManager({
               onResetToMathPreschoolToGrade6();
               onSuccessMessage('Configured curriculum preset: Preschool to Grade 6 with Mathematics only!');
             }}
-            className="px-3 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-amber-300 font-bold text-xs transition shrink-0 cursor-pointer"
+            className="px-3 py-1.5 rounded-lg bg-[#10246f] hover:bg-[#0c1b54] text-amber-300 font-bold text-xs transition shrink-0 cursor-pointer"
           >
             Apply Preschool–Grade 6 Math Preset
           </button>
@@ -222,7 +222,7 @@ export default function CurriculumManager({
           }}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
             activeSection === 'grades'
-              ? 'bg-stone-900 text-white shadow-xs'
+              ? 'bg-[#10246f] text-white shadow-xs'
               : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
           }`}
         >
@@ -236,7 +236,7 @@ export default function CurriculumManager({
           }}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
             activeSection === 'subjects'
-              ? 'bg-stone-900 text-white shadow-xs'
+              ? 'bg-[#10246f] text-white shadow-xs'
               : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
           }`}
         >
@@ -355,7 +355,7 @@ export default function CurriculumManager({
 
                   <div className="pt-4 border-t border-stone-100 mt-4 flex items-center justify-between text-xs">
                     <span className="text-stone-500">Repository Content:</span>
-                    <span className="font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded-md font-mono">
+                    <span className="font-bold text-[#10246f] bg-[#eef4ff] border border-[#d7def0] px-2 py-0.5 rounded-md font-mono">
                       {qCount} Questions in Bank
                     </span>
                   </div>
@@ -520,7 +520,7 @@ export default function CurriculumManager({
                   placeholder="e.g. Maths, Art & Creativity, Social Studies"
                   value={subName}
                   onChange={(e) => setSubName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-[#10246f]"
                 />
               </div>
 
@@ -562,7 +562,7 @@ export default function CurriculumManager({
                   placeholder="Describe knowledge domain and learning outcomes"
                   value={subDesc}
                   onChange={(e) => setSubDesc(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-[#10246f]"
                 />
               </div>
 
@@ -576,7 +576,7 @@ export default function CurriculumManager({
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md"
+                  className="px-4 py-2 rounded-xl bg-[#10246f] hover:bg-[#0c1b54] text-white font-bold shadow-md cursor-pointer transition-all"
                 >
                   Create Subject
                 </button>

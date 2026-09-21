@@ -1559,6 +1559,7 @@ export default function PForPencilHomePage({
           <div>
             <h4>Support</h4>
             <button className="link-btn" onClick={onOpenRegionModal}>Curriculum Standards</button>
+            <button className="link-btn" onClick={onOpenSupabaseModal}>Database Hub (Supabase)</button>
             <button className="link-btn" onClick={() => alert('FAQ: Find answers to common setup questions.')}>FAQ</button>
             <button className="link-btn" onClick={() => alert('Privacy Policy: All student data is secure and protected.')}>Privacy Policy</button>
             <button className="link-btn" onClick={() => alert('Terms of Service: pforpencil.com/terms')}>Terms of Service</button>
@@ -1591,10 +1592,11 @@ export default function PForPencilHomePage({
         ))}
         <button
           onClick={onOpenSupabaseModal}
-          className="p-1 rounded-lg hover:bg-stone-100 text-stone-500 hover:text-stone-900 transition-colors cursor-pointer"
-          title="Open Database Hub"
+          className="px-2 py-0.5 rounded-lg hover:bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold transition-colors cursor-pointer text-[11px] flex items-center gap-1"
+          title="Open Supabase Database Hub to test connection and live data sync"
         >
-          🗄️
+          <span>🗄️</span>
+          <span>DB Hub</span>
         </button>
       </aside>
     </div>

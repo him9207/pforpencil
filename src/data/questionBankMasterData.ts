@@ -216,6 +216,15 @@ const STANDARD_CURRICULUM_TEMPLATES: Record<string, CurriculumStandardTemplate[]
   ],
   grade1: [
     {
+      category: 'Numbers & Quantities',
+      categoryCode: 'CAT-NUM',
+      skills: [
+        { name: 'Recognizing Numbers & Counting', code: 'SK-NUM-01' },
+        { name: 'Number Sequencing & Order', code: 'SK-NUM-02' },
+        { name: 'Number Line Counting', code: 'SK-NUM-03' }
+      ]
+    },
+    {
       category: 'Addition & Subtraction',
       categoryCode: 'CAT-ADD',
       skills: [
@@ -249,6 +258,21 @@ const STANDARD_CURRICULUM_TEMPLATES: Record<string, CurriculumStandardTemplate[]
       categoryCode: 'CAT-PAT',
       skills: [
         { name: 'Number Patterns', code: 'SK-PAT-03' }
+      ]
+    },
+    {
+      category: 'Comparison & Sorting',
+      categoryCode: 'CAT-CMP',
+      skills: [
+        { name: 'Greater Than / Less Than', code: 'SK-CMP-03' }
+      ]
+    },
+    {
+      category: 'Living Things & Science',
+      categoryCode: 'CAT-SCI',
+      skills: [
+        { name: 'Animal & Nature Characteristics', code: 'SK-SCI-01' },
+        { name: 'Habitats & Living Things', code: 'SK-SCI-02' }
       ]
     }
   ],

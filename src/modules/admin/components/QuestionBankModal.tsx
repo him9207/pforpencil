@@ -91,6 +91,7 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
   const [batchCount,setBatchCount]=useState(10); const [batchDifficulty,setBatchDifficulty]=useState<'Easy'|'Medium'|'Hard'|'Mixed'>('Easy'); const [batchType,setBatchType]=useState<'same'|'mixed'>('same'); const [batchVisualMode,setBatchVisualMode]=useState<'text'|'visual'|'mixed'>('text'); const [generated,setGenerated]=useState<Question[]>([]);
   const [useSelectedForCsv,setUseSelectedForCsv]=useState(false); const [csvFileName,setCsvFileName]=useState(''); const [csvErrors,setCsvErrors]=useState<string[]>([]); const [parsed,setParsed]=useState<Question[]>([]); const [csvInput,setCsvInput]=useState<HTMLInputElement|null>(null);
   const [editingBatchIndex, setEditingBatchIndex] = useState<number | null>(null);
+  const [editingCsvIndex, setEditingCsvIndex] = useState<number | null>(null);
   const [editingDraft, setEditingDraft] = useState<Question | null>(null);
   const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
 
@@ -408,29 +409,11 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'pforpencil_question_master_workbook.xlsx';
+    a.download = 'pforpencil_grade1_all_types_master_workbook.xlsx';
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const downloadQuickVisualTemplate=()=>{
-    const sampleRows=[
-      ['How many apples are on the screen?','2','3','4','5','B','apple|apple|apple','bounce','🍎 🍎 🍎','picture_counting','Tap each apple to count them.','Easy'],
-      ['Which shape is a star?','Circle','Triangle','Star','Square','C','circle|triangle|star|square','pulse','⭐','picture_choice','Tap the star.','Easy'],
-      ['Which animal is the largest?','Mouse','Dog','Elephant','','C','mouse|dog|elephant|','bounce','🐘','picture_choice','Tap the biggest animal.','Easy'],
-      ['What is 2 + 2?','3','4','5','6','B','cookie|cookie|cookie|cookie','bounce','🍪 🍪 🍪 🍪','picture_counting','Count all the cookies.','Easy']
-    ];
-    const csv=['\uFEFF' + quickVisualHeaders.map(csvEscape).join(','),...sampleRows.map(r=>r.map(csvEscape).join(','))].join('\n');
-    const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url;
-    a.download='pforpencil_quick_visual_questions_template.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const downloadTemplate=()=>{const sample=['','CNT-AU','REG-VIC','CUR-VCAA20','SUB_MTH','GRD_G3','CAT-NUM','SK-NUM-01','Easy','multiple_choice','Which number is greater?','25','32','18','21','B','32 is greater than 25, 18 and 21.','Compare the numbers.','🔢','', 'Yes','picture_counting','bounce','tap','Tap the pictures and choose the answer.','','','apple|apple|apple','playful','Yes',20,'Draft'];const masterSheet=[['MASTER DATA CODES'],['Countries'],...cm.countries.map(x=>[x.code,x.name]),['Regions'],...cm.regions.map(x=>[x.code,x.name,x.countryId]),['Curricula'],...cm.curricula.map(x=>[x.code,x.name,x.regionId])];const csv=[templateHeaders.map(csvEscape).join(','),sample.map(csvEscape).join(','),'','','# Master Data Reference','','','',...masterSheet.map(r=>r.map(csvEscape).join(','))].join('\n');const blob=new Blob(['\uFEFF' + csv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='pforpencil_question_master_template.csv';a.click();URL.revokeObjectURL(url);};
   const processCsv=(rawInputText:string)=>{
     const textData=fixMojibake(rawInputText);
     const rows=parseCsv(textData);
@@ -485,9 +468,26 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
 
       if(!country||!region||!cur||!sub||!grd||!cat||!skill)return;
 
-      const opts=[val('Option A'),val('Option B'),val('Option C'),val('Option D')];
-      const ca=(val('Correct Answer')||'A').toUpperCase();
-      const ci=Math.max(0,['A','B','C','D'].indexOf(ca));
+      let opts=[val('Option A'),val('Option B'),val('Option C'),val('Option D')].filter(Boolean);
+      const ca=val('Correct Answer')||'A';
+      let ci=0;
+
+      if (type === 'true_false') {
+        const isTrue = ['TRUE', 'T', '1', 'YES', 'A', 'OPTION A'].includes(ca.toUpperCase());
+        ci = isTrue ? 0 : 1;
+        if (opts.length < 2) opts = ['True', 'False'];
+      } else if (['A', '0', 'OPTION A'].includes(ca.toUpperCase())) {
+        ci = 0;
+      } else if (['B', '1', 'OPTION B'].includes(ca.toUpperCase())) {
+        ci = 1;
+      } else if (['C', '2', 'OPTION C'].includes(ca.toUpperCase())) {
+        ci = 2;
+      } else if (['D', '3', 'OPTION D'].includes(ca.toUpperCase())) {
+        ci = 3;
+      } else {
+        const matchedIdx = opts.findIndex(o => o.toLowerCase() === ca.toLowerCase());
+        if (matchedIdx >= 0) ci = matchedIdx;
+      }
 
       const visualObjectsRaw=val('Visual Objects');
       const hasVisualObjects=Boolean(visualObjectsRaw && visualObjectsRaw.trim());
@@ -525,6 +525,46 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
         };
       }
 
+      // Specialized question type configurations
+      let dragItems: any = undefined;
+      let matchPairs: any = undefined;
+      let orderSequence: any = undefined;
+      let sortBuckets: any = undefined;
+      let openBoxAnswer: string | undefined = undefined;
+
+      if (type === 'drag_and_drop') {
+        dragItems = opts.map((opt, i) => {
+          const parts = opt.split('->').map(s => s.trim());
+          return {
+            item: parts[0] || `Item ${i + 1}`,
+            target: parts[1] || 'Target Zone'
+          };
+        });
+      } else if (type === 'match_making') {
+        matchPairs = opts.map(opt => {
+          const parts = opt.split('->').map(s => s.trim());
+          return {
+            left: parts[0] || 'Item A',
+            right: parts[1] || 'Match A'
+          };
+        });
+      } else if (type === 'ordering') {
+        orderSequence = opts.length > 0 ? opts : ['1', '2', '3', '4'];
+      } else if (type === 'sorting') {
+        sortBuckets = opts.map(opt => {
+          const parts = opt.split(':').map(s => s.trim());
+          return {
+            bucketName: parts[0] || 'Bucket',
+            items: parts[1] ? parts[1].split(',').map(x => x.trim()) : ['Item 1', 'Item 2']
+          };
+        });
+      } else if (type === 'open_box' || type === 'fill_blank') {
+        openBoxAnswer = ca || opts[0] || '1';
+        if (opts.length === 0) {
+          opts = [openBoxAnswer];
+        }
+      }
+
       const q:Question={
         id:getNextQuestionId(grd.name,existing,0,sub.name),
         country:country.name,
@@ -547,13 +587,18 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
         difficulty:diff,
         type,
         prompt:text,
-        options:opts,
+        options: (type === 'open_box' || type === 'fill_blank') && opts.length === 0 ? [openBoxAnswer || ''] : (opts.length > 0 ? opts : ['Option A', 'Option B', 'Option C', 'Option D']),
         correctIndex:ci,
+        openBoxAnswer,
         explanation:val('Explanation')||'Review the answer and try again.',
         hint:val('Hint')||undefined,
         visualClipart:finalClipart,
         mediaUrl:val('Media URL')||undefined,
         visualConfig,
+        dragItems,
+        matchPairs,
+        orderSequence,
+        sortBuckets,
         points:Number(val('Points'))||20,
         status:(val('Status') as any)||'Draft'
       };
@@ -571,6 +616,9 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
 
     if (isExcel) {
       try {
+        const curObj = cm.curricula.find(c => c.id === curriculumId);
+        const cntObj = cm.countries.find(c => c.id === countryId);
+        const regObj = cm.regions.find(r => r.id === regionId);
         const result = await parseQuestionExcelFile(f, {
           existingQuestions: questions,
           getNextId: (grd, existing, offset, sub) => getNextQuestionId(grd, existing, offset, sub),
@@ -580,7 +628,18 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
           defaultSubjectId: selectedSubject?.id,
           defaultGradeId: selectedGrade?.id,
           defaultCategoryId: selectedCategory?.id,
-          defaultSkillId: selectedSkill?.id
+          defaultSkillId: selectedSkill?.id,
+          defaultCountryName: cntObj?.name || 'Australia',
+          defaultRegionName: regObj?.name || 'Victoria',
+          defaultCurriculumName: curObj?.name || 'Victorian Curriculum 2.0',
+          defaultSubjectName: selectedSubject?.name || subject,
+          defaultGradeName: selectedGrade?.name || grade,
+          defaultCategoryName: selectedCategory?.name,
+          defaultCategoryCode: selectedCategory?.code,
+          defaultSkillName: selectedSkill?.name,
+          defaultSkillCode: selectedSkill?.code,
+          defaultCurriculumReference: selectedSkill?.curriculumReference,
+          useSelectedHierarchy: useSelectedForCsv
         });
         setCsvErrors(result.errors);
         setParsed(result.questions);
@@ -620,7 +679,7 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
     return matchCat && matchSearch;
   });
 
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 backdrop-blur-sm p-4"><div className="bg-white rounded-3xl shadow-2xl border border-stone-200 max-w-5xl w-full my-4 overflow-hidden flex flex-col max-h-[94vh]"><div className="bg-stone-900 text-white p-5 flex items-center justify-between"><div><h2 className="text-lg font-bold">Master Question Bank Creator</h2><p className="text-xs text-stone-300">Single create, batch generate, Excel workbook and CSV import all use the same master hierarchy and visual engine.</p></div><button onClick={onClose}><X className="w-5 h-5"/></button></div><div className="bg-stone-100 px-6 py-2.5 border-b flex flex-wrap gap-2 text-xs font-bold"><button onClick={()=>setMode('single')} className={`px-3 py-1.5 rounded-xl ${mode==='single'?'bg-white shadow-xs':'text-stone-600'}`}>Single Interactive Question</button><button onClick={()=>setMode('batch')} className={`px-3 py-1.5 rounded-xl ${mode==='batch'?'bg-white shadow-xs':'text-stone-600'}`}><Sparkles className="inline w-3.5 h-3.5 text-amber-500 mr-1"/>Batch Multi-Question Generator</button><button onClick={()=>setMode('csv_upload')} className={`px-3 py-1.5 rounded-xl ${mode==='csv_upload'?'bg-white shadow-xs':'text-stone-600'}`}><FileSpreadsheet className="inline w-3.5 h-3.5 text-emerald-600 mr-1"/>Excel / CSV Bulk Upload & Template</button><button onClick={()=>setMode('clipart_library')} className={`px-3 py-1.5 rounded-xl ${mode==='clipart_library'?'bg-white shadow-xs':'text-stone-600'}`}><Palette className="inline w-3.5 h-3.5 text-indigo-600 mr-1"/>Clipart & Visual Library ({CLIPART_LIBRARY.length})</button></div><div className="p-6 overflow-y-auto flex-1 text-stone-800 text-xs">
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 backdrop-blur-sm p-4"><div className="bg-white rounded-3xl shadow-2xl border border-stone-200 max-w-5xl w-full my-4 overflow-hidden flex flex-col max-h-[94vh]"><div className="bg-stone-900 text-white p-5 flex items-center justify-between"><div><h2 className="text-lg font-bold">Master Question Bank Creator</h2><p className="text-xs text-stone-300">Single create, batch generate, Excel workbook upload, and Clipart library all use the same master hierarchy and visual engine.</p></div><button onClick={onClose}><X className="w-5 h-5"/></button></div><div className="bg-stone-100 px-6 py-2.5 border-b flex flex-wrap gap-2 text-xs font-bold"><button onClick={()=>setMode('single')} className={`px-3 py-1.5 rounded-xl ${mode==='single'?'bg-white shadow-xs':'text-stone-600'}`}>Single Interactive Question</button><button onClick={()=>setMode('batch')} className={`px-3 py-1.5 rounded-xl ${mode==='batch'?'bg-white shadow-xs':'text-stone-600'}`}><Sparkles className="inline w-3.5 h-3.5 text-amber-500 mr-1"/>Batch Multi-Question Generator</button><button onClick={()=>setMode('csv_upload')} className={`px-3 py-1.5 rounded-xl ${mode==='csv_upload'?'bg-white shadow-xs':'text-stone-600'}`}><FileSpreadsheet className="inline w-3.5 h-3.5 text-emerald-600 mr-1"/>Excel Bulk Upload & Master Template</button><button onClick={()=>setMode('clipart_library')} className={`px-3 py-1.5 rounded-xl ${mode==='clipart_library'?'bg-white shadow-xs':'text-stone-600'}`}><Palette className="inline w-3.5 h-3.5 text-indigo-600 mr-1"/>Clipart & Visual Library ({CLIPART_LIBRARY.length})</button></div><div className="p-6 overflow-y-auto flex-1 text-stone-800 text-xs">
     {mode==='single'&&<form onSubmit={saveSingle} className="space-y-4">
       {hierarchyBlock}
       <div className="grid grid-cols-2 gap-3">
@@ -1450,42 +1509,36 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
     {mode==='csv_upload'&&<div className="space-y-4">
       <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
         <div className="font-black text-emerald-950 flex items-center justify-between text-sm">
-          <span>Excel Master Workbook & CSV Bulk Importer</span>
-          <span className="text-[10px] bg-emerald-600 text-white px-2.5 py-0.5 rounded-full font-bold shadow-xs">Recommended: Excel (.xlsx)</span>
+          <span>Excel Master Workbook (.xlsx) Importer</span>
+          <span className="text-[10px] bg-emerald-600 text-white px-2.5 py-0.5 rounded-full font-bold shadow-xs">Standard Format: Excel (.xlsx)</span>
         </div>
         <p className="text-[11px] text-emerald-900 mt-1 leading-relaxed">
-          Teachers can now use <strong>Microsoft Excel (.xlsx)</strong> with built-in sheets for <strong>Instructions, Ready-to-Test Questions of each type, Clipart Library references, and Master Codes</strong>.
-          You never need to embed or paste images: just specify Clipart codes like <code>apple</code>, <code>star</code>, <code>cookie</code>, or <code>car</code>!
+          Standardized <strong>Microsoft Excel (.xlsx)</strong> workbook with 100 Grade 1 questions across all 10 question types, instructions, and full Clipart Library references.
+          You never need to embed or paste image files: just reference clipart names like <code>apple</code>, <code>star</code>, <code>cookie</code>, or <code>car</code>!
         </p>
       </div>
 
       <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200 space-y-3">
         <div className="font-bold text-stone-900 text-xs flex items-center gap-1.5">
-          <Download className="w-4 h-4 text-emerald-600" /> Step 1: Download Template Workbook
+          <Download className="w-4 h-4 text-emerald-600" /> Step 1: Download Master Excel Workbook
         </div>
         <div className="flex flex-wrap gap-2.5">
           <button onClick={downloadExcelMasterWorkbook} className="px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-xs transition flex items-center gap-2">
-            <FileSpreadsheet className="w-4 h-4" /> Download Master Excel (.xlsx) Workbook with Clipart Catalog
-          </button>
-          <button onClick={downloadQuickVisualTemplate} className="px-3.5 py-2 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 text-stone-800 font-bold text-xs transition flex items-center gap-1.5">
-            <Download className="w-4 h-4 text-stone-600" /> Quick Visual CSV
-          </button>
-          <button onClick={downloadTemplate} className="px-3.5 py-2 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 text-stone-700 font-bold text-xs transition flex items-center gap-1.5">
-            <Download className="w-4 h-4 text-stone-600" /> Full Master CSV
+            <FileSpreadsheet className="w-4 h-4" /> Download Grade 1 Master Excel Workbook (100 Sample Questions & Clipart Catalog)
           </button>
         </div>
       </div>
 
       <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200 space-y-3">
         <div className="font-bold text-stone-900 text-xs flex items-center gap-1.5">
-          <Upload className="w-4 h-4 text-[#10246f]" /> Step 2: Upload Completed Excel or CSV File
+          <Upload className="w-4 h-4 text-[#10246f]" /> Step 2: Upload Completed Excel Workbook
         </div>
         <div className="flex items-center gap-3">
           <button onClick={()=>csvInput?.click()} className="px-5 py-2.5 rounded-xl bg-[#10246f] hover:bg-[#0c1b54] text-white font-bold text-xs shadow-xs transition flex items-center gap-2">
-            <Upload className="w-4 h-4" /> Select Excel (.xlsx, .xls) or CSV
+            <Upload className="w-4 h-4" /> Select Excel Workbook (.xlsx, .xls)
           </button>
           <span className="text-[11px] font-semibold text-stone-600">{csvFileName ? `Selected: ${csvFileName}` : 'No file chosen yet'}</span>
-          <input ref={setCsvInput} type="file" accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" onChange={onFile} className="hidden" />
+          <input ref={setCsvInput} type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" onChange={onFile} className="hidden" />
         </div>
       </div>
 
@@ -1504,23 +1557,208 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
         {csvErrors.length>20&&<div className="text-[11px] font-semibold">+ {csvErrors.length-20} more errors</div>}
       </div>}
 
-      {parsed.length>0&&<div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
-        <div className="font-bold text-emerald-900 text-sm flex items-center gap-1.5"><Check className="w-4 h-4 text-emerald-700"/> {parsed.length} questions ready to import</div>
-        <p className="text-[11px] text-emerald-800 mt-1">All imported questions will be added to your question bank in <strong>Draft</strong> status for review.</p>
-        <div className="mt-3 max-h-48 overflow-y-auto border border-emerald-200 bg-white rounded-xl p-2 divide-y divide-stone-100">
-          {parsed.slice(0, 5).map((q, idx) => (
-            <div key={idx} className="py-1.5 px-2 text-[11px] flex items-center justify-between">
-              <span className="font-semibold text-stone-800 truncate max-w-md">{idx + 1}. {q.prompt}</span>
-              <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono">{q.type}</span>
+      {parsed.length>0&&<div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <div className="font-bold text-emerald-950 text-sm flex items-center gap-1.5">
+              <Check className="w-4 h-4 text-emerald-700"/> {parsed.length} Questions Loaded & Ready
+            </div>
+            <p className="text-[11px] text-emerald-800 mt-0.5">
+              Review and click <strong>Preview</strong> to test each question as a student, or <strong>Edit</strong> to modify prompts, clipart, pairs, or answer choices before importing.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const nextStatus = parsed.every(q => q.status === 'active' || q.status === 'Published') ? 'Draft' : 'Published';
+                setParsed(prev => prev.map(q => ({ ...q, status: nextStatus })));
+              }}
+              className="px-2.5 py-1.5 rounded-lg border border-emerald-300 bg-white hover:bg-emerald-100 text-emerald-900 text-xs font-bold transition flex items-center gap-1"
+            >
+              {parsed.every(q => q.status === 'active' || q.status === 'Published') ? 'Set All to Draft' : 'Publish All'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setParsed([]);
+                setCsvFileName('');
+                setCsvErrors([]);
+              }}
+              className="px-2.5 py-1.5 rounded-lg border border-stone-300 bg-white hover:bg-stone-100 text-stone-700 text-xs font-semibold transition flex items-center gap-1"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-stone-500"/> Clear List
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-2.5 max-h-[50vh] overflow-y-auto pr-1">
+          {parsed.map((q, i) => (
+            <div
+              key={q.id || i}
+              className="p-3.5 rounded-xl border border-stone-200 bg-white hover:border-emerald-300 shadow-2xs transition group"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-mono text-xs font-bold text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded">
+                    #{i + 1}
+                  </span>
+                  <span className="font-mono text-[11px] font-semibold text-stone-700">
+                    {q.id}
+                  </span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    q.difficulty === 'Hard' ? 'bg-rose-100 text-rose-700' :
+                    q.difficulty === 'Medium' ? 'bg-amber-100 text-amber-800' :
+                    'bg-emerald-100 text-emerald-800'
+                  }`}>
+                    {q.difficulty}
+                  </span>
+                  <span className="text-[10px] text-stone-600 font-semibold bg-stone-100 px-1.5 py-0.5 rounded">
+                    {typeLabel(q)}
+                  </span>
+                  {q.visualClipart && (
+                    <span className="text-xs px-1.5 py-0.5 bg-amber-50 border border-amber-200 rounded">
+                      {q.visualClipart}
+                    </span>
+                  )}
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    q.status === 'active' || q.status === 'Published' ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-200 text-stone-700'
+                  }`}>
+                    {q.status || 'Draft'}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewQuestion(q)}
+                    className="px-2 py-1 rounded-md border border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-700 text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+                    title="Preview Question in Student Mode"
+                  >
+                    <Eye className="w-3 h-3 text-stone-600"/> Preview
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingCsvIndex(i);
+                      setEditingDraft({ ...q });
+                    }}
+                    className="px-2 py-1 rounded-md border border-stone-200 bg-stone-50 hover:bg-emerald-50 hover:border-emerald-300 text-stone-700 text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+                    title="Edit Question"
+                  >
+                    <Edit3 className="w-3 h-3 text-emerald-700"/> Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const cloneId = `${q.id}-COPY-${Date.now().toString().slice(-4)}`;
+                      const clone = { ...q, id: cloneId, prompt: `${q.prompt} (Copy)` };
+                      const next = [...parsed];
+                      next.splice(i + 1, 0, clone);
+                      setParsed(next);
+                    }}
+                    className="p-1 rounded-md border border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-600 cursor-pointer"
+                    title="Duplicate Question"
+                  >
+                    <Copy className="w-3 h-3"/>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setParsed(prev => prev.filter((_, idx) => idx !== i))}
+                    className="p-1 rounded-md border border-stone-200 bg-stone-50 hover:bg-rose-50 text-rose-600 cursor-pointer"
+                    title="Delete from list"
+                  >
+                    <Trash2 className="w-3 h-3"/>
+                  </button>
+                </div>
+              </div>
+
+              <div className="font-bold text-xs text-stone-900 mt-2">
+                {q.prompt}
+              </div>
+
+              {/* Type-Specific Answer Preview */}
+              {q.type === 'match_making' && q.matchPairs && q.matchPairs.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-2">
+                  {q.matchPairs.map((p, pIdx) => (
+                    <div key={pIdx} className="p-1.5 rounded-lg bg-stone-50 border border-stone-200 text-[11px] flex items-center justify-between">
+                      <span className="font-semibold text-stone-800">{p.left}</span>
+                      <span className="text-stone-400">➔</span>
+                      <span className="font-semibold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded">{p.right}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : q.type === 'drag_and_drop' && q.dragItems && q.dragItems.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-2">
+                  {q.dragItems.map((d, dIdx) => (
+                    <div key={dIdx} className="p-1.5 rounded-lg bg-stone-50 border border-stone-200 text-[11px] flex items-center justify-between">
+                      <span className="font-semibold text-stone-800">{d.item}</span>
+                      <span className="text-stone-400">➔</span>
+                      <span className="font-semibold text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded">{d.target}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : q.type === 'sorting' && q.sortBuckets && q.sortBuckets.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-2">
+                  {q.sortBuckets.map((b, bIdx) => (
+                    <div key={bIdx} className="p-1.5 rounded-lg bg-stone-50 border border-stone-200 text-[11px]">
+                      <span className="font-bold text-indigo-900">{b.bucketName}:</span>
+                      <span className="text-stone-700 ml-1">{b.items.join(', ')}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : q.type === 'ordering' && q.orderSequence && q.orderSequence.length > 0 ? (
+                <div className="p-1.5 rounded-lg bg-stone-50 border border-stone-200 text-[11px] mt-2 flex items-center gap-1.5 flex-wrap">
+                  <span className="font-bold text-stone-500">Order:</span>
+                  {q.orderSequence.map((step, sIdx) => (
+                    <span key={sIdx} className="flex items-center gap-1">
+                      <span className="bg-amber-100 text-amber-900 font-bold px-1.5 py-0.5 rounded">{step}</span>
+                      {sIdx < q.orderSequence!.length - 1 && <span className="text-stone-400">➔</span>}
+                    </span>
+                  ))}
+                </div>
+              ) : (q.type === 'open_box' || q.type === 'fill_blank') ? (
+                <div className="p-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] mt-2 flex items-center gap-2">
+                  <span className="font-bold text-emerald-900">Accepted Answer:</span>
+                  <span className="font-mono font-bold text-emerald-800 bg-white px-2 py-0.5 rounded border border-emerald-300">
+                    {q.openBoxAnswer || q.options[0] || '1'}
+                  </span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+                  {q.options.map((opt, optIdx) => {
+                    const isCorrect = q.correctIndex === optIdx;
+                    return (
+                      <div
+                        key={optIdx}
+                        className={`p-1.5 rounded-lg border text-[11px] flex items-center gap-1.5 ${
+                          isCorrect
+                            ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-bold'
+                            : 'bg-stone-50 border-stone-200 text-stone-700'
+                        }`}
+                      >
+                        <span className="font-mono text-[10px] text-stone-400">
+                          {String.fromCharCode(65 + optIdx)}:
+                        </span>
+                        <span className="truncate">{opt || '(empty)'}</span>
+                        {isCorrect && <Check className="w-3 h-3 text-emerald-600 ml-auto shrink-0"/>}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           ))}
-          {parsed.length > 5 && <div className="py-1 px-2 text-[10px] text-stone-500 font-semibold italic">+ {parsed.length - 5} more questions</div>}
         </div>
       </div>}
 
-      <div className="flex justify-end">
-        <button onClick={importCsv} disabled={!parsed.length||csvErrors.length>0} className="px-5 py-2.5 rounded-xl bg-stone-900 hover:bg-black text-white font-bold disabled:opacity-40 transition shadow-xs">
-          Import {parsed.length ? `${parsed.length} Draft Questions` : 'Questions'}
+      <div className="flex justify-end pt-2">
+        <button
+          onClick={importCsv}
+          disabled={!parsed.length || csvErrors.length > 0}
+          className="px-6 py-2.5 rounded-xl bg-stone-900 hover:bg-black text-white font-bold text-xs disabled:opacity-40 transition shadow-xs flex items-center gap-2 cursor-pointer"
+        >
+          <Check className="w-4 h-4 text-emerald-400"/> Import All {parsed.length ? `${parsed.length} Questions` : 'Questions'}
         </button>
       </div>
     </div>}
@@ -1596,13 +1834,17 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
     onClose={() => {
       setEditingDraft(null);
       setEditingBatchIndex(null);
+      setEditingCsvIndex(null);
     }}
     onSave={(updated) => {
       if (editingBatchIndex !== null) {
         setGenerated(prev => prev.map((item, idx) => idx === editingBatchIndex ? updated : item));
+      } else if (editingCsvIndex !== null) {
+        setParsed(prev => prev.map((item, idx) => idx === editingCsvIndex ? updated : item));
       }
       setEditingDraft(null);
       setEditingBatchIndex(null);
+      setEditingCsvIndex(null);
     }}
   />
   </div>;

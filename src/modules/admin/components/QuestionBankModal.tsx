@@ -5,6 +5,7 @@ import { sounds } from '../../../utils/audio';
 import { getNextQuestionId } from '../../../utils/idAndUsernameGenerator';
 import { loadCurriculumMaster } from '../../../data/curriculumMasterData';
 import { CategoryMasterRecord, SkillMasterRecord } from '../../../data/questionBankMasterData';
+import { fixMojibake, parseVisualObjectsString } from '../../../utils/visualUtils';
 
 interface Props {
   isOpen: boolean; onClose: () => void; availableGrades: string[]; availableSubjects: string[]; questions?: Question[];
@@ -92,13 +93,309 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
   };
 
   const saveSingle=(e:React.FormEvent)=>{e.preventDefault();if(!canCreate||!prompt.trim())return;const id=getNextQuestionId(grade,questions,0,subject);const q=buildQuestion(id,prompt.trim(),questionType==='open_box'||questionType==='fill_blank'?[openAnswer.trim()]:options.map(x=>x.trim()),questionType==='open_box'||questionType==='fill_blank'?0:correctIndex,difficulty,questionType,{openBoxAnswer:(questionType==='open_box'||questionType==='fill_blank')?openAnswer.trim():undefined});onAddQuestion(q);onSuccess();};
-  const generateBatch=()=>{if(!canCreate)return;const list:Question[]=[];const existing=[...questions];for(let i=0;i<batchCount;i++){const diff=batchDifficulty==='Mixed'?(i%3===0?'Easy':i%3===1?'Medium':'Hard') as any:batchDifficulty;const type=batchType==='mixed'?TYPES[i%TYPES.length].value:'multiple_choice';let a=(i%8)+2,b=(i%6)+2;let p='',opts:string[]=['','','',''],ci=0,answer='';const cat=names.category.toLowerCase();if(cat.includes('number')||cat.includes('algebra')){const sum=a+b;p=`What is ${a} + ${b}?`;opts=[String(sum),String(sum+1),String(sum+2),String(Math.max(0,sum-1))];answer=String(sum);}else if(cat.includes('measurement')){const total=(i%5)+2;p=`How many units are shown in this measurement example?`;opts=[String(total),String(total+1),String(Math.max(1,total-1)),String(total+2)];answer=String(total);}else{p=`Which statement is correct about ${names.skill}?`;opts=[`This is example ${i+1}`,`This is not related`,`It is always false`,`None of these`];answer=opts[0];}const id=getNextQuestionId(grade,existing,0,subject);const shouldVisual=batchVisualMode==='visual'||(batchVisualMode==='mixed'&&i%2===0); const q=buildQuestion(id,p,opts,ci,diff,type,{visualClipart:shouldVisual?(i%2===0?'🍎 🍎':'⭐ ⭐'):undefined,openBoxAnswer:answer,explanation:`The correct answer is ${answer}.`,visualConfig:shouldVisual?{enabled:true,template:(i%3===0?'picture_counting':i%3===1?'pattern':'picture_choice') as VisualQuestionTemplate,animation:(i%2===0?'bounce':'pop') as VisualAnimation,interaction:'tap',visualInstructions:'Tap the pictures and choose the answer.',background:'playful',autoPlay:true,objects:(i%2===0?[{id:'obj-1',label:'apple',emoji:'🍎',count:a},{id:'obj-2',label:'star',emoji:'⭐',count:b}]:undefined)}:undefined});list.push(q);existing.push(q);}setGenerated(list);};
+  const generateBatch=()=>{
+    if(!canCreate) return;
+    const list:Question[]=[];
+    const existing=[...questions];
+    
+    for(let i=0; i<batchCount; i++){
+      const diff = batchDifficulty==='Mixed' ? (i%3===0?'Easy':i%3===1?'Medium':'Hard') as any : batchDifficulty;
+      let type: QuestionType = batchType==='mixed' ? TYPES[i%TYPES.length].value : (batchType as QuestionType || 'multiple_choice');
+      let a = (i % 8) + 2, b = (i % 6) + 2;
+      let p = '', opts: string[] = ['', '', '', ''], ci = 0, answer = '';
+      const cat = (names.category || '').toLowerCase();
+      const sk = (names.skill || '').toLowerCase();
+      
+      const isMath = cat.includes('number') || cat.includes('algebra') || cat.includes('add') || cat.includes('sub') || cat.includes('count') || cat.includes('math') || sk.includes('add') || sk.includes('sub') || sk.includes('count') || sk.includes('number');
+      const isGeometry = cat.includes('geometry') || cat.includes('shape') || sk.includes('shape') || sk.includes('triangle') || sk.includes('square');
+      const isMeasurement = cat.includes('measurement') || cat.includes('time') || sk.includes('time') || sk.includes('clock');
+
+      if (isMath) {
+        if (sk.includes('sub') || cat.includes('sub')) {
+          const total = a + b;
+          p = `What is ${total} - ${a}?`;
+          answer = String(b);
+          opts = [String(b), String(b + 1), String(Math.max(0, b - 1)), String(b + 2)];
+        } else if (sk.includes('count') || cat.includes('count')) {
+          p = `How many objects are shown in total?`;
+          answer = String(a);
+          opts = [String(a), String(a + 1), String(Math.max(1, a - 1)), String(a + 2)];
+        } else {
+          const sum = a + b;
+          p = `What is ${a} + ${b}?`;
+          answer = String(sum);
+          opts = [String(sum), String(sum + 1), String(sum + 2), String(Math.max(0, sum - 1))];
+        }
+      } else if (isGeometry) {
+        p = `Which of the following is a 2D shape with straight sides?`;
+        answer = 'Triangle';
+        opts = ['Triangle', 'Circle', 'Sphere', 'Cylinder'];
+      } else if (isMeasurement) {
+        const total = (i % 5) + 2;
+        p = `How many units are shown in this measurement example?`;
+        answer = String(total);
+        opts = [String(total), String(total + 1), String(Math.max(1, total - 1)), String(total + 2)];
+      } else {
+        p = `Which example best demonstrates ${names.skill || 'this concept'}?`;
+        answer = `Correct Concept Option ${i + 1}`;
+        opts = [`Correct Concept Option ${i + 1}`, `Incorrect Choice A`, `Incorrect Choice B`, `None of the above`];
+      }
+
+      // Shuffle options deterministically
+      ci = i % 4;
+      if (ci !== 0) {
+        const temp = opts[0];
+        opts[0] = opts[ci];
+        opts[ci] = temp;
+      }
+
+      // Special configs for specialized question types so they never freeze
+      let dragItems: any = undefined;
+      let matchPairs: any = undefined;
+      let orderSequence: any = undefined;
+      let sortBuckets: any = undefined;
+
+      if (type === 'drag_and_drop') {
+        dragItems = [
+          { item: '🍎 Apple', target: '🧺 Fruit Basket' },
+          { item: '🚗 Toy Car', target: '🧸 Toy Box' },
+          { item: '🍌 Banana', target: '🧺 Fruit Basket' }
+        ];
+        p = `Drag and place each item into its correct target!`;
+      } else if (type === 'match_making') {
+        matchPairs = [
+          { left: '🐱 Cat', right: 'Meow' },
+          { left: '🐶 Dog', right: 'Woof' },
+          { left: '🐮 Cow', right: 'Moo' }
+        ];
+        p = `Match each animal with its sound!`;
+      } else if (type === 'ordering') {
+        orderSequence = ['1', '2', '3', '4'];
+        opts = ['1', '2', '3', '4'];
+        p = `Arrange the numbers in counting order from smallest to largest!`;
+      } else if (type === 'sorting') {
+        sortBuckets = [
+          { bucketName: '🧺 Fruit Basket', items: ['🍎 Apple', '🍌 Banana', '🍓 Berry'] },
+          { bucketName: '🧸 Toy Box', items: ['🚗 Toy Car', '⚽ Ball', '🎈 Balloon'] }
+        ];
+        p = `Sort each item into the correct category!`;
+      } else if (type === 'true_false') {
+        opts = ['True', 'False'];
+        ci = (a % 2 === 0) ? 0 : 1;
+        p = `True or False: ${a} + ${b} equals ${ci === 0 ? a + b : a + b + 1}.`;
+        answer = opts[ci];
+      } else if (type === 'open_box' || type === 'fill_blank') {
+        opts = [answer];
+        ci = 0;
+      }
+
+      const id = getNextQuestionId(grade, existing, 0, subject);
+      const shouldVisual = batchVisualMode === 'visual' || (batchVisualMode === 'mixed' && i % 2 === 0);
+      
+      const q = buildQuestion(id, p, opts, ci, diff, type, {
+        visualClipart: shouldVisual ? (i % 2 === 0 ? '🍎 🍎' : '⭐ ⭐') : undefined,
+        openBoxAnswer: answer,
+        explanation: `The correct answer is ${answer || opts[ci]}.`,
+        hint: `Think carefully about ${names.skill || 'the question'}!`,
+        dragItems,
+        matchPairs,
+        orderSequence,
+        sortBuckets,
+        visualConfig: shouldVisual ? {
+          enabled: true,
+          template: (i % 3 === 0 ? 'picture_counting' : i % 3 === 1 ? 'pattern' : 'picture_choice') as VisualQuestionTemplate,
+          animation: (i % 2 === 0 ? 'bounce' : 'pulse') as VisualAnimation,
+          interaction: 'tap',
+          visualInstructions: 'Tap the pictures and choose the answer.',
+          background: 'playful',
+          autoPlay: true,
+          objects: (i % 2 === 0 
+            ? [{ id: 'obj-1', label: 'apple', emoji: '🍎', count: a }, { id: 'obj-2', label: 'star', emoji: '⭐', count: b }]
+            : [{ id: 'obj-1', label: 'cookie', emoji: '🍪', count: a }])
+        } : undefined
+      });
+      
+      list.push(q);
+      existing.push(q);
+    }
+    setGenerated(list);
+  };
   const saveGenerated=()=>{if(!generated.length)return;if(onAddBatchQuestions)onAddBatchQuestions(generated);else generated.forEach(onAddQuestion);onSuccess();};
 
   const templateHeaders=['Question ID','Country Code','Region Code','Curriculum Code','Subject Code','Grade Code','Category Code','Skill Code','Difficulty','Question Type','Question Text','Option A','Option B','Option C','Option D','Correct Answer','Explanation','Hint','Visual Clipart','Media URL','Visual Enabled','Visual Template','Visual Animation','Visual Interaction','Visual Instructions','Visual Image URL','Visual Audio URL','Visual Objects','Visual Background','Visual Auto Play','Points','Status'];
+  const quickVisualHeaders=['Question Text','Option A','Option B','Option C','Option D','Correct Answer','Visual Objects','Visual Animation','Visual Clipart','Visual Template','Visual Instructions','Difficulty'];
+
+  const downloadQuickVisualTemplate=()=>{
+    const sampleRows=[
+      ['How many apples are on the screen?','2','3','4','5','B','apple|apple|apple','bounce','🍎 🍎 🍎','picture_counting','Tap each apple to count them.','Easy'],
+      ['Which shape is a star?','Circle','Triangle','Star','Square','C','circle|triangle|star|square','pulse','⭐','picture_choice','Tap the star.','Easy'],
+      ['Which animal is the largest?','Mouse','Dog','Elephant','','C','mouse|dog|elephant|','bounce','🐘','picture_choice','Tap the biggest animal.','Easy'],
+      ['What is 2 + 2?','3','4','5','6','B','cookie|cookie|cookie|cookie','bounce','🍪 🍪 🍪 🍪','picture_counting','Count all the cookies.','Easy']
+    ];
+    const csv=['\uFEFF' + quickVisualHeaders.map(csvEscape).join(','),...sampleRows.map(r=>r.map(csvEscape).join(','))].join('\n');
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download='pforpencil_quick_visual_questions_template.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const downloadTemplate=()=>{const sample=['','CNT-AU','REG-VIC','CUR-VCAA20','SUB_MTH','GRD_G3','CAT-NUM','SK-NUM-01','Easy','multiple_choice','Which number is greater?','25','32','18','21','B','32 is greater than 25, 18 and 21.','Compare the numbers.','🔢','', 'Yes','picture_counting','bounce','tap','Tap the pictures and choose the answer.','','','apple|apple|apple','playful','Yes',20,'Draft'];const masterSheet=[['MASTER DATA CODES'],['Countries'],...cm.countries.map(x=>[x.code,x.name]),['Regions'],...cm.regions.map(x=>[x.code,x.name,x.countryId]),['Curricula'],...cm.curricula.map(x=>[x.code,x.name,x.regionId])];const csv=[templateHeaders.map(csvEscape).join(','),sample.map(csvEscape).join(','),'','','# Master Data Reference','','','',...masterSheet.map(r=>r.map(csvEscape).join(','))].join('\n');const blob=new Blob(['\uFEFF' + csv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='pforpencil_question_master_template.csv';a.click();URL.revokeObjectURL(url);};
-  const processCsv=(text:string)=>{const rows=parseCsv(text);if(rows.length<2){setCsvErrors(['CSV must include a header and at least one question row.']);setParsed([]);return;}const headers=rows[0].map(h=>h.trim());const index=(n:string)=>headers.findIndex(h=>h.toLowerCase()===n.toLowerCase());const required=['Country Code','Region Code','Curriculum Code','Subject Code','Grade Code','Category Code','Skill Code','Difficulty','Question Type','Question Text'];const errs:string[]=[];required.forEach(h=>{if(index(h)<0)errs.push(`Missing required column: ${h}`);});if(errs.length){setCsvErrors(errs);setParsed([]);return;}const out:Question[]=[];const existing=[...questions];rows.slice(1).forEach((r,ri)=>{const row=ri+2;const val=(h:string)=>r[index(h)]||'';const cc=useSelectedForCsv?countryId:val('Country Code');const rc=useSelectedForCsv?regionId:val('Region Code');const cuc=useSelectedForCsv?curriculumId:val('Curriculum Code');const sc=useSelectedForCsv?(selectedSubject?.id||''):val('Subject Code');const gc=useSelectedForCsv?(selectedGrade?.id||''):val('Grade Code');const catc=useSelectedForCsv?(selectedCategory?.code||''):val('Category Code');const skc=useSelectedForCsv?(selectedSkill?.code||''):val('Skill Code');const country=cm.countries.find(x=>x.code===cc&&x.active);const region=cm.regions.find(x=>x.code===rc&&x.countryId===country?.id&&x.active);const cur=cm.curricula.find(x=>x.code===cuc&&x.countryId===country?.id&&x.regionId===region?.id&&x.active);const sub=(subjects.length?subjects:[]).find(x=>x.id===sc&&x.active);const grd=(grades.length?grades:[]).find(x=>x.id===gc&&x.active);const cat=categoryMasters.find(x=>x.code===catc&&x.curriculumId===cur?.id&&x.subjectId===sub?.id&&x.gradeId===grd?.id&&x.active);const skill=skillMasters.find(x=>x.code===skc&&x.categoryId===cat?.id&&x.gradeId===grd?.id&&x.active);if(!country)errs.push(`Row ${row}: Invalid/inactive Country Code ${cc}`);if(!region)errs.push(`Row ${row}: Invalid Region Code ${rc}`);if(!cur)errs.push(`Row ${row}: Invalid Curriculum Code ${cuc}`);if(!sub)errs.push(`Row ${row}: Invalid Subject Code ${sc}`);if(!grd)errs.push(`Row ${row}: Invalid Grade Code ${gc}`);if(!cat)errs.push(`Row ${row}: Invalid Category Code ${catc}`);if(!skill)errs.push(`Row ${row}: Invalid Skill Code ${skc}`);const diff=val('Difficulty') as any;if(!['Easy','Medium','Hard'].includes(diff))errs.push(`Row ${row}: Difficulty must be Easy, Medium or Hard`);const type=val('Question Type') as QuestionType;if(!TYPES.some(t=>t.value===type))errs.push(`Row ${row}: Invalid Question Type ${type}`);const text=val('Question Text');if(!text)errs.push(`Row ${row}: Question Text is required`);if(!country||!region||!cur||!sub||!grd||!cat||!skill||!text||!['Easy','Medium','Hard'].includes(diff)||!TYPES.some(t=>t.value===type))return;const opts=[val('Option A'),val('Option B'),val('Option C'),val('Option D')];const ca=val('Correct Answer').toUpperCase();const ci=Math.max(0,['A','B','C','D'].indexOf(ca));const q:Question={id:getNextQuestionId(grd.name,existing,0,sub.name),country:country.name,state:region.name,curriculum:cur.name,countryId:country.id,regionId:region.id,curriculumId:cur.id,subject:sub.name,subjectId:sub.id,grade:grd.name,gradeId:grd.id,category:cat.name,categoryId:cat.id,categoryCode:cat.code,skill:skill.name,skillId:skill.id,skillCode:skill.code,curriculumReference:skill.curriculumReference,difficulty:diff,type,prompt:text,options:opts,correctIndex:ci,explanation:val('Explanation')||'Review the answer.',hint:val('Hint')||undefined,visualClipart:val('Visual Clipart')||undefined,mediaUrl:val('Media URL')||undefined,visualConfig:(['yes','true','1'].includes(val('Visual Enabled').toLowerCase())?{enabled:true,template:(val('Visual Template')||'picture_counting') as VisualQuestionTemplate,animation:(val('Visual Animation')||'bounce') as VisualAnimation,interaction:(val('Visual Interaction')||'tap') as VisualQuestionConfig['interaction'],visualInstructions:val('Visual Instructions')||undefined,imageUrl:val('Visual Image URL')||undefined,audioUrl:val('Visual Audio URL')||undefined,objects:val('Visual Objects')?val('Visual Objects').split('|').map((x:string,i:number)=>({id:`obj-${i+1}`,label:x.trim(),emoji:x.trim()})).filter((x:any)=>x.label):undefined,background:(val('Visual Background')||'playful') as VisualQuestionConfig['background'],autoPlay:!['no','false','0'].includes(val('Visual Auto Play').toLowerCase())}:undefined),points:Number(val('Points'))||20,status:(val('Status') as any)||'Draft'};out.push(q);existing.push(q);});setCsvErrors(errs);setParsed(out);};
-  const onFile=(e:React.ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;setCsvFileName(f.name);const reader=new FileReader();reader.onload=ev=>processCsv(String(ev.target?.result||''));reader.readAsText(f);};
+  const processCsv=(rawInputText:string)=>{
+    const textData=fixMojibake(rawInputText);
+    const rows=parseCsv(textData);
+    if(rows.length<2){setCsvErrors(['CSV must include a header and at least one question row.']);setParsed([]);return;}
+    const headers=rows[0].map(h=>fixMojibake(h).trim());
+    const index=(n:string)=>headers.findIndex(h=>h.toLowerCase()===n.toLowerCase());
+    const out:Question[]=[];const existing=[...questions];const errs:string[]=[];
+
+    if(index('Question Text')<0){
+      setCsvErrors(['Missing required column: "Question Text"']);
+      setParsed([]);
+      return;
+    }
+
+    rows.slice(1).forEach((r,ri)=>{
+      const row=ri+2;
+      const val=(h:string)=>{
+        const idx=index(h);
+        return idx>=0?fixMojibake(r[idx]||''):'';
+      };
+      const text=val('Question Text');
+      if(!text)return; // skip empty rows
+
+      const cc=useSelectedForCsv?countryId:val('Country Code')||countryId;
+      const rc=useSelectedForCsv?regionId:val('Region Code')||regionId;
+      const cuc=useSelectedForCsv?curriculumId:val('Curriculum Code')||curriculumId;
+      const sc=useSelectedForCsv?(selectedSubject?.id||''):val('Subject Code')||(selectedSubject?.id||'');
+      const gc=useSelectedForCsv?(selectedGrade?.id||''):val('Grade Code')||(selectedGrade?.id||'');
+      const catc=useSelectedForCsv?(selectedCategory?.code||''):val('Category Code')||(selectedCategory?.code||'');
+      const skc=useSelectedForCsv?(selectedSkill?.code||''):val('Skill Code')||(selectedSkill?.code||'');
+
+      const country=cm.countries.find(x=>x.code===cc&&x.active)||countries[0];
+      const region=cm.regions.find(x=>x.code===rc&&x.active)||regions[0];
+      const cur=cm.curricula.find(x=>x.code===cuc&&x.active)||curricula[0];
+      const sub=(subjects.length?subjects:[]).find(x=>x.id===sc&&x.active)||selectedSubject;
+      const grd=(grades.length?grades:[]).find(x=>x.id===gc&&x.active)||selectedGrade;
+      const cat=categoryMasters.find(x=>(x.code===catc||x.name.toLowerCase()===catc.toLowerCase())&&x.active)||selectedCategory;
+      const skill=skillMasters.find(x=>(x.code===skc||x.name.toLowerCase()===skc.toLowerCase())&&x.active)||selectedSkill;
+
+      if(!country)errs.push(`Row ${row}: Invalid Country`);
+      if(!region)errs.push(`Row ${row}: Invalid Region`);
+      if(!cur)errs.push(`Row ${row}: Invalid Curriculum`);
+      if(!sub)errs.push(`Row ${row}: Invalid Subject`);
+      if(!grd)errs.push(`Row ${row}: Invalid Grade`);
+      if(!cat)errs.push(`Row ${row}: Select or specify a Category`);
+      if(!skill)errs.push(`Row ${row}: Select or specify a Skill`);
+
+      const rawDiff=val('Difficulty')||'Easy';
+      const diff:( 'Easy' | 'Medium' | 'Hard' )=['Easy','Medium','Hard'].includes(rawDiff)?rawDiff as any:'Easy';
+      const rawType=val('Question Type')||'multiple_choice';
+      const type:QuestionType=TYPES.some(t=>t.value===rawType)?rawType as QuestionType:'multiple_choice';
+
+      if(!country||!region||!cur||!sub||!grd||!cat||!skill)return;
+
+      const opts=[val('Option A'),val('Option B'),val('Option C'),val('Option D')];
+      const ca=(val('Correct Answer')||'A').toUpperCase();
+      const ci=Math.max(0,['A','B','C','D'].indexOf(ca));
+
+      const visualObjectsRaw=val('Visual Objects');
+      const hasVisualObjects=Boolean(visualObjectsRaw && visualObjectsRaw.trim());
+      const visualEnabledStr=val('Visual Enabled').toLowerCase();
+      const isVisualEnabled=hasVisualObjects || ['yes','true','1'].includes(visualEnabledStr);
+
+      let visualConfig: VisualQuestionConfig | undefined = undefined;
+      let finalClipart = val('Visual Clipart') || undefined;
+
+      if(isVisualEnabled){
+        const tpl=(val('Visual Template') || (rawType==='image_choice'?'picture_choice':'picture_counting')) as VisualQuestionTemplate;
+        const anim=(val('Visual Animation') || (tpl==='picture_choice'?'pulse':'bounce')) as VisualAnimation;
+        const interaction=(val('Visual Interaction') || 'tap') as VisualQuestionConfig['interaction'];
+        const instructions=val('Visual Instructions') || (tpl==='picture_counting'?'Tap the pictures to count them.':'Tap the correct picture.');
+        const bg=(val('Visual Background') || 'playful') as VisualQuestionConfig['background'];
+        const autoPlay=!['no','false','0'].includes(val('Visual Auto Play').toLowerCase());
+        
+        const parsedObjects = hasVisualObjects ? parseVisualObjectsString(visualObjectsRaw) : undefined;
+
+        if (parsedObjects && parsedObjects.length > 0 && !finalClipart) {
+          finalClipart = parsedObjects.map(o => o.emoji || o.label).join(' ');
+        }
+
+        visualConfig={
+          enabled: true,
+          template: tpl,
+          animation: anim,
+          interaction,
+          visualInstructions: instructions,
+          imageUrl: val('Visual Image URL') || undefined,
+          audioUrl: val('Visual Audio URL') || undefined,
+          objects: parsedObjects && parsedObjects.length > 0 ? parsedObjects : undefined,
+          background: bg,
+          autoPlay
+        };
+      }
+
+      const q:Question={
+        id:getNextQuestionId(grd.name,existing,0,sub.name),
+        country:country.name,
+        state:region.name,
+        curriculum:cur.name,
+        countryId:country.id,
+        regionId:region.id,
+        curriculumId:cur.id,
+        subject:sub.name,
+        subjectId:sub.id,
+        grade:grd.name,
+        gradeId:grd.id,
+        category:cat.name,
+        categoryId:cat.id,
+        categoryCode:cat.code,
+        skill:skill.name,
+        skillId:skill.id,
+        skillCode:skill.code,
+        curriculumReference:skill.curriculumReference,
+        difficulty:diff,
+        type,
+        prompt:text,
+        options:opts,
+        correctIndex:ci,
+        explanation:val('Explanation')||'Review the answer and try again.',
+        hint:val('Hint')||undefined,
+        visualClipart:finalClipart,
+        mediaUrl:val('Media URL')||undefined,
+        visualConfig,
+        points:Number(val('Points'))||20,
+        status:(val('Status') as any)||'Draft'
+      };
+      out.push(q);
+      existing.push(q);
+    });
+    setCsvErrors(errs);
+    setParsed(out);
+  };
+  const onFile=(e:React.ChangeEvent<HTMLInputElement>)=>{
+    const f=e.target.files?.[0];
+    if(!f)return;
+    setCsvFileName(f.name);
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      try {
+        const buffer = ev.target?.result;
+        if (buffer instanceof ArrayBuffer) {
+          const decoder = new TextDecoder('utf-8', { fatal: false });
+          const text = decoder.decode(buffer);
+          processCsv(text);
+        } else {
+          processCsv(String(buffer || ''));
+        }
+      } catch (err) {
+        processCsv(String(ev.target?.result||''));
+      }
+    };
+    reader.readAsArrayBuffer(f);
+  };
   const importCsv=()=>{if(!parsed.length||csvErrors.length)return;if(onAddBatchQuestions)onAddBatchQuestions(parsed);else parsed.forEach(onAddQuestion);onSuccess();};
   const onSuccess=()=>{sounds.success();onClose();};
   if(!isOpen)return null;
@@ -106,6 +403,6 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
   return <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 backdrop-blur-sm p-4"><div className="bg-white rounded-3xl shadow-2xl border border-stone-200 max-w-5xl w-full my-4 overflow-hidden flex flex-col max-h-[94vh]"><div className="bg-stone-900 text-white p-5 flex items-center justify-between"><div><h2 className="text-lg font-bold">Master Question Bank Creator</h2><p className="text-xs text-stone-300">Single create, batch generate and CSV import all use the same master hierarchy and question structure.</p></div><button onClick={onClose}><X className="w-5 h-5"/></button></div><div className="bg-stone-100 px-6 py-2.5 border-b flex gap-2 text-xs font-bold"><button onClick={()=>setMode('single')} className={`px-3 py-1.5 rounded-xl ${mode==='single'?'bg-white shadow-xs':'text-stone-600'}`}>Single Interactive Question</button><button onClick={()=>setMode('batch')} className={`px-3 py-1.5 rounded-xl ${mode==='batch'?'bg-white shadow-xs':'text-stone-600'}`}><Sparkles className="inline w-3.5 h-3.5 text-amber-500 mr-1"/>Batch Multi-Question Generator</button><button onClick={()=>setMode('csv_upload')} className={`px-3 py-1.5 rounded-xl ${mode==='csv_upload'?'bg-white shadow-xs':'text-stone-600'}`}><FileSpreadsheet className="inline w-3.5 h-3.5 text-emerald-600 mr-1"/>Excel / CSV Bulk Upload & Template</button></div><div className="p-6 overflow-y-auto flex-1 text-stone-800 text-xs">
     {mode==='single'&&<form onSubmit={saveSingle} className="space-y-4">{hierarchyBlock}<div className="grid grid-cols-2 gap-3"><label className="font-semibold">Difficulty<select value={difficulty} onChange={e=>setDifficulty(e.target.value as any)} className="w-full mt-1 p-2 rounded-xl border"><option>Easy</option><option>Medium</option><option>Hard</option></select></label><label className="font-semibold">Question Type<select value={questionType} onChange={e=>setQuestionType(e.target.value as QuestionType)} className="w-full mt-1 p-2 rounded-xl border">{TYPES.map(t=><option key={t.value} value={t.value}>{t.label}</option>)}</select></label></div><label className="font-semibold block">Question Text<textarea required value={prompt} onChange={e=>setPrompt(e.target.value)} rows={3} className="w-full mt-1 p-3 rounded-xl border" placeholder="Enter the student-facing question..."/></label>{(questionType==='open_box'||questionType==='fill_blank')?<label className="font-semibold block">Correct Answer<input required value={openAnswer} onChange={e=>setOpenAnswer(e.target.value)} className="w-full mt-1 p-2.5 rounded-xl border"/></label>:<div className="p-3 rounded-2xl bg-stone-50 border"><div className="font-bold mb-2">Answer Options</div>{options.map((o,i)=><div key={i} className="flex gap-2 mb-2"><input type="radio" checked={correctIndex===i} onChange={()=>setCorrectIndex(i)}/><input value={o} onChange={e=>setOptions(p=>p.map((x,j)=>j===i?e.target.value:x))} placeholder={`Option ${String.fromCharCode(65+i)}`} className="flex-1 p-2 rounded-lg border"/></div>)}</div>}<div className="p-4 rounded-2xl border border-stone-200 bg-stone-50 space-y-3"><div className="flex items-center justify-between"><div><div className="font-black text-stone-900">Visual / Animated Layer</div><div className="text-[10px] text-stone-600 mt-0.5">Optional. Existing text questions work exactly as before.</div></div><label className="flex items-center gap-2 font-bold"><input type="checkbox" checked={visualEnabled} onChange={e=>setVisualEnabled(e.target.checked)}/> Enable visuals</label></div>{visualEnabled&&<><div className="grid grid-cols-1 sm:grid-cols-3 gap-2"><label>Template<select value={visualTemplate} onChange={e=>setVisualTemplate(e.target.value as VisualQuestionTemplate)} className="w-full mt-1 p-2 rounded-xl border bg-white"><option value="picture_counting">Picture Counting</option><option value="picture_choice">Picture Choice</option><option value="drag_drop">Drag & Drop</option><option value="matching">Matching</option><option value="sorting">Sorting</option><option value="ordering">Ordering</option><option value="pattern">Pattern</option><option value="number_line">Number Line</option><option value="interactive_story">Interactive Story</option></select></label><label>Animation<select value={visualAnimation} onChange={e=>setVisualAnimation(e.target.value as VisualAnimation)} className="w-full mt-1 p-2 rounded-xl border bg-white"><option>none</option><option>bounce</option><option>float</option><option>pulse</option><option>wiggle</option><option>pop</option><option>spin</option></select></label><label>Interaction<select value={visualInteraction} onChange={e=>setVisualInteraction(e.target.value as VisualQuestionConfig['interaction'])} className="w-full mt-1 p-2 rounded-xl border bg-white"><option value="tap">Tap</option><option value="count">Count</option><option value="drag">Drag</option><option value="match">Match</option><option value="sort">Sort</option><option value="order">Order</option><option value="none">None</option></select></label></div><label className="block">Visual Instructions<textarea value={visualInstructions} onChange={e=>setVisualInstructions(e.target.value)} rows={2} className="w-full mt-1 p-2 rounded-xl border bg-white" placeholder="e.g. Tap all the apples, then choose how many you counted."/></label><div className="grid grid-cols-1 sm:grid-cols-2 gap-2"><label>Visual Image / GIF URL<input value={visualImageUrl} onChange={e=>setVisualImageUrl(e.target.value)} className="w-full mt-1 p-2 rounded-xl border bg-white" placeholder="https://..."/></label><label>Audio URL<input value={visualAudioUrl} onChange={e=>setVisualAudioUrl(e.target.value)} className="w-full mt-1 p-2 rounded-xl border bg-white" placeholder="https://...mp3"/></label></div><label>Visual Objects <span className="font-normal text-stone-500">(separate with |, e.g. 🍎|🍎|🍎)</span><input value={visualObjects} onChange={e=>setVisualObjects(e.target.value)} className="w-full mt-1 p-2 rounded-xl border bg-white" placeholder="🍎|🍎|🍎|🍎|🍎"/></label><div className="flex flex-wrap gap-2 items-center"><label>Background<select value={visualBackground} onChange={e=>setVisualBackground(e.target.value as any)} className="ml-1 p-1.5 rounded-lg border bg-white"><option value="playful">Playful</option><option value="soft">Soft</option><option value="none">None</option></select></label><label className="flex items-center gap-1.5"><input type="checkbox" checked={visualAutoPlay} onChange={e=>setVisualAutoPlay(e.target.checked)}/> Auto-play animation/audio</label></div><div className="p-3 rounded-xl bg-white border flex items-center justify-center min-h-20"><div className="text-center"><div className="text-[10px] text-stone-400 mb-1">Live visual preview</div><div className="text-3xl">{visualObjects||visualClipart||'🍎 🍎 🍎'}</div><div className="text-[10px] text-stone-600 mt-1">{visualInstructions||'Your visual question will appear here.'}</div></div></div></>}</div><div className="flex flex-wrap gap-1.5">{CLIPART.map(x=><button key={x} type="button" onClick={()=>setVisualClipart(p=>p+x)} className="w-8 h-8 border rounded-lg bg-white">{x}</button>)}</div><div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><textarea value={explanation} onChange={e=>setExplanation(e.target.value)} rows={2} placeholder="Explanation" className="p-2 rounded-xl border"/><textarea value={hint} onChange={e=>setHint(e.target.value)} rows={2} placeholder="Hint (optional)" className="p-2 rounded-xl border"/></div><div className="flex justify-between items-center border-t pt-3"><div className="text-[10px] text-stone-500">Questions are saved as Draft and can be reviewed before publishing.</div><button disabled={!canCreate||!prompt.trim()} className="px-5 py-2.5 rounded-xl bg-stone-900 text-white font-bold disabled:opacity-40"><Plus className="inline w-4 h-4 mr-1"/>Save Draft Question</button></div></form>}
     {mode==='batch'&&<div className="space-y-4">{hierarchyBlock}<div className="grid grid-cols-1 sm:grid-cols-4 gap-3"><label className="font-semibold">Questions<input type="number" min={1} max={1000} value={batchCount} onChange={e=>setBatchCount(Math.min(1000,Math.max(1,Number(e.target.value)||1)))} className="w-full mt-1 p-2.5 rounded-xl border"/></label><label className="font-semibold">Difficulty<select value={batchDifficulty} onChange={e=>setBatchDifficulty(e.target.value as any)} className="w-full mt-1 p-2.5 rounded-xl border"><option>Easy</option><option>Medium</option><option>Hard</option><option>Mixed</option></select></label><label className="font-semibold">Question Type<select value={batchType} onChange={e=>setBatchType(e.target.value as any)} className="w-full mt-1 p-2.5 rounded-xl border"><option value="same">Multiple Choice</option><option value="mixed">Mixed Types</option></select></label><label className="font-semibold">Visual Style<select value={batchVisualMode} onChange={e=>setBatchVisualMode(e.target.value as any)} className="w-full mt-1 p-2.5 rounded-xl border"><option value="text">Text (existing)</option><option value="visual">Visual / Animated</option><option value="mixed">Mixed</option></select></label></div><div className="flex justify-between"><div className="text-stone-500">Generate questions for <strong>{names.skill||'selected skill'}</strong>. Generated questions remain Draft.</div><button onClick={generateBatch} disabled={!canCreate} className="px-4 py-2 rounded-xl bg-amber-500 font-bold disabled:opacity-40"><Sparkles className="inline w-4 h-4 mr-1"/>Generate {batchCount}</button></div>{generated.length>0&&<div className="border rounded-2xl overflow-hidden"><div className="p-3 bg-stone-50 border-b flex justify-between font-bold"><span>Generated Preview ({generated.length})</span><button onClick={()=>setGenerated([])}><Trash2 className="w-4 h-4"/></button></div><div className="max-h-72 overflow-y-auto">{generated.map((q,i)=><div key={q.id} className="p-3 border-b"><div className="font-mono text-[10px] text-stone-400">{i+1}. {q.id} · {q.difficulty}</div><div className="font-semibold mt-1">{q.prompt}</div><div className="text-stone-500 mt-1">{q.options.join(' · ')}</div></div>)}</div><div className="p-3 flex justify-end"><button onClick={saveGenerated} className="px-4 py-2 rounded-xl bg-stone-900 text-white font-bold">Save {generated.length} Draft Questions</button></div></div>}</div>}
-    {mode==='csv_upload'&&<div className="space-y-4"><div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200"><div className="font-black text-emerald-950">One template for the whole Question Bank</div><p className="text-[11px] text-emerald-800 mt-1">Use stable master codes such as CNT-AU, REG-VIC, CUR-VCAA20, CAT-NUM and the Grade Code + Skill Code. Names are resolved by Funlearn during validation.</p></div><div className="flex flex-wrap gap-2"><button onClick={downloadTemplate} className="px-4 py-2 rounded-xl border bg-white font-bold"><Download className="inline w-4 h-4 mr-1"/>Download Template</button><button onClick={()=>csvInput?.click()} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold"><Upload className="inline w-4 h-4 mr-1"/>Choose CSV</button><input ref={setCsvInput} type="file" accept=".csv,text/csv" onChange={onFile} className="hidden"/></div><label className="flex items-center gap-2 p-3 rounded-xl border bg-stone-50"><input type="checkbox" checked={useSelectedForCsv} onChange={e=>setUseSelectedForCsv(e.target.checked)}/><span><strong>Use current Question Bank hierarchy for all rows</strong><span className="block text-[10px] text-stone-500">Useful when the file contains questions for one selected Skill. The hierarchy columns can then be blank.</span></span></label>{useSelectedForCsv&&hierarchyBlock}<div className="text-[10px] text-stone-500">{csvFileName?`File: ${csvFileName}`:'No file selected'}</div>{csvErrors.length>0&&<div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 space-y-1"><div className="font-bold"><AlertCircle className="inline w-4 h-4 mr-1"/>Validation errors</div>{csvErrors.slice(0,20).map((e,i)=><div key={i}>{e}</div>)}{csvErrors.length>20&&<div>+ {csvErrors.length-20} more errors</div>}</div>}{parsed.length>0&&<div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200"><div className="font-bold text-emerald-900">✓ {parsed.length} questions ready to import</div><p className="text-[10px] text-emerald-800 mt-1">All imported questions will be created as Draft.</p></div>}<div className="flex justify-end"><button onClick={importCsv} disabled={!parsed.length||csvErrors.length>0} className="px-5 py-2.5 rounded-xl bg-stone-900 text-white font-bold disabled:opacity-40">Import {parsed.length||''} Draft Questions</button></div></div>}
+    {mode==='csv_upload'&&<div className="space-y-4"><div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200"><div className="font-black text-emerald-950 flex items-center justify-between"><span>Simplified Visual & Animated CSV Upload</span><span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">New: Quick Visual Mode</span></div><p className="text-[11px] text-emerald-800 mt-1">To create visual questions easily, you only need <strong>Question Text, Options, Correct Answer, and Visual Objects</strong>. You can write emojis like <strong>🍎|🍎|🍎</strong> or plain English words like <strong>apple|apple|apple</strong>, <strong>star|circle|square</strong>, or <strong>cat|dog|lion</strong>. The system automatically converts them and fixes Excel encoding!</p></div><div className="flex flex-wrap gap-2"><button onClick={downloadQuickVisualTemplate} className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-xs transition flex items-center gap-1.5"><Download className="w-4 h-4"/>Download Quick Visual CSV (Simple)</button><button onClick={downloadTemplate} className="px-3.5 py-2 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 font-bold text-xs transition flex items-center gap-1.5"><Download className="w-4 h-4"/>Full Master Template (Advanced)</button><button onClick={()=>csvInput?.click()} className="px-4 py-2 rounded-xl bg-[#10246f] hover:bg-[#0c1b54] text-white font-bold text-xs shadow-xs transition flex items-center gap-1.5"><Upload className="w-4 h-4"/>Choose CSV</button><input ref={setCsvInput} type="file" accept=".csv,text/csv" onChange={onFile} className="hidden"/></div><label className="flex items-center gap-2 p-3 rounded-xl border border-stone-200 bg-stone-50"><input type="checkbox" checked={useSelectedForCsv} onChange={e=>setUseSelectedForCsv(e.target.checked)}/><span><strong>Use current Question Bank hierarchy for all rows</strong><span className="block text-[10px] text-stone-500">Attach questions directly to the active Grade, Category & Skill selected above without needing hierarchy codes.</span></span></label>{useSelectedForCsv&&hierarchyBlock}<div className="text-[10px] text-stone-500">{csvFileName?`File: ${csvFileName}`:'No file selected'}</div>{csvErrors.length>0&&<div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 space-y-1"><div className="font-bold"><AlertCircle className="inline w-4 h-4 mr-1"/>Validation errors</div>{csvErrors.slice(0,20).map((e,i)=><div key={i}>{e}</div>)}{csvErrors.length>20&&<div>+ {csvErrors.length-20} more errors</div>}</div>}{parsed.length>0&&<div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200"><div className="font-bold text-emerald-900">✓ {parsed.length} questions ready to import</div><p className="text-[10px] text-emerald-800 mt-1">All imported questions will be created as Draft.</p></div>}<div className="flex justify-end"><button onClick={importCsv} disabled={!parsed.length||csvErrors.length>0} className="px-5 py-2.5 rounded-xl bg-stone-900 text-white font-bold disabled:opacity-40">Import {parsed.length||''} Draft Questions</button></div></div>}
   </div></div></div>;
 }

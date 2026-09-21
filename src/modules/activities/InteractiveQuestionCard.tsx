@@ -13,6 +13,7 @@ import {
   Move
 } from 'lucide-react';
 import { Question } from '../../types';
+import { fixMojibake, resolveVisualEmoji } from '../../utils/visualUtils';
 
 export interface InteractiveQuestionCardProps {
   question: Question;
@@ -125,7 +126,8 @@ export default function InteractiveQuestionCard({
   };
 
   // Helper to extract or supply an appropriate friendly clipart for an option or item
-  const getOptionClipart = (text: string, defaultEmoji = '✨') => {
+  const getOptionClipart = (rawText: string, defaultEmoji = '✨') => {
+    const text = fixMojibake(rawText || '');
     // Check if text already has emoji
     const matched = text.match(/[\p{Emoji}\u200d]+/gu);
     if (matched && matched.length > 0) return matched[0];
@@ -353,19 +355,27 @@ export default function InteractiveQuestionCard({
   const visualObjects = useMemo(() => {
     if (question.visualConfig?.objects?.length) {
       return question.visualConfig.objects.flatMap((o) =>
-        Array.from({ length: Math.max(1, o.count || 1) }, (_, i) => ({
-          id: `${o.id}-${i}`,
-          label: o.label,
-          emoji: o.emoji || '🍎'
-        }))
+        Array.from({ length: Math.max(1, o.count || 1) }, (_, i) => {
+          const raw = o.emoji || o.label || '🍎';
+          const resolved = resolveVisualEmoji(raw);
+          return {
+            id: `${o.id}-${i}`,
+            label: resolved.label,
+            emoji: resolved.emoji
+          };
+        })
       );
     }
-    const clips = (question.visualClipart || '🍎 🍎 🍎 🍎 🍎 🍎').split(/\s+/).filter(Boolean);
-    return clips.map((emoji, i) => ({
-      id: `clip-${i}`,
-      label: emoji,
-      emoji
-    }));
+    const fixedClips = fixMojibake(question.visualClipart || '🍎 🍎 🍎 🍎 🍎 🍎');
+    const clips = fixedClips.split(/\s+/).filter(Boolean);
+    return clips.map((item, i) => {
+      const resolved = resolveVisualEmoji(item);
+      return {
+        id: `clip-${i}`,
+        label: resolved.label,
+        emoji: resolved.emoji
+      };
+    });
   }, [question]);
 
   // -------------------------------------------------------------
@@ -455,8 +465,12 @@ export default function InteractiveQuestionCard({
           )}
 
           {question.visualClipart && (
-            <div className="text-xl sm:text-2xl px-3 py-1 bg-white/90 rounded-xl border border-amber-200/60 shadow-2xs tracking-wider select-none font-bold">
-              {question.visualClipart}
+            <div className={`text-xl sm:text-2xl px-3 py-1 bg-white/90 rounded-xl border border-amber-200/60 shadow-2xs tracking-wider select-none font-bold ${
+              question.visualConfig?.animation === 'bounce' ? 'animate-bounce' :
+              question.visualConfig?.animation === 'pulse' ? 'animate-pulse' :
+              question.visualConfig?.animation === 'spin' ? 'animate-spin' : ''
+            }`}>
+              {fixMojibake(question.visualClipart)}
             </div>
           )}
         </div>
@@ -496,7 +510,11 @@ export default function InteractiveQuestionCard({
                         : 'bg-white border-2 border-stone-200 hover:border-amber-300 hover:scale-105'
                     }`}
                   >
-                    <span className="select-none animate-bounce">{obj.emoji}</span>
+                    <span className={`select-none ${
+                      question.visualConfig?.animation === 'pulse' ? 'animate-pulse' :
+                      question.visualConfig?.animation === 'spin' ? 'animate-spin' :
+                      question.visualConfig?.animation === 'none' ? '' : 'animate-bounce'
+                    }`}>{obj.emoji}</span>
                     {isTapped && (
                       <span className="absolute -top-2.5 -right-2.5 w-7 h-7 rounded-full bg-emerald-500 text-white font-black text-xs flex items-center justify-center shadow-sm border-2 border-white animate-in zoom-in">
                         {tapOrderIndex}
@@ -527,7 +545,7 @@ export default function InteractiveQuestionCard({
           <div className="text-center">
             <span className="text-xs font-black uppercase tracking-wider text-sky-700 bg-sky-100 px-3.5 py-1.5 rounded-full inline-flex items-center gap-1.5 shadow-2xs">
               <Move className="w-3.5 h-3.5 text-sky-600" />
-              <span>Click & drag a baby animal to its mama (or tap to place)!</span>
+              <span>Click & drag each item to its target zone (or tap to place)!</span>
             </span>
           </div>
 
@@ -559,13 +577,13 @@ export default function InteractiveQuestionCard({
             }`}
           >
             <div className="flex items-center justify-between text-xs font-bold text-stone-500 mb-2 px-1">
-              <span>Baby Animals to place:</span>
+              <span>Items to place:</span>
               <span className="text-[11px] text-stone-400">Drag or tap</span>
             </div>
             <div className="flex flex-wrap gap-2.5 justify-center">
               {unplacedDragItems.length === 0 ? (
                 <div className="text-xs font-bold text-emerald-700 flex items-center gap-1.5 py-1">
-                  <CheckCircle2 className="w-4 h-4" /> All baby animals are matched with their mamas!
+                  <CheckCircle2 className="w-4 h-4" /> All items have been placed in their targets!
                 </div>
               ) : (
                 unplacedDragItems.map((d) => {
@@ -1168,51 +1186,65 @@ export default function InteractiveQuestionCard({
       )}
 
       {/* -------------------------------------------------------------
-          TYPE: OPEN_BOX / FILL_BLANK (QUESTION DISPLAY WITH [TEXT BOX] + OPTIONS / NUMBER PAD)
+          TYPE: OPEN_BOX / FILL_BLANK (INLINE EQUATION / TEXT INPUT)
       ------------------------------------------------------------- */}
       {(type === 'open_box' || type === 'fill_blank') && (
-        <div className="w-full max-w-lg mx-auto space-y-5">
-          {/* Question Equation/Prompt Bar with [Text Box] */}
-          <div className="bg-amber-50/70 border-2 border-amber-300 rounded-3xl p-4 sm:p-5 flex flex-wrap items-center justify-center gap-3 text-xl sm:text-2xl font-black text-stone-900 shadow-xs">
-            <span className="text-amber-800 text-sm sm:text-base font-extrabold uppercase tracking-wide mr-1">
-              Ques:
-            </span>
-            <span className="leading-snug text-center">
-              {question.prompt.includes('__') ? (
-                question.prompt.split('__')[0]
-              ) : question.prompt.includes('...') ? (
-                question.prompt.split('...')[0]
-              ) : (
-                question.prompt
+        <div className="w-full max-w-xl mx-auto space-y-4">
+          {/* If the prompt has a blank/fill-in placeholder or math equation, show the focused formula box */}
+          {(question.prompt.includes('__') || question.prompt.includes('...') || question.prompt.includes('=')) ? (
+            <div className="bg-amber-50/80 border-2 border-amber-300 rounded-2xl p-3.5 sm:p-4.5 flex flex-wrap items-center justify-center gap-2.5 text-lg sm:text-xl font-black text-stone-900 shadow-2xs">
+              <span className="leading-snug text-center">
+                {question.prompt.includes('__') ? (
+                  question.prompt.split('__')[0]
+                ) : question.prompt.includes('...') ? (
+                  question.prompt.split('...')[0]
+                ) : (
+                  question.prompt
+                )}
+              </span>
+              {/* The inline answer box */}
+              <input
+                id="fill-blank-input"
+                type="text"
+                disabled={isSubmitted}
+                value={openBoxInput}
+                onChange={(e) => onChangeOpenBoxInput(e.target.value)}
+                placeholder="?"
+                className="w-24 sm:w-32 text-center text-xl sm:text-2xl font-black tracking-wider py-1 px-3 rounded-xl border-3 border-amber-500 focus:outline-none focus:ring-3 focus:ring-amber-300 bg-white text-stone-900 shadow-inner"
+              />
+              {question.prompt.includes('__') && question.prompt.split('__')[1] && (
+                <span>{question.prompt.split('__')[1]}</span>
               )}
-            </span>
-            {/* The inline answer box */}
-            <input
-              id="fill-blank-input"
-              type="text"
-              disabled={isSubmitted}
-              value={openBoxInput}
-              onChange={(e) => onChangeOpenBoxInput(e.target.value)}
-              placeholder="?"
-              className="w-28 sm:w-36 text-center text-2xl sm:text-3xl font-black tracking-wider py-1.5 px-3 rounded-2xl border-4 border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-300 bg-white text-stone-900 shadow-inner"
-            />
-            {question.prompt.includes('__') && question.prompt.split('__')[1] && (
-              <span>{question.prompt.split('__')[1]}</span>
-            )}
-            {question.prompt.includes('...') && question.prompt.split('...')[1] && (
-              <span>{question.prompt.split('...')[1]}</span>
-            )}
-          </div>
+              {question.prompt.includes('...') && question.prompt.split('...')[1] && (
+                <span>{question.prompt.split('...')[1]}</span>
+              )}
+            </div>
+          ) : (!question.options || question.options.length <= 1) ? (
+            <div className="bg-amber-50/60 border border-amber-200 rounded-2xl p-4 text-center space-y-2">
+              <label htmlFor="fill-blank-input" className="block text-xs font-bold text-amber-800 uppercase tracking-wider">
+                Type your answer below:
+              </label>
+              <input
+                id="fill-blank-input"
+                type="text"
+                disabled={isSubmitted}
+                value={openBoxInput}
+                onChange={(e) => onChangeOpenBoxInput(e.target.value)}
+                placeholder="Enter answer here..."
+                className="w-full max-w-sm mx-auto text-center text-xl font-bold py-2.5 px-4 rounded-xl border-2 border-amber-400 focus:outline-none focus:ring-3 focus:ring-amber-200 bg-white text-stone-900 shadow-xs"
+              />
+            </div>
+          ) : null}
 
           {/* Quick-Select Options below (if options are provided) */}
-          {question.options && question.options.length > 0 && (
+          {question.options && question.options.length > 1 && (
             <div className="space-y-2">
               <div className="text-xs font-bold text-stone-500 uppercase tracking-wider text-center">
-                Tap an option or type in the box:
+                Select your answer:
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className={`grid gap-2.5 ${question.options.length > 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2'}`}>
                 {question.options.map((opt, oIdx) => {
-                  const isSelected = openBoxInput.trim().toLowerCase() === opt.trim().toLowerCase();
+                  const isSelected = (selectedOption === oIdx) || (openBoxInput.trim().toLowerCase() === opt.trim().toLowerCase() && openBoxInput.trim() !== '');
                   const targetAnswer = (question.openBoxAnswer || question.options[question.correctIndex] || question.options[0] || '').trim().toLowerCase();
                   const isTarget = opt.trim().toLowerCase() === targetAnswer;
 
@@ -1226,7 +1258,7 @@ export default function InteractiveQuestionCard({
                       optClass = 'bg-stone-50 border-2 border-stone-200 text-stone-400 opacity-50';
                     }
                   } else if (isSelected) {
-                    optClass = 'bg-amber-500 border-2 border-amber-600 text-stone-950 font-black shadow-md ring-4 ring-amber-300/50 scale-[1.02]';
+                    optClass = 'bg-amber-500 border-2 border-amber-600 text-stone-950 font-black shadow-md ring-4 ring-amber-300/50 scale-[1.01]';
                   }
 
                   return (
@@ -1239,10 +1271,15 @@ export default function InteractiveQuestionCard({
                         onChangeOpenBoxInput(opt);
                         if (onSelectOption) onSelectOption(oIdx);
                       }}
-                      className={`py-3 px-3 rounded-2xl font-black text-base sm:text-lg transition-all shadow-xs active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 ${optClass}`}
+                      className={`py-3 px-4 rounded-xl font-bold text-sm sm:text-base transition-all shadow-2xs active:scale-95 cursor-pointer flex items-center justify-between text-left gap-2 ${optClass}`}
                     >
-                      <span>{opt}</span>
-                      {isSelected && !isSubmitted && <span>✓</span>}
+                      <span className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-stone-100 text-stone-700 text-xs font-black flex items-center justify-center shrink-0 border border-stone-200">
+                          {String.fromCharCode(65 + oIdx)}
+                        </span>
+                        <span>{opt}</span>
+                      </span>
+                      {isSelected && !isSubmitted && <span className="font-black text-amber-950">✓</span>}
                     </button>
                   );
                 })}
@@ -1250,10 +1287,10 @@ export default function InteractiveQuestionCard({
             </div>
           )}
 
-          {/* Quick Number Pad for input / clear */}
-          {!isSubmitted && (
-            <div className="bg-stone-200/70 p-3 sm:p-3.5 rounded-3xl border border-stone-300 shadow-inner">
-              <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+          {/* Quick Number Pad ONLY when no options are given and numeric input is needed */}
+          {!isSubmitted && (!question.options || question.options.length <= 1) && (
+            <div className="bg-stone-100 p-3 rounded-2xl border border-stone-200 shadow-inner max-w-sm mx-auto">
+              <div className="grid grid-cols-3 gap-1.5">
                 {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'clear', '0', 'backspace'].map((key) => (
                   <button
                     key={key}
@@ -1270,11 +1307,11 @@ export default function InteractiveQuestionCard({
                         }
                       }
                     }}
-                    className={`py-2.5 rounded-2xl font-black text-base sm:text-lg transition-all shadow-xs active:scale-95 cursor-pointer ${
+                    className={`py-2 rounded-xl font-black text-base transition-all shadow-2xs active:scale-95 cursor-pointer ${
                       key === 'clear'
-                        ? 'bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-black'
+                        ? 'bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs'
                         : key === 'backspace'
-                        ? 'bg-stone-300 hover:bg-stone-400 text-stone-900 text-xs font-black'
+                        ? 'bg-stone-300 hover:bg-stone-400 text-stone-900 text-xs'
                         : 'bg-white hover:bg-amber-50 hover:text-amber-900 border border-stone-200 text-stone-800'
                     }`}
                   >
@@ -1385,11 +1422,12 @@ export default function InteractiveQuestionCard({
       )}
 
       {/* -------------------------------------------------------------
-          TYPE: MULTIPLE_CHOICE / RADIO_SINGLE / NUMBER_LINE / CLOCK
+          TYPE: MULTIPLE_CHOICE / RADIO_SINGLE / NUMBER_LINE / CLOCK / WORD_PROBLEM / DATA_GRAPH / FALLBACK
       ------------------------------------------------------------- */}
-      {['multiple_choice', 'radio_single', 'number_line', 'clock'].includes(type) && (
+      {(['multiple_choice', 'radio_single', 'number_line', 'clock', 'word_problem', 'data_graph', 'interactive'].includes(type) || 
+        (!['select_objects', 'drag_and_drop', 'match_making', 'ordering', 'sorting', 'fill_blank', 'open_box', 'true_false', 'image_choice'].includes(type) && question.options && question.options.length > 0)) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3.5 w-full">
-          {question.options.map((option, idx) => {
+          {(question.options && question.options.length > 0 ? question.options : ['Option A', 'Option B', 'Option C', 'Option D']).map((option, idx) => {
             const isSelected = selectedOption === idx;
             const isCorrectOption = idx === question.correctIndex;
             const optionClipart = getOptionClipart(option, '');

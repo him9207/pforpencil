@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 260" width="320" height="260">
+  <defs>
+    <filter id="cardImgShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#ed197b" flood-opacity="0.18" />
+    </filter>
+    <linearGradient id="parentGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff3b9d" />
+      <stop offset="100%" stop-color="#ed197b" />
+    </linearGradient>
+    <linearGradient id="childGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1689ef" />
+      <stop offset="100%" stop-color="#0a5eb5" />
+    </linearGradient>
+  </defs>
+
+  <g filter="url(#cardImgShadow)">
+    <!-- Floating Soft Love Heart -->
+    <path d="M 210,35 C 202,18 178,18 170,36 C 162,18 138,18 130,35 C 122,55 145,75 170,92 C 195,75 218,55 210,35 Z" fill="#ed197b" opacity="0.9" />
+
+    <!-- MOTHER -->
+    <!-- Hair behind -->
+    <path d="M 160,90 C 160,55 195,38 235,55 C 255,70 255,120 240,145 C 215,145 160,120 160,90 Z" fill="#3f2314" />
+    <!-- Mother Head -->
+    <circle cx="205" cy="98" r="42" fill="#fed7aa" />
+    <!-- Eyes -->
+    <circle cx="192" cy="95" r="4" fill="#1e293b" />
+    <circle cx="218" cy="95" r="4" fill="#1e293b" />
+    <circle cx="194" cy="93" r="1.5" fill="#ffffff" />
+    <circle cx="220" cy="93" r="1.5" fill="#ffffff" />
+    <!-- Cheeks & Smile -->
+    <circle cx="184" cy="104" r="6" fill="#f87171" opacity="0.4" />
+    <circle cx="226" cy="104" r="6" fill="#f87171" opacity="0.4" />
+    <path d="M 198,110 Q 205,118 212,110" fill="none" stroke="#1e293b" stroke-width="3" stroke-linecap="round" />
+    <!-- Mother Top -->
+    <path d="M 155,140 C 155,140 185,130 205,130 C 225,130 255,140 255,140 L 265,240 L 145,240 Z" fill="url(#parentGrad)" />
+
+    <!-- CHILD -->
+    <!-- Hair -->
+    <path d="M 90,125 C 90,95 115,85 145,95 C 155,110 150,145 145,160 C 128,160 90,150 90,125 Z" fill="#2d1500" />
+    <!-- Head -->
+    <circle cx="120" cy="132" r="32" fill="#fed7aa" />
+    <!-- Eyes -->
+    <circle cx="110" cy="128" r="3.5" fill="#1e293b" />
+    <circle cx="130" cy="128" r="3.5" fill="#1e293b" />
+    <circle cx="111" cy="126" r="1.2" fill="#ffffff" />
+    <circle cx="131" cy="126" r="1.2" fill="#ffffff" />
+    <!-- Cheeks & Smile -->
+    <circle cx="103" cy="136" r="5" fill="#f87171" opacity="0.4" />
+    <circle cx="137" cy="136" r="5" fill="#f87171" opacity="0.4" />
+    <path d="M 115,142 Q 120,148 125,142" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" />
+    <!-- Child Top -->
+    <path d="M 85,165 C 85,165 110,158 125,158 C 140,158 165,165 165,165 L 170,240 L 80,240 Z" fill="url(#childGrad)" />
+
+    <!-- Shared Tablet / Device In Front -->
+    <rect x="95" y="195" width="110" height="55" rx="8" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="3" />
+    <rect x="103" y="202" width="94" height="41" rx="4" fill="#1e293b" />
+    <circle cx="150" cy="222" r="12" fill="#ed197b" />
+    <text x="150" y="227" font-family="'Nunito', sans-serif" font-weight="900" font-size="14" fill="#ffffff" text-anchor="middle">P</text>
+  </g>
+</svg>

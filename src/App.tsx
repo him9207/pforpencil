@@ -1259,65 +1259,70 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-stone-100/60 text-stone-900 flex flex-col font-sans selection:bg-stone-900 selection:text-white">
-      {/* Top Navbar with Persona quick-switcher & Supabase viewer */}
-      <Navbar
-        currentUser={currentUser}
-        allUsers={allUsers}
-        onSelectUser={(user) => {
-          setCurrentUser(user);
-          setCurrentView('dashboard');
-        }}
-        onOpenAuthModal={() => setAuthModalConfig({ isOpen: true, initialScreen: 'signin', initialRole: 'parent' })}
-        onOpenPricingModal={() => setCurrentView(currentView === 'pricing' ? 'dashboard' : 'pricing')}
-        onOpenSupabaseModal={() => setSupabaseModalOpen(true)}
-        onOpenRegionModal={() => setRegionModalOpen(true)}
-        currentView={currentView}
-        onNavigateView={(v) => setCurrentView(v)}
-      />
+      <div className={`min-h-screen text-stone-900 flex flex-col font-sans selection:bg-stone-900 selection:text-white ${
+        currentView === 'home' ? 'bg-white' : 'bg-stone-100/60'
+      }`}>
+      {/* Top Navbar with Persona quick-switcher & Supabase viewer (Only on portal & sub-views) */}
+      {currentView !== 'home' && (
+        <Navbar
+          currentUser={currentUser}
+          allUsers={allUsers}
+          onSelectUser={(user) => {
+            setCurrentUser(user);
+            setCurrentView('dashboard');
+          }}
+          onOpenAuthModal={() => setAuthModalConfig({ isOpen: true, initialScreen: 'signin', initialRole: 'parent' })}
+          onOpenPricingModal={() => setCurrentView(currentView === 'pricing' ? 'dashboard' : 'pricing')}
+          onOpenSupabaseModal={() => setSupabaseModalOpen(true)}
+          onOpenRegionModal={() => setRegionModalOpen(true)}
+          currentView={currentView}
+          onNavigateView={(v) => setCurrentView(v)}
+        />
+      )}
 
-      {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 pt-6 pb-24">
-        {currentView === 'home' ? (
-          <HomePage
-            currentUser={currentUser}
-            allUsers={allUsers}
-            grades={grades}
-            subjects={subjects}
-            questions={questions}
-            activities={activities}
-            onSelectRoleUser={(user) => {
-              setCurrentUser(user);
-              setCurrentView('dashboard');
-            }}
-            onNavigateView={(v) => setCurrentView(v)}
-            onOpenPricing={() => setCurrentView('pricing')}
-            onOpenRegionModal={() => setRegionModalOpen(true)}
-            onOpenAuthModal={(options) => {
-              setAuthModalConfig({
-                isOpen: true,
-                initialScreen: options?.screen || 'signin',
-                initialRole: options?.role || 'parent'
-              });
-            }}
-            onOpenSupabaseModal={() => setSupabaseModalOpen(true)}
-            onDirectLogin={(user) => {
-              setCurrentUser(user);
-              setCurrentView('dashboard');
-            }}
-            onRegisterUser={handleRegisterUser}
-          />
-        ) : currentView === 'pricing' ? (
-          <SubscriptionsView
-            currentUser={currentUser}
-            vouchers={vouchers}
-            onSubscribePlan={handleSubscribePlan}
-          />
-        ) : (
-          /* Role-Based Portals matching User Specifications */
-          <>
-            {/* 1. STUDENT PORTAL (Quests, practice, boss battles, level XP) */}
-            {currentUser.role === 'student' && (
+      {currentView === 'home' ? (
+        <HomePage
+          currentUser={currentUser}
+          allUsers={allUsers}
+          grades={grades}
+          subjects={subjects}
+          questions={questions}
+          activities={activities}
+          onSelectRoleUser={(user) => {
+            setCurrentUser(user);
+            setCurrentView('dashboard');
+          }}
+          onNavigateView={(v) => setCurrentView(v)}
+          onOpenPricing={() => setCurrentView('pricing')}
+          onOpenRegionModal={() => setRegionModalOpen(true)}
+          onOpenAuthModal={(options) => {
+            setAuthModalConfig({
+              isOpen: true,
+              initialScreen: options?.screen || 'signin',
+              initialRole: options?.role || 'parent'
+            });
+          }}
+          onOpenSupabaseModal={() => setSupabaseModalOpen(true)}
+          onDirectLogin={(user) => {
+            setCurrentUser(user);
+            setCurrentView('dashboard');
+          }}
+          onRegisterUser={handleRegisterUser}
+        />
+      ) : (
+        /* Main Container for Dashboards & Portals */
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 pt-6 pb-24">
+          {currentView === 'pricing' ? (
+            <SubscriptionsView
+              currentUser={currentUser}
+              vouchers={vouchers}
+              onSubscribePlan={handleSubscribePlan}
+            />
+          ) : (
+            /* Role-Based Portals matching User Specifications */
+            <>
+              {/* 1. STUDENT PORTAL (Quests, practice, boss battles, level XP) */}
+              {currentUser.role === 'student' && (
               <StudentPortal
                 currentUser={currentUser}
                 studentProgress={currentStudentProgress}
@@ -1485,8 +1490,10 @@ export default function App() {
           </>
         )}
       </main>
+      )}
 
-      {/* Floating Role-Based Sandbox Switcher Bar (Bottom Bar) */}
+      {/* Floating Role-Based Sandbox Switcher Bar (Bottom Bar - only in dashboard/portal views) */}
+      {currentView !== 'home' && (
       <div className="fixed bottom-3 inset-x-0 z-30 flex justify-center pointer-events-none px-4">
         <div className="pointer-events-auto bg-slate-900/95 backdrop-blur-md text-white rounded-2xl p-1.5 shadow-2xl border border-slate-800 flex items-center gap-1.5 max-w-full overflow-x-auto text-xs">
           <span className="px-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0 hidden sm:inline">
@@ -1568,6 +1575,7 @@ export default function App() {
           </select>
         </div>
       </div>
+      )}
 
       {/* Auth Modal */}
       <AuthModal

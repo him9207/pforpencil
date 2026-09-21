@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 650 480" width="650" height="480">
+  <defs>
+    <filter id="heroShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="18" stdDeviation="16" flood-color="#14204b" flood-opacity="0.16" />
+    </filter>
+    <linearGradient id="cloudGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#eaf7ff" />
+      <stop offset="100%" stop-color="#f8f4ff" />
+    </linearGradient>
+    <linearGradient id="boyHoddie" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1689ef" />
+      <stop offset="100%" stop-color="#0a5eb5" />
+    </linearGradient>
+    <linearGradient id="girlTop" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ed197b" />
+      <stop offset="100%" stop-color="#c4005c" />
+    </linearGradient>
+    <linearGradient id="bookBlue" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1689ef" />
+      <stop offset="100%" stop-color="#42a5f5" />
+    </linearGradient>
+    <linearGradient id="bookRed" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ff3b30" />
+      <stop offset="100%" stop-color="#ff6b64" />
+    </linearGradient>
+    <linearGradient id="laptopScreen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+  </defs>
+
+  <g filter="url(#heroShadow)">
+    <!-- Base Table Mat / Platform -->
+    <ellipse cx="325" cy="410" rx="260" ry="40" fill="#e8f0fe" opacity="0.7" />
+
+    <!-- Stack of Books -->
+    <rect x="200" y="360" width="250" height="26" rx="6" fill="url(#bookBlue)" />
+    <rect x="200" y="360" width="250" height="6" rx="2" fill="#90caf9" />
+    <text x="215" y="378" font-family="'Nunito', sans-serif" font-weight="900" font-size="14" fill="#ffffff">MATH MASTERY</text>
+
+    <rect x="180" y="386" width="290" height="30" rx="6" fill="url(#bookRed)" />
+    <rect x="180" y="386" width="290" height="6" rx="2" fill="#ffab91" />
+    <text x="195" y="406" font-family="'Nunito', sans-serif" font-weight="900" font-size="14" fill="#ffffff">LEVEL 1 • QUESTS</text>
+
+    <!-- Laptop In Center -->
+    <rect x="245" y="240" width="160" height="110" rx="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="4" />
+    <rect x="255" y="250" width="140" height="88" rx="6" fill="url(#laptopScreen)" />
+    <!-- Screen content -->
+    <circle cx="325" cy="294" r="24" fill="#ed197b" />
+    <text x="325" y="303" font-family="'Nunito', sans-serif" font-weight="900" font-size="28" fill="#ffffff" text-anchor="middle">P</text>
+    <!-- Laptop Base -->
+    <path d="M 215,350 C 215,346 220,344 225,344 L 425,344 C 430,344 435,346 435,350 L 445,360 L 205,360 Z" fill="#cbd5e1" />
+    <rect x="295" y="347" width="60" height="5" rx="2.5" fill="#94a3b8" />
+
+    <!-- Cup with pencils & ruler -->
+    <rect x="490" y="305" width="40" height="55" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="3" />
+    <path d="M 498,305 L 498,265 L 504,265 L 504,305 Z" fill="#ff3b30" />
+    <polygon points="498,265 504,265 501,255" fill="#ffd54f" />
+    <path d="M 510,305 L 510,250 L 518,250 L 518,305 Z" fill="#10b981" />
+    <polygon points="510,250 518,250 514,240" fill="#ffd54f" />
+    <rect x="522" y="270" width="10" height="35" fill="#fbbf24" rx="2" />
+
+    <!-- BOY (Left side) -->
+    <!-- Hair -->
+    <path d="M 130,165 C 130,110 170,90 205,100 C 230,85 260,110 255,150 C 260,165 255,185 240,195 C 225,200 150,200 130,165 Z" fill="#3f2314" />
+    <!-- Head -->
+    <circle cx="190" cy="165" r="48" fill="#fed7aa" />
+    <!-- Ears -->
+    <circle cx="144" cy="165" r="10" fill="#fed7aa" />
+    <circle cx="236" cy="165" r="10" fill="#fed7aa" />
+    <!-- Eyes -->
+    <ellipse cx="175" cy="160" rx="5" ry="6" fill="#1e293b" />
+    <ellipse cx="205" cy="160" rx="5" ry="6" fill="#1e293b" />
+    <circle cx="177" cy="158" r="2" fill="#ffffff" />
+    <circle cx="207" cy="158" r="2" fill="#ffffff" />
+    <!-- Cheeks -->
+    <circle cx="165" cy="172" r="7" fill="#f87171" opacity="0.45" />
+    <circle cx="215" cy="172" r="7" fill="#f87171" opacity="0.45" />
+    <!-- Happy Smile -->
+    <path d="M 180,180 Q 190,192 200,180" fill="none" stroke="#1e293b" stroke-width="3.5" stroke-linecap="round" />
+    <!-- Blue Hoodie Body -->
+    <path d="M 135,210 C 135,210 170,200 190,200 C 210,200 245,210 245,210 L 255,320 L 125,320 Z" fill="url(#boyHoddie)" />
+    <!-- Raised Hand / Thumbs up -->
+    <path d="M 115,225 C 105,220 95,240 110,260 L 138,270" fill="none" stroke="url(#boyHoddie)" stroke-width="18" stroke-linecap="round" />
+    <circle cx="106" cy="225" r="13" fill="#fed7aa" />
+
+    <!-- GIRL (Right side) -->
+    <!-- Hair -->
+    <path d="M 390,150 C 390,100 440,85 480,100 C 515,115 515,170 510,210 C 495,200 480,220 460,210 C 425,220 390,190 390,150 Z" fill="#2d1500" />
+    <!-- Head -->
+    <circle cx="450" cy="165" r="48" fill="#fcd34d" />
+    <circle cx="450" cy="165" r="46" fill="#fed7aa" />
+    <!-- Ears -->
+    <circle cx="404" cy="165" r="10" fill="#fed7aa" />
+    <circle cx="496" cy="165" r="10" fill="#fed7aa" />
+    <!-- Cute Pink Ribbon / Flower -->
+    <circle cx="488" cy="130" r="12" fill="#ed197b" />
+    <circle cx="488" cy="130" r="5" fill="#ffd54f" />
+    <!-- Eyes -->
+    <ellipse cx="435" cy="160" rx="5" ry="6" fill="#1e293b" />
+    <ellipse cx="465" cy="160" rx="5" ry="6" fill="#1e293b" />
+    <circle cx="437" cy="158" r="2" fill="#ffffff" />
+    <circle cx="467" cy="158" r="2" fill="#ffffff" />
+    <!-- Cheeks -->
+    <circle cx="425" cy="172" r="7" fill="#ed197b" opacity="0.35" />
+    <circle cx="475" cy="172" r="7" fill="#ed197b" opacity="0.35" />
+    <!-- Smile -->
+    <path d="M 440,180 Q 450,192 460,180" fill="none" stroke="#1e293b" stroke-width="3.5" stroke-linecap="round" />
+    <!-- Pink Shirt Body -->
+    <path d="M 400,210 C 400,210 435,200 450,200 C 465,200 500,210 500,210 L 510,320 L 390,320 Z" fill="url(#girlTop)" />
+    <!-- Girl Raised Arm -->
+    <path d="M 525,225 C 535,220 545,240 530,260 L 500,270" fill="none" stroke="url(#girlTop)" stroke-width="18" stroke-linecap="round" />
+    <circle cx="534" cy="225" r="13" fill="#fed7aa" />
+  </g>
+</svg>

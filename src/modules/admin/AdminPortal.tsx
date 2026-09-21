@@ -696,7 +696,7 @@ export default function AdminPortal({
     )}`;
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', jsonString);
-    downloadAnchor.setAttribute('download', `funlearn_complete_data_export_${new Date().toISOString().split('T')[0]}.json`);
+    downloadAnchor.setAttribute('download', `pforpencil_complete_data_export_${new Date().toISOString().split('T')[0]}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();

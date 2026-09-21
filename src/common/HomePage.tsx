@@ -19,21 +19,124 @@ type Grade = {
 };
 
 const gradesList: Grade[] = [
-  { label: 'Preschool', short: 'P', accent: '#FCE8F3', icon: '✦' },
-  { label: 'Foundation', short: 'F', accent: '#EAF8F5', icon: '🌱' },
-  { label: 'Grade 1', short: '1', accent: '#EEF6FF', icon: '1' },
-  { label: 'Grade 2', short: '2', accent: '#EAFBF2', icon: '2' },
-  { label: 'Grade 3', short: '3', accent: '#FFF2EA', icon: '3' },
-  { label: 'Grade 4', short: '4', accent: '#F1EDFF', icon: '4' },
-  { label: 'Grade 5', short: '5', accent: '#FFF9E8', icon: '5' },
-  { label: 'Grade 6', short: '6', accent: '#FFEAF5', icon: '6' },
+  { label: 'Preschool', short: 'P', accent: '#FCE8F3', icon: 'spark' },
+  { label: 'Foundation', short: 'F', accent: '#EAF8F5', icon: 'sprout' },
+  { label: 'Grade 1', short: '1', accent: '#EEF6FF', icon: 'number-1' },
+  { label: 'Grade 2', short: '2', accent: '#EAFBF2', icon: 'number-2' },
+  { label: 'Grade 3', short: '3', accent: '#FFF2EA', icon: 'number-3' },
+  { label: 'Grade 4', short: '4', accent: '#F1EDFF', icon: 'number-4' },
+  { label: 'Grade 5', short: '5', accent: '#FFF9E8', icon: 'number-5' },
+  { label: 'Grade 6', short: '6', accent: '#FFEAF5', icon: 'number-6' },
 ];
+
+
+type IconKind =
+  | 'game'
+  | 'bolt'
+  | 'chart'
+  | 'shield'
+  | 'spark'
+  | 'sprout'
+  | 'target'
+  | 'smile'
+  | 'sun';
+
+function UiIcon({ kind, size = 24 }: { kind: IconKind; size?: number }) {
+  const common = {
+    width: size,
+    height: size,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    xmlns: 'http://www.w3.org/2000/svg',
+    'aria-hidden': true,
+  } as const;
+
+  switch (kind) {
+    case 'game':
+      return (
+        <svg {...common}>
+          <path d="M7.5 8h9a4.5 4.5 0 0 1 4.3 5.85l-1.1 3.4a2.2 2.2 0 0 1-4.05.3l-.75-1.35H9.1l-.75 1.35a2.2 2.2 0 0 1-4.05-.3l-1.1-3.4A4.5 4.5 0 0 1 7.5 8Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
+          <path d="M7 11v4M5 13h4M15.5 12.25h.01M18 14h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+        </svg>
+      );
+    case 'bolt':
+      return (
+        <svg {...common}>
+          <path d="m13.2 2.8-7 10.1h5.2l-.6 8.3 7-10.1h-5.2l.6-8.3Z" fill="currentColor"/>
+        </svg>
+      );
+    case 'chart':
+      return (
+        <svg {...common}>
+          <path d="M4 19.5V14h4v5.5H4Zm6 0V9h4v10.5h-4Zm6 0V4.5h4v15h-4Z" fill="currentColor" opacity=".9"/>
+        </svg>
+      );
+    case 'shield':
+      return (
+        <svg {...common}>
+          <path d="M12 3.2 19 6v5.4c0 4.6-2.9 7.8-7 9.4-4.1-1.6-7-4.8-7-9.4V6l7-2.8Z" fill="currentColor" opacity=".92"/>
+          <path d="m8.8 12.2 2.1 2.1 4.5-4.7" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      );
+    case 'spark':
+      return (
+        <svg {...common}>
+          <path d="m12 2 1.55 6.45L20 10l-6.45 1.55L12 18l-1.55-6.45L4 10l6.45-1.55L12 2Z" fill="currentColor"/>
+          <path d="m19 15 .7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7L19 15Z" fill="currentColor" opacity=".65"/>
+        </svg>
+      );
+    case 'sprout':
+      return (
+        <svg {...common}>
+          <path d="M12 21V11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+          <path d="M12 11C7.5 11 5 8.2 5 4.5 8.8 4.5 11.4 6.2 12 9c.6-2.8 3.2-4.5 7-4.5 0 3.7-2.5 6.5-7 6.5Z" fill="currentColor" opacity=".9"/>
+        </svg>
+      );
+    case 'target':
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.8"/>
+          <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.8"/>
+          <circle cx="12" cy="12" r="1.8" fill="currentColor"/>
+        </svg>
+      );
+    case 'smile':
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8.8" stroke="currentColor" strokeWidth="1.8"/>
+          <circle cx="9" cy="10" r="1" fill="currentColor"/>
+          <circle cx="15" cy="10" r="1" fill="currentColor"/>
+          <path d="M8.2 14.1c1 1.35 2.25 2 3.8 2s2.8-.65 3.8-2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+        </svg>
+      );
+    case 'sun':
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="3.6" fill="currentColor"/>
+          <path d="M12 2.5v2M12 19.5v2M21.5 12h-2M4.5 12h-2M18.72 5.28l-1.42 1.42M6.7 17.3l-1.42 1.42M18.72 18.72l-1.42-1.42M6.7 6.7 5.28 5.28" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+        </svg>
+      );
+  }
+}
+
+function GradeIcon({ icon }: { icon: string }) {
+  if (icon === 'spark') return <UiIcon kind="spark" size={31} />;
+  if (icon === 'sprout') return <UiIcon kind="sprout" size={31} />;
+  const number = icon.replace('number-', '');
+  return <span className="grade-number">{number}</span>;
+}
 
 const demoQuestions = [
   { question: '7 + 5 = ?', options: ['10', '11', '12', '13'], answer: '12' },
   { question: '9 + 4 = ?', options: ['12', '13', '14', '15'], answer: '13' },
   { question: '15 − 6 = ?', options: ['7', '8', '9', '10'], answer: '9' },
 ];
+
+const countryFlags: Record<string, string> = {
+  Australia: '🇦🇺',
+  India: '🇮🇳',
+  'New Zealand': '🇳🇿',
+};
 
 const countries: Record<string, string[]> = {
   Australia: ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'],
@@ -75,6 +178,7 @@ export default function PForPencilHomePage({
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [xp, setXp] = useState(0);
   const [seconds, setSeconds] = useState(24);
+  const [openRegion, setOpenRegion] = useState<'country' | 'state' | null>(null);
 
   const question = demoQuestions[questionIndex];
 
@@ -95,6 +199,12 @@ export default function PForPencilHomePage({
     setCountry(value);
     const nextStates = countries[value] || [];
     setState(nextStates[0] || '');
+    setOpenRegion(null);
+  };
+
+  const handleStateChange = (value: string) => {
+    setState(value);
+    setOpenRegion(null);
   };
 
   const chooseAnswer = (answer: string) => {
@@ -252,6 +362,89 @@ export default function PForPencilHomePage({
           flex: 0 0 auto;
         }
 
+        .region-menu {
+          position: relative;
+          flex: 0 0 auto;
+        }
+
+        .region-trigger {
+          height: 42px;
+          min-width: 138px;
+          padding: 0 13px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 9px;
+          border: 1px solid #bfcbe8;
+          border-radius: 23px;
+          background: #fff;
+          color: var(--navy);
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+
+        .region-trigger.state-trigger { min-width: 102px; }
+
+        .region-left {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+        }
+
+        .flag {
+          font-size: 17px;
+          line-height: 1;
+        }
+
+        .region-chevron {
+          font-size: 10px;
+          color: #5d6f9f;
+          transition: transform .15s ease;
+        }
+
+        .region-trigger.open .region-chevron {
+          transform: rotate(180deg);
+        }
+
+        .region-dropdown {
+          position: absolute;
+          top: calc(100% + 8px);
+          right: 0;
+          min-width: 170px;
+          padding: 7px;
+          border: 1px solid #d9e0ef;
+          border-radius: 14px;
+          background: #fff;
+          box-shadow: 0 18px 40px rgba(25,48,105,.16);
+          z-index: 50;
+        }
+
+        .region-option {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          padding: 9px 10px;
+          border: 0;
+          border-radius: 9px;
+          background: transparent;
+          color: var(--navy);
+          font-size: 13px;
+          font-weight: 600;
+          text-align: left;
+          cursor: pointer;
+        }
+
+        .region-option:hover,
+        .region-option.selected {
+          background: #f4f7ff;
+          color: var(--pink);
+        }
+
+        .state-dropdown { min-width: 130px; }
+
         .select-wrap {
           position: relative;
         }
@@ -323,13 +516,14 @@ export default function PForPencilHomePage({
         /* ---------------- HERO ---------------- */
         .hero {
           display: grid;
-          grid-template-columns: 1.05fr .9fr 1.25fr;
-          min-height: 485px;
+          grid-template-columns: minmax(390px, 1.02fr) minmax(350px, .88fr) minmax(470px, 1.22fr);
+          min-height: 505px;
           align-items: center;
-          padding: 36px 4.5vw 22px;
-          gap: 26px;
+          padding: 38px 4.5vw 26px;
+          gap: 30px;
           background:
-            radial-gradient(circle at 62% 40%, rgba(216,237,255,.65), transparent 28%),
+            radial-gradient(circle at 63% 44%, rgba(216,237,255,.72), transparent 29%),
+            radial-gradient(circle at 90% 52%, rgba(247,235,255,.32), transparent 24%),
             #fff;
         }
 
@@ -536,13 +730,13 @@ export default function PForPencilHomePage({
         .hero-photo {
           position: relative;
           width: 100%;
-          max-width: 500px;
+          max-width: 590px;
           aspect-ratio: 875 / 570;
           justify-self: end;
           overflow: hidden;
-          border-radius: 18px;
+          border-radius: 20px;
           background: #f5f8ff;
-          box-shadow: 0 18px 45px rgba(33, 60, 120, .12);
+          box-shadow: 0 22px 52px rgba(33, 60, 120, .15);
         }
 
         .hero-photo img {
@@ -551,33 +745,6 @@ export default function PForPencilHomePage({
           object-fit: cover;
           object-position: center;
           display: block;
-        }
-
-        .photo-note {
-          position: absolute;
-          right: 18px;
-          top: 18px;
-          max-width: 145px;
-          color: var(--navy);
-          font-family: Poppins, Inter, sans-serif;
-          font-size: 20px;
-          line-height: 1.05;
-          font-weight: 600;
-          transform: rotate(-5deg);
-          text-align: center;
-          z-index: 2;
-          pointer-events: none;
-        }
-
-        .photo-note::after {
-          content: "";
-          display: block;
-          width: 80px;
-          height: 5px;
-          border-bottom: 3px solid var(--pink);
-          border-radius: 50%;
-          transform: rotate(-4deg);
-          margin: 7px auto 0;
         }
 
         /* ---------------- FEATURES ---------------- */
@@ -607,9 +774,13 @@ export default function PForPencilHomePage({
           align-items: center;
           justify-content: center;
           background: #f5f6fb;
-          font-size: 24px;
           flex: 0 0 auto;
         }
+
+        .feature-icon.game { color: #5f35d6; }
+        .feature-icon.bolt { color: #ff9e18; }
+        .feature-icon.chart { color: #5470ad; }
+        .feature-icon.shield { color: #1a9bc9; }
 
         .feature strong {
           display: block;
@@ -631,7 +802,7 @@ export default function PForPencilHomePage({
         }
 
         .section-title {
-          margin: 0 0 18px;
+          margin: 0 0 20px;
           color: var(--navy);
           font-family: Poppins, Inter, sans-serif;
           font-size: 27px;
@@ -659,17 +830,83 @@ export default function PForPencilHomePage({
         }
 
         .grade-icon {
+          height: 34px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 6px;
+          color: var(--navy);
+        }
+
+        .grade-number {
           display: block;
           font-family: Poppins, Inter, sans-serif;
-          font-size: 27px;
+          font-size: 31px;
+          line-height: 1;
           font-weight: 800;
-          margin-bottom: 6px;
         }
 
         .grade-name {
           display: block;
           font-size: 13px;
           font-weight: 700;
+        }
+
+
+        /* ---------------- BENEFITS ---------------- */
+        .benefits-section {
+          padding: 12px 4.5vw 42px;
+        }
+
+        .benefits-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 0;
+          border-top: 1px solid #edf0f7;
+          border-bottom: 1px solid #edf0f7;
+        }
+
+        .benefit {
+          min-height: 154px;
+          padding: 25px 34px 22px;
+          display: flex;
+          align-items: flex-start;
+          gap: 16px;
+        }
+
+        .benefit + .benefit {
+          border-left: 1px solid #e6eaf3;
+        }
+
+        .benefit-icon {
+          width: 52px;
+          height: 52px;
+          flex: 0 0 52px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 16px;
+          background: #f6f8ff;
+          color: var(--pink);
+        }
+
+        .benefit:nth-child(2) .benefit-icon { color: var(--teal); }
+        .benefit:nth-child(3) .benefit-icon { color: var(--blue); }
+
+        .benefit h3 {
+          margin: 2px 0 6px;
+          color: var(--navy);
+          font-family: Poppins, Inter, sans-serif;
+          font-size: 17px;
+          line-height: 1.2;
+        }
+
+        .benefit p {
+          margin: 0;
+          max-width: 270px;
+          color: #6879a6;
+          font-size: 13px;
+          line-height: 1.5;
         }
 
         /* ---------------- PARENT / SCHOOL ---------------- */
@@ -851,8 +1088,11 @@ export default function PForPencilHomePage({
           .header-actions { gap: 7px; }
           .select { min-width: 104px; }
           .select.small { min-width: 82px; }
+          .region-trigger { min-width: 124px; }
+          .region-trigger.state-trigger { min-width: 92px; }
           .btn-login, .btn-signup { padding: 0 17px; }
-          .hero { grid-template-columns: minmax(0, 1.05fr) minmax(300px, .9fr) minmax(330px, 1.1fr); }
+          .hero { grid-template-columns: minmax(0, 1.05fr) minmax(300px, .9fr) minmax(360px, 1.1fr); }
+          .hero-photo { max-width: 540px; }
           .hero-title { font-size: 47px; }
         }
 
@@ -871,6 +1111,7 @@ export default function PForPencilHomePage({
           }
           .nav button.active::after { bottom: -4px; }
           .header-actions { margin-left: auto; }
+          .region-trigger { height: 40px; font-size: 13px; }
           .hero { grid-template-columns: 1fr 1fr; }
           .hero-photo {
             grid-column: 1 / -1;
@@ -882,6 +1123,8 @@ export default function PForPencilHomePage({
           .demo-card { max-width: 430px; }
           .grades { grid-template-columns: repeat(4, 1fr); }
           .feature-strip { grid-template-columns: repeat(2, 1fr); }
+          .benefits-grid { grid-template-columns: 1fr; }
+          .benefit + .benefit { border-left: 0; border-top: 1px solid #e6eaf3; }
           .feature:nth-child(2) { border-right: 0; }
           .audience-grid { grid-template-columns: 1fr; }
         }
@@ -894,6 +1137,10 @@ export default function PForPencilHomePage({
           }
           .select { min-width: 95px; height: 37px; font-size: 12px; }
           .select.small { min-width: 76px; }
+          .region-trigger { min-width: 102px; height: 37px; padding: 0 10px; font-size: 12px; }
+          .region-trigger.state-trigger { min-width: 72px; }
+          .region-dropdown { right: auto; left: 0; }
+          .benefits-section { padding-bottom: 30px; }
           .header-divider { display: none; }
           .btn-login, .btn-signup {
             height: 37px;
@@ -912,11 +1159,6 @@ export default function PForPencilHomePage({
             max-width: 100%;
             margin-top: 4px;
             border-radius: 14px;
-          }
-          .photo-note {
-            font-size: 16px;
-            right: 12px;
-            top: 12px;
           }
           .feature-strip { grid-template-columns: 1fr; }
           .feature { border-right: 0; border-bottom: 1px solid #e1e6f1; }
@@ -951,30 +1193,74 @@ export default function PForPencilHomePage({
         </nav>
 
         <div className="header-actions">
-          <label className="select-wrap">
-            <select className="select" value={country} onChange={(e) => handleCountryChange(e.target.value)}>
-              {Object.keys(countries).map((item) => <option key={item}>{item}</option>)}
-            </select>
-            <span className="select-arrow">⌄</span>
-          </label>
+          <div className="region-menu">
+            <button
+              type="button"
+              className={`region-trigger ${openRegion === 'country' ? 'open' : ''}`}
+              onClick={() => setOpenRegion(openRegion === 'country' ? null : 'country')}
+              aria-haspopup="listbox"
+              aria-expanded={openRegion === 'country'}
+            >
+              <span className="region-left">
+                <span className="flag">{countryFlags[country] || '🌐'}</span>
+                <span>{country}</span>
+              </span>
+              <span className="region-chevron">⌄</span>
+            </button>
+            {openRegion === 'country' && (
+              <div className="region-dropdown" role="listbox">
+                {Object.keys(countries).map((item) => (
+                  <button
+                    type="button"
+                    key={item}
+                    className={`region-option ${country === item ? 'selected' : ''}`}
+                    onClick={() => handleCountryChange(item)}
+                  >
+                    <span className="flag">{countryFlags[item] || '🌐'}</span>
+                    <span>{item}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
-          <label className="select-wrap">
-            <select className="select small" value={state} onChange={(e) => setState(e.target.value)}>
-              {(countries[country] || []).map((item) => <option key={item}>{item}</option>)}
-            </select>
-            <span className="select-arrow">⌄</span>
-          </label>
+          <div className="region-menu">
+            <button
+              type="button"
+              className={`region-trigger state-trigger ${openRegion === 'state' ? 'open' : ''}`}
+              onClick={() => setOpenRegion(openRegion === 'state' ? null : 'state')}
+              aria-haspopup="listbox"
+              aria-expanded={openRegion === 'state'}
+            >
+              <span>{state}</span>
+              <span className="region-chevron">⌄</span>
+            </button>
+            {openRegion === 'state' && (
+              <div className="region-dropdown state-dropdown" role="listbox">
+                {(countries[country] || []).map((item) => (
+                  <button
+                    type="button"
+                    key={item}
+                    className={`region-option ${state === item ? 'selected' : ''}`}
+                    onClick={() => handleStateChange(item)}
+                  >
+                    <span>{item}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="header-divider" />
 
-          <button 
-            className="btn-login" 
+          <button
+            className="btn-login"
             onClick={() => onOpenAuthModal({ screen: 'signin' })}
           >
             Log In
           </button>
-          <button 
-            className="btn-signup" 
+          <button
+            className="btn-signup"
             onClick={() => onOpenAuthModal({ screen: 'register' })}
           >
             Sign Up
@@ -1077,27 +1363,26 @@ export default function PForPencilHomePage({
               src="/assets/hero-student.jpg" 
               alt="Child practicing mathematics" 
             />
-            <div className="photo-note">Confident Kids<br />Brighter Futures</div>
           </div>
         </section>
 
         {/* ---------------- FEATURES ---------------- */}
-        <section className="feature-strip">
+        <section className="feature-strip" aria-label="P for Pencil benefits">
           <div className="feature">
-            <span className="feature-icon">🎮</span>
+            <span className="feature-icon game"><UiIcon kind="game" size={24} /></span>
             <div><strong>Interactive Practice</strong><span>Engaging and adaptive</span></div>
           </div>
           <div className="feature">
-            <span className="feature-icon">⚡</span>
+            <span className="feature-icon bolt"><UiIcon kind="bolt" size={23} /></span>
             <div><strong>Instant Feedback</strong><span>Learn from mistakes</span></div>
           </div>
           <div className="feature">
-            <span className="feature-icon">▮▮▮</span>
+            <span className="feature-icon chart"><UiIcon kind="chart" size={24} /></span>
             <div><strong>Track Progress</strong><span>See real growth</span></div>
           </div>
           <div className="feature">
-            <span className="feature-icon">🛡</span>
-            <div><strong>Safe & Ad-free</strong><span>A trusted learning space</span></div>
+            <span className="feature-icon shield"><UiIcon kind="shield" size={24} /></span>
+            <div><strong>Safe &amp; Ad-free</strong><span>A trusted learning space</span></div>
           </div>
         </section>
 
@@ -1112,10 +1397,39 @@ export default function PForPencilHomePage({
                 style={{ background: grade.accent }}
                 onClick={() => handleGradeClick(grade)}
               >
-                <span className="grade-icon">{grade.icon}</span>
+                <span className="grade-icon"><GradeIcon icon={grade.icon} /></span>
                 <span className="grade-name">{grade.label}</span>
               </button>
             ))}
+          </div>
+        </section>
+
+        {/* ---------------- LEARNING BENEFITS ---------------- */}
+        <section className="benefits-section" aria-label="Why families choose P for Pencil">
+          <div className="benefits-grid">
+            <article className="benefit">
+              <span className="benefit-icon"><UiIcon kind="target" size={29} /></span>
+              <div>
+                <h3>Build Confidence</h3>
+                <p>Give children small wins, useful feedback and practice that helps them feel ready for the next challenge.</p>
+              </div>
+            </article>
+
+            <article className="benefit">
+              <span className="benefit-icon"><UiIcon kind="smile" size={29} /></span>
+              <div>
+                <h3>Make Math Enjoyable</h3>
+                <p>Turn everyday practice into a positive learning experience with interactive questions and playful progress.</p>
+              </div>
+            </article>
+
+            <article className="benefit">
+              <span className="benefit-icon"><UiIcon kind="sun" size={29} /></span>
+              <div>
+                <h3>Prepare for a Brighter Tomorrow</h3>
+                <p>Build strong foundations that support confident learners from Preschool through Grade 6.</p>
+              </div>
+            </article>
           </div>
         </section>
 

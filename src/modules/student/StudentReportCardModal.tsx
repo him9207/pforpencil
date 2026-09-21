@@ -124,8 +124,8 @@ export default function StudentReportCardModal({
                 🎓
               </div>
               <div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 block">
-                  FunLearn Academic Mastery Network
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#f20b86] block">
+                  PforPencil Academic Mastery Network
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-stone-900 tracking-tight">
                   {effectiveSchoolName}
@@ -382,7 +382,7 @@ export default function StudentReportCardModal({
         {/* Modal Footer */}
         <div className="p-4 bg-stone-50 border-t border-stone-200 flex items-center justify-between print:hidden">
           <span className="text-xs text-stone-500">
-            FunLearn Unified Learning System • Document ID: RC-{student.studentId}-{new Date().getFullYear()}
+            PforPencil Unified Learning System • Document ID: RC-{student.studentId}-{new Date().getFullYear()}
           </span>
           <button
             onClick={onClose}

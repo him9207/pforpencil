@@ -35,7 +35,8 @@ export interface CurriculumMasterData {
   curricula: CurriculumMaster[];
 }
 
-export const CURRICULUM_MASTER_STORAGE_KEY = 'funlearn_curriculum_master_v1';
+export const CURRICULUM_MASTER_STORAGE_KEY = 'pforpencil_curriculum_master_v1';
+export const LEGACY_CURRICULUM_MASTER_STORAGE_KEY = 'funlearn_curriculum_master_v1';
 
 export const DEFAULT_CURRICULUM_MASTER: CurriculumMasterData = {
   countries: [
@@ -69,7 +70,7 @@ export const DEFAULT_CURRICULUM_MASTER: CurriculumMasterData = {
 
 export function loadCurriculumMaster(): CurriculumMasterData {
   try {
-    const raw = localStorage.getItem(CURRICULUM_MASTER_STORAGE_KEY);
+    const raw = localStorage.getItem(CURRICULUM_MASTER_STORAGE_KEY) || localStorage.getItem(LEGACY_CURRICULUM_MASTER_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed?.countries && parsed?.regions && parsed?.curricula) {

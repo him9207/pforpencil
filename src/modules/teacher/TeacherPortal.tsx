@@ -493,7 +493,7 @@ export default function TeacherPortal({
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setShowCreateClassModal(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-stone-950 font-black text-xs transition-all shadow-xs cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#10246f] hover:bg-[#0c1a52] text-white font-bold text-xs transition-all shadow-xs cursor-pointer hover:scale-105 active:scale-95"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Create Class</span>
@@ -504,14 +504,14 @@ export default function TeacherPortal({
               setNewStudentPin(String(Math.floor(1000 + Math.random() * 9000)));
               setShowCreateStudentModal(true);
             }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-stone-950 font-black text-xs transition-all shadow-xs cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#f20b86] hover:bg-[#df0879] text-white font-bold text-xs transition-all shadow-xs cursor-pointer hover:scale-105 active:scale-95"
           >
             <Users className="w-3.5 h-3.5" />
             <span>Enroll Student</span>
           </button>
           <button
             onClick={() => setShowCreateQuestionModal(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#13b7ad] hover:bg-[#0fa097] text-white text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-105 active:scale-95"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Author Custom Question</span>
@@ -528,10 +528,10 @@ export default function TeacherPortal({
       )}
 
       {/* Active Classroom Selector & Tabs */}
-      <div className="bg-white rounded-3xl border border-stone-200 p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white rounded-3xl border border-[#e1e6f1] p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Class switcher buttons */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold text-stone-400 uppercase tracking-wider mr-1">
+          <span className="text-xs font-bold text-[#59627a] uppercase tracking-wider mr-1">
             Assigned Classes:
           </span>
           {teacherClasses.map((cls) => {
@@ -543,28 +543,28 @@ export default function TeacherPortal({
                   setSelectedClassId(cls.id);
                   sounds.playCorrect();
                 }}
-                className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                   isSelected
-                    ? 'bg-stone-900 text-white shadow-xs'
-                    : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                    ? 'bg-[#10246f] text-white shadow-xs'
+                    : 'bg-[#eef4ff] text-[#10246f] hover:bg-[#d7def0]'
                 }`}
               >
                 <span>{cls.name}</span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                  isSelected ? 'bg-slate-800 text-indigo-300' : 'bg-blue-50 text-blue-800 border border-blue-200'
+                <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold ${
+                  isSelected ? 'bg-white/20 text-white' : 'bg-white text-[#10246f] border border-[#d7def0]'
                 }`}>
                   {cls.grade}
                 </span>
                 {cls.section && (
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
-                    isSelected ? 'bg-stone-800 text-blue-300' : 'bg-blue-100 text-blue-900'
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
+                    isSelected ? 'bg-white/20 text-white' : 'bg-white text-[#13b7ad]'
                   }`}>
                     {cls.section}
                   </span>
                 )}
                 {cls.room && (
-                  <span className={`text-[9px] px-1 py-0.5 rounded font-mono opacity-80 ${
-                    isSelected ? 'text-stone-300' : 'text-stone-500'
+                  <span className={`text-[9px] px-1 py-0.2 rounded font-mono opacity-80 ${
+                    isSelected ? 'text-white/80' : 'text-[#59627a]'
                   }`}>
                     🚪 {cls.room}
                   </span>
@@ -575,43 +575,43 @@ export default function TeacherPortal({
         </div>
 
         {/* View Tabs */}
-        <div className="bg-stone-100 p-1.5 rounded-2xl flex items-center gap-1">
+        <div className="bg-[#eef4ff] p-1.5 rounded-full border border-[#d7def0] flex items-center gap-1">
           <button
             onClick={() => setActiveTab('students')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'students'
-                ? 'bg-amber-500 text-stone-950 font-black shadow-xs'
-                : 'text-stone-600 hover:text-stone-950'
+                ? 'bg-[#f20b86] text-white shadow-xs'
+                : 'text-[#59627a] hover:text-[#10246f]'
             }`}
           >
             🎒 Students ({classStudents.length})
           </button>
           <button
             onClick={() => setActiveTab('assignments')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'assignments'
-                ? 'bg-amber-500 text-stone-950 font-black shadow-xs'
-                : 'text-stone-600 hover:text-stone-950'
+                ? 'bg-[#f20b86] text-white shadow-xs'
+                : 'text-[#59627a] hover:text-[#10246f]'
             }`}
           >
             📋 Assignments ({classAssignments.length})
           </button>
           <button
             onClick={() => setActiveTab('questions')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'questions'
-                ? 'bg-amber-500 text-stone-950 font-black shadow-xs'
-                : 'text-stone-600 hover:text-stone-950'
+                ? 'bg-[#f20b86] text-white shadow-xs'
+                : 'text-[#59627a] hover:text-[#10246f]'
             }`}
           >
             📚 Question Bank ({accessibleQuestions.length})
           </button>
           <button
             onClick={() => setActiveTab('activities')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'activities'
-                ? 'bg-amber-500 text-stone-950 font-black shadow-xs'
-                : 'text-stone-600 hover:text-stone-950'
+                ? 'bg-[#f20b86] text-white shadow-xs'
+                : 'text-[#59627a] hover:text-[#10246f]'
             }`}
           >
             ⚡ Activities & Quizzes ({activities.length})

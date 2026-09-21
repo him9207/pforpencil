@@ -17,6 +17,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
   try {
     ['sch', 'tea', 'stu', 'par', 'adm', 'con'].forEach((k) => {
       window.localStorage.removeItem(`funlearn_hwm_${k}`);
+      window.localStorage.removeItem(`pforpencil_hwm_${k}`);
     });
   } catch {
     // Sandboxed environment fallback

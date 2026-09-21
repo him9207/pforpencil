@@ -1,7 +1,8 @@
 import { Activity, ActivityDatabase, ActivityMasterRecord, ActivityStep } from '../types';
 import { INITIAL_ACTIVITIES } from '../mockData';
 
-export const ACTIVITY_DATABASE_STORAGE_KEY = 'funlearn_activity_database_v3';
+export const ACTIVITY_DATABASE_STORAGE_KEY = 'pforpencil_activity_database_v1';
+export const LEGACY_ACTIVITY_DATABASE_STORAGE_KEY = 'funlearn_activity_database_v3';
 export const ACTIVITY_ID_PATTERN = /^ACT\d{6}$/;
 
 const emptyDatabase = (): ActivityDatabase => ({
@@ -124,7 +125,7 @@ function hydrateDatabase(db: ActivityDatabase): Activity[] {
 
 export function loadActivityDatabase(): ActivityDatabase {
   try {
-    const raw = localStorage.getItem(ACTIVITY_DATABASE_STORAGE_KEY);
+    const raw = localStorage.getItem(ACTIVITY_DATABASE_STORAGE_KEY) || localStorage.getItem(LEGACY_ACTIVITY_DATABASE_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as ActivityDatabase;
       if (Array.isArray(parsed.activities) && Array.isArray(parsed.activitySteps) && Array.isArray(parsed.activityQuestionLinks)) {

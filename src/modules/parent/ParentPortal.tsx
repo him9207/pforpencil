@@ -212,7 +212,7 @@ export default function ParentPortal({
       }, {} as Record<string, number>),
       recentActivities: [],
       badges: [
-        { id: 'B_NEW', name: 'Junior Pioneer', icon: '🌟', description: 'Enrolled in FunLearn Family Academy', unlockedAt: new Date().toISOString().split('T')[0] }
+        { id: 'B_NEW', name: 'Junior Pioneer', icon: '🌟', description: 'Enrolled in PforPencil Family Academy', unlockedAt: new Date().toISOString().split('T')[0] }
       ]
     };
 
@@ -264,7 +264,7 @@ export default function ParentPortal({
 
         {/* Child Selector Tabs & Add Child Button */}
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-stone-100 p-1.5 rounded-2xl">
+          <div className="flex items-center gap-1.5 bg-[#eef4ff] p-1.5 rounded-full border border-[#d7def0]">
             {myChildren.map((child) => (
               <button
                 key={child.studentId}
@@ -273,15 +273,15 @@ export default function ParentPortal({
                   setSelectedChildId(child.studentId);
                   sounds.playCorrect();
                 }}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
                   child.studentId === activeChild?.studentId
-                    ? 'bg-amber-500 text-stone-950 font-black shadow-xs'
-                    : 'text-stone-600 hover:text-stone-950'
+                    ? 'bg-[#f20b86] text-white shadow-xs'
+                    : 'text-[#59627a] hover:text-[#10246f] hover:bg-white'
                 }`}
               >
                 <span>{child.avatar}</span>
                 <span>{child.studentName}</span>
-                <span className="text-[10px] text-stone-700 font-mono">
+                <span className={`text-[10px] font-mono ${child.studentId === activeChild?.studentId ? 'text-white/80' : 'text-[#59627a]'}`}>
                   ({child.studentUsername})
                 </span>
               </button>
@@ -292,14 +292,14 @@ export default function ParentPortal({
           {myChildren.length < 3 ? (
             <button
               onClick={handleOpenAddChildModal}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-stone-950 text-xs font-black transition-all shadow-xs cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-[#10246f] hover:bg-[#0c1a52] text-white text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-105 active:scale-95"
               title="Add child (up to 3)"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Child ({myChildren.length}/3)</span>
             </button>
           ) : (
-            <span className="px-3 py-2 rounded-2xl bg-stone-100 text-stone-500 text-xs font-bold border border-stone-200">
+            <span className="px-4 py-2 rounded-full bg-[#ecfdf5] text-[#065f46] text-xs font-bold border border-[#a7f3d0]">
               ✓ Family Max (3/3 Children)
             </span>
           )}
@@ -404,9 +404,9 @@ export default function ParentPortal({
               {/* Reset PIN Button */}
               <button
                 onClick={() => setShowResetPinModal(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold transition cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#f8faff] hover:bg-[#eef4ff] text-[#10246f] border border-[#d7def0] text-xs font-bold transition cursor-pointer"
               >
-                <KeyRound className="w-3.5 h-3.5 text-amber-600" />
+                <KeyRound className="w-3.5 h-3.5 text-[#13b7ad]" />
                 <span>Reset Child PIN</span>
               </button>
 
@@ -416,7 +416,7 @@ export default function ParentPortal({
                   sounds.playLevelUp();
                   setShowReportCardModal(true);
                 }}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 text-xs font-black transition shadow-xs cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#f20b86] hover:bg-[#df0879] text-white text-xs font-bold transition shadow-xs cursor-pointer hover:scale-105 active:scale-95"
               >
                 <FileText className="w-4 h-4" />
                 <span>View Full Report Card & Analytics</span>
@@ -825,7 +825,7 @@ export default function ParentPortal({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 font-black cursor-pointer shadow-xs"
+                  className="px-6 py-2 rounded-full bg-[#f20b86] hover:bg-[#df0879] text-white font-bold cursor-pointer shadow-xs transition-all hover:scale-105 active:scale-95 text-xs sm:text-sm"
                 >
                   Enroll Child
                 </button>

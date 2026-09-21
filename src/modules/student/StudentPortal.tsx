@@ -112,9 +112,11 @@ export default function StudentPortal({
   const [masterDataVersion, setMasterDataVersion] = useState(0);
   useEffect(() => {
     const handleMasterUpdate = () => setMasterDataVersion(v => v + 1);
+    window.addEventListener('pforpencil_master_data_updated', handleMasterUpdate);
     window.addEventListener('funlearn_master_data_updated', handleMasterUpdate);
     window.addEventListener('storage', handleMasterUpdate);
     return () => {
+      window.removeEventListener('pforpencil_master_data_updated', handleMasterUpdate);
       window.removeEventListener('funlearn_master_data_updated', handleMasterUpdate);
       window.removeEventListener('storage', handleMasterUpdate);
     };
@@ -748,52 +750,51 @@ export default function StudentPortal({
   return (
     <div className="space-y-8 pb-12">
       {/* Kid Welcome & Gamification Bar - Vibrant, Colorful & High-Contrast Student Profile */}
-      <div className="bg-gradient-to-br from-amber-50/70 via-orange-50/40 to-emerald-50/40 border-2 border-amber-200/90 rounded-3xl p-6 sm:p-8 shadow-sm relative overflow-hidden">
-        {/* Playful colorful backdrop bubbles */}
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 rounded-full bg-gradient-to-br from-amber-200/40 to-orange-200/30 pointer-events-none blur-2xl" />
-        <div className="absolute bottom-0 left-1/3 -mb-10 w-40 h-40 rounded-full bg-gradient-to-tr from-emerald-200/40 to-teal-200/30 pointer-events-none blur-xl" />
-        <div className="absolute top-1/2 left-4 w-24 h-24 rounded-full bg-amber-200/30 pointer-events-none blur-lg" />
+      <div className="bg-white border-2 border-[#e1e6f1] rounded-3xl p-6 sm:p-8 shadow-xs relative overflow-hidden">
+        {/* Soft colorful backdrop accents */}
+        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 rounded-full bg-[#fdf2f8] pointer-events-none blur-2xl" />
+        <div className="absolute bottom-0 left-1/3 -mb-10 w-40 h-40 rounded-full bg-[#eaf8f5] pointer-events-none blur-xl" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           {/* Avatar & Student Name */}
           <div className="flex items-center gap-4">
-            <div className="w-18 h-18 sm:w-22 sm:h-22 rounded-3xl bg-gradient-to-tr from-amber-400 via-orange-500 to-emerald-500 p-1 shadow-md flex items-center justify-center shrink-0">
+            <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-3xl bg-[#eef4ff] border-2 border-[#10246f]/15 p-1 shadow-xs flex items-center justify-center shrink-0">
               <div className="w-full h-full rounded-[22px] bg-white flex items-center justify-center text-4xl sm:text-5xl shadow-inner">
                 {studentProgress.avatar}
               </div>
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-black px-3 py-1 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-stone-950 uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
-                  <Lock className="w-3 h-3 text-stone-900" />
+                <span className="text-xs font-bold px-3 py-0.5 rounded-full bg-[#fdf2f8] text-[#f20b86] border border-[#fbcfe8] uppercase tracking-wider flex items-center gap-1.5 shadow-2xs">
+                  <Lock className="w-3 h-3 text-[#f20b86]" />
                   <span>{studentGrade}</span>
                 </span>
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100/80 text-emerald-900 border border-emerald-300 flex items-center gap-1 shadow-2xs">
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#eaf8f5] text-[#13b7ad] border border-[#a7f3d0] flex items-center gap-1 shadow-2xs">
                   <span>{studentCountry === 'India' ? '🇮🇳' : studentCountry === 'United Kingdom' ? '🇬🇧' : studentCountry === 'Canada' ? '🇨🇦' : studentCountry === 'Australia' ? '🇦🇺' : '🇺🇸'}</span>
                   <span>{studentState}</span>
                 </span>
-                <span className="text-xs font-mono bg-amber-100/80 border border-amber-300 text-amber-950 px-2.5 py-0.5 rounded-full font-bold">
+                <span className="text-xs font-mono bg-[#eef4ff] border border-[#d7def0] text-[#10246f] px-2.5 py-0.5 rounded-full font-bold">
                   ID: {studentProgress.studentUsername}
                 </span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-stone-900 mt-1 flex items-center gap-2">
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[#10246f] mt-1 flex items-center gap-2">
                 <span>Student: {studentProgress.studentName}</span>
-                <span className="animate-bounce">🌟</span>
+                <span>🌟</span>
               </h1>
-              <p className="text-xs sm:text-sm text-stone-600 font-medium">
+              <p className="text-xs sm:text-sm text-[#59627a] font-medium">
                 {studentProgress.schoolOrParent === 'school' 
                   ? (studentProgress.schoolName || currentUser.schoolName || 'School Organization') 
                   : `Family Student of ${studentProgress.parentName || currentUser.parentName || 'Parent'}`}
-                <span className="text-orange-700 font-semibold ml-1.5">• {studentCurriculum}</span>
+                <span className="text-[#13b7ad] font-semibold ml-1.5">• {studentCurriculum}</span>
               </p>
               <div className="mt-2.5 flex items-center gap-2">
                 <button
                   type="button"
                   id="open-student-id-card-btn"
                   onClick={() => setIsIdCardOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 text-xs font-black transition cursor-pointer shadow-sm hover:scale-[1.02] active:scale-[0.98]"
+                  className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#10246f] hover:bg-[#0c1a52] text-white text-xs font-bold transition cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
                 >
-                  <Award className="w-3.5 h-3.5 text-stone-900" />
+                  <Award className="w-3.5 h-3.5 text-white" />
                   <span>🪪 My Student ID Card</span>
                 </button>
               </div>
@@ -801,36 +802,36 @@ export default function StudentPortal({
           </div>
 
           {/* Gamification Stats - Colorful Cards */}
-          <div className="grid grid-cols-3 gap-2.5 sm:gap-3 bg-white/95 backdrop-blur-sm border-2 border-amber-200/80 p-3 sm:p-4 rounded-3xl shadow-sm">
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-3 bg-[#f8faff] border border-[#e1e6f1] p-3 sm:p-4 rounded-3xl shadow-xs">
             {/* Level Card */}
-            <div className="text-center px-3 py-2 rounded-2xl bg-gradient-to-b from-amber-50 to-orange-100/60 border border-amber-200/70">
-              <div className="flex items-center justify-center gap-1 text-orange-800 text-xs font-black">
-                <Zap className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+            <div className="text-center px-3 py-2 rounded-2xl bg-[#FCE8F3] border border-[#fbcfe8]">
+              <div className="flex items-center justify-center gap-1 text-[#f20b86] text-xs font-bold">
+                <Zap className="w-3.5 h-3.5 fill-[#f20b86] text-[#f20b86]" />
                 <span>Level {studentProgress.level}</span>
               </div>
-              <span className="block text-xl sm:text-2xl font-black text-stone-900 mt-0.5">
-                {studentProgress.xp} <span className="text-[11px] font-bold text-orange-700">XP</span>
+              <span className="block text-xl sm:text-2xl font-black text-[#10246f] mt-0.5">
+                {studentProgress.xp} <span className="text-[11px] font-bold text-[#f20b86]">XP</span>
               </span>
             </div>
 
             {/* Streak Card */}
-            <div className="text-center px-3 py-2 rounded-2xl bg-gradient-to-b from-orange-50 to-amber-100/50 border border-orange-200/70">
-              <div className="flex items-center justify-center gap-1 text-orange-800 text-xs font-black">
-                <Flame className="w-3.5 h-3.5 fill-orange-500 text-orange-500" />
+            <div className="text-center px-3 py-2 rounded-2xl bg-[#FFF9E8] border border-[#ffbf32]/30">
+              <div className="flex items-center justify-center gap-1 text-amber-700 text-xs font-bold">
+                <Flame className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
                 <span>Streak</span>
               </div>
-              <span className="block text-xl sm:text-2xl font-black text-stone-900 mt-0.5">
-                {studentProgress.streakDays} <span className="text-[11px] font-bold text-orange-700">Days</span>
+              <span className="block text-xl sm:text-2xl font-black text-[#10246f] mt-0.5">
+                {studentProgress.streakDays} <span className="text-[11px] font-bold text-amber-700">Days</span>
               </span>
             </div>
 
             {/* Coins Card */}
-            <div className="text-center px-3 py-2 rounded-2xl bg-gradient-to-b from-emerald-50 to-teal-100/60 border border-emerald-200/70">
-              <div className="flex items-center justify-center gap-1 text-emerald-800 text-xs font-black">
-                <Coins className="w-3.5 h-3.5 fill-emerald-600 text-emerald-600" />
+            <div className="text-center px-3 py-2 rounded-2xl bg-[#EAFBF2] border border-[#16c47f]/30">
+              <div className="flex items-center justify-center gap-1 text-[#16c47f] text-xs font-bold">
+                <Coins className="w-3.5 h-3.5 fill-[#16c47f] text-[#16c47f]" />
                 <span>Coins</span>
               </div>
-              <span className="block text-xl sm:text-2xl font-black text-stone-900 mt-0.5 flex items-center justify-center gap-1">
+              <span className="block text-xl sm:text-2xl font-black text-[#10246f] mt-0.5 flex items-center justify-center gap-1">
                 <span>🪙</span>
                 <span>{studentProgress.coins}</span>
               </span>
@@ -839,57 +840,57 @@ export default function StudentPortal({
         </div>
 
         {/* Level XP Progress Bar with colorful styling */}
-        <div className="mt-5 pt-4 border-t border-amber-200/70 flex items-center justify-between gap-4 text-xs font-semibold text-stone-700">
-          <span className="font-black text-amber-950 flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-orange-500 animate-ping" />
+        <div className="mt-5 pt-4 border-t border-[#e1e6f1] flex items-center justify-between gap-4 text-xs font-semibold text-[#59627a]">
+          <span className="font-bold text-[#10246f] flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#f20b86] animate-ping" />
             <span>Level {studentProgress.level} Explorer</span>
           </span>
-          <div className="flex-1 max-w-md bg-stone-100 border border-stone-200 h-3.5 rounded-full overflow-hidden p-0.5">
+          <div className="flex-1 max-w-md bg-[#eef4ff] border border-[#e1e6f1] h-3 rounded-full overflow-hidden p-0.5">
             <div 
-              className="bg-gradient-to-r from-amber-500 via-orange-500 to-emerald-500 h-full rounded-full transition-all duration-500 shadow-xs"
+              className="bg-gradient-to-r from-[#f20b86] via-[#168bea] to-[#16c47f] h-full rounded-full transition-all duration-500 shadow-xs"
               style={{ width: `${(studentProgress.xp % 500) / 5}%` }}
             />
           </div>
-          <span className="text-orange-900 font-bold">{500 - (studentProgress.xp % 500)} XP to Level {studentProgress.level + 1}</span>
+          <span className="text-[#f20b86] font-bold">{500 - (studentProgress.xp % 500)} XP to Level {studentProgress.level + 1}</span>
         </div>
       </div>
 
       {/* PORTAL NAVIGATION TABS */}
-      <div className="flex items-center gap-2 border-b border-stone-200 pb-3">
+      <div className="flex items-center gap-2 border-b border-[#e1e6f1] pb-3">
         <button
           onClick={() => setActiveTab('adventures')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition cursor-pointer ${
             activeTab === 'adventures'
-              ? 'bg-amber-500 text-stone-950 font-black shadow-sm'
-              : 'text-stone-600 hover:text-stone-950 hover:bg-stone-100'
+              ? 'bg-[#f20b86] text-white shadow-xs'
+              : 'text-[#59627a] hover:text-[#10246f] hover:bg-[#eef4ff]'
           }`}
         >
-          <Sparkles className="w-4 h-4 text-stone-900" />
-          <span>🎮 Adventures & Quizzes</span>
+          <Sparkles className="w-4 h-4" />
+          <span>Adventures & Quizzes</span>
         </button>
 
         <button
           onClick={() => setActiveTab('skills')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition cursor-pointer ${
             activeTab === 'skills'
-              ? 'bg-amber-500 text-stone-950 font-black shadow-sm'
-              : 'text-stone-600 hover:text-stone-950 hover:bg-stone-100'
+              ? 'bg-[#f20b86] text-white shadow-xs'
+              : 'text-[#59627a] hover:text-[#10246f] hover:bg-[#eef4ff]'
           }`}
         >
-          <Compass className="w-4 h-4 text-stone-900" />
-          <span>🧭 Skill Standards Browser</span>
+          <Compass className="w-4 h-4" />
+          <span>Skill Standards Browser</span>
         </button>
 
         <button
           onClick={() => setActiveTab('analytics')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition cursor-pointer ${
             activeTab === 'analytics'
-              ? 'bg-amber-500 text-stone-950 font-black shadow-sm'
-              : 'text-stone-600 hover:text-stone-950 hover:bg-stone-100'
+              ? 'bg-[#f20b86] text-white shadow-xs'
+              : 'text-[#59627a] hover:text-[#10246f] hover:bg-[#eef4ff]'
           }`}
         >
-          <BarChart3 className="w-4 h-4 text-stone-900" />
-          <span>📊 Learning Analytics</span>
+          <BarChart3 className="w-4 h-4" />
+          <span>Learning Analytics</span>
         </button>
       </div>
 
@@ -907,48 +908,56 @@ export default function StudentPortal({
       {/* ACTIVE FULL-SCREEN QUESTION & ANSWER ARENA (ZERO TEXT OVERLAP, 100% OPAQUE & ERGONOMIC) */}
       {/* ========================================================================= */}
       {activePlayActivity && (
-        <div className="fixed inset-0 z-[100] bg-stone-900 flex flex-col h-screen w-screen select-none overflow-hidden animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-[100] bg-[#f8faff] flex flex-col h-screen w-screen select-none overflow-hidden font-sans text-[#10246f] animate-in fade-in duration-150">
           
-          {/* 1. TOP NAVIGATION & PROGRESS HUD (STICKY TOP, HIGH CONTRAST) */}
-          <header className="px-4 sm:px-6 py-3 bg-stone-950 text-white flex items-center justify-between shrink-0 border-b border-stone-800 shadow-md">
-            {/* Left: Activity Title & Grade Lock */}
+          {/* 1. TOP NAVIGATION HEADER */}
+          <header className="h-14 sm:h-16 px-4 sm:px-8 bg-white border-b border-[#e1e6f1] flex items-center justify-between shrink-0 shadow-2xs">
+            {/* Left: Logo + Activity Title */}
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-stone-950 font-black flex items-center justify-center text-lg sm:text-xl shrink-0 shadow-sm">
-                {activePlayActivity.type === 'boss_battle' ? '⚔️' : activePlayActivity.type === 'game' ? '🎮' : '📝'}
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-sky-400 bg-sky-950/90 px-2 py-0.5 rounded-md border border-sky-800/60">
-                    {activePlayActivity.type === 'boss_battle' ? '⚔️ Boss Battle' : '📝 Skill Questionnaire & Practice Drill'}
-                  </span>
-                  <span className="text-[11px] font-bold text-stone-300 hidden sm:inline-block">
-                    🔒 {studentGrade}
-                  </span>
-                </div>
-                <h3 className="text-xs sm:text-sm md:text-base font-black text-white truncate mt-0.5">
+              <img 
+                src="/assets/pforpencil-logo.png" 
+                alt="P for Pencil" 
+                className="h-7 sm:h-8 w-auto object-contain shrink-0"
+                onError={(e) => { e.currentTarget.src = '/assets/pforpencil-logo.svg'; }}
+              />
+              <div className="hidden sm:block border-l border-[#e1e6f1] pl-3 min-w-0">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#59627a] block">
+                  {studentGrade} • {activePlayActivity.type === 'boss_battle' ? 'Boss Battle' : 'Practice Drill'}
+                </span>
+                <h3 className="text-xs sm:text-sm font-black text-[#10246f] truncate max-w-xs md:max-w-md">
                   {activePlayActivity.title}
                 </h3>
               </div>
             </div>
 
-            {/* Right: Question Dots / Timer / Exit */}
-            <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+            {/* Center: Question Indicator */}
+            {!quizFinished && activeQuestions.length > 0 && (
+              <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#fdf2f8] text-[#f20b86] border border-[#fbcfe8] text-xs sm:text-sm font-bold shadow-2xs">
+                <span>Question</span>
+                <span className="font-black">{currentQuestionIndex + 1}</span>
+                <span className="text-[#f20b86]/70">of</span>
+                <span className="font-black">{activeQuestions.length}</span>
+              </div>
+            )}
+
+            {/* Right: Timer / XP / Exit Button */}
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               {/* Live Question Countdown Timer */}
               {!quizFinished && (
-                <div className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-black border transition-colors ${
+                <div className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-bold border transition-colors ${
                   questionTimer <= 5 
-                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/50 animate-pulse' 
+                    ? 'bg-rose-50 text-rose-600 border-rose-300 animate-pulse' 
                     : questionTimer <= 10 
-                    ? 'bg-amber-500/20 text-amber-200 border-amber-500/40' 
-                    : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
+                    ? 'bg-amber-50 text-amber-700 border-amber-300' 
+                    : 'bg-[#eaf8f5] text-[#13b7ad] border-[#13b7ad]/30'
                 }`}>
-                  <Timer className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <Timer className="w-3.5 h-3.5" />
                   <span className="font-mono">{questionTimer}s</span>
                 </div>
               )}
 
               {/* Score / XP Earned Counter */}
-              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-900 border border-stone-800 text-amber-400 text-xs font-black">
+              <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#eef4ff] border border-[#d7def0] text-[#10246f] text-xs font-bold">
                 <span>🪙</span>
                 <span>{score} Pts</span>
               </div>
@@ -957,7 +966,7 @@ export default function StudentPortal({
               <button
                 type="button"
                 onClick={() => setActivePlayActivity(null)}
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/10 hover:bg-rose-600/90 text-stone-300 hover:text-white flex items-center justify-center text-sm sm:text-base transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-full bg-[#f8faff] hover:bg-[#fff1f2] border border-[#e1e6f1] text-[#59627a] hover:text-[#f43f5e] flex items-center justify-center text-sm font-bold transition-colors cursor-pointer"
                 title="Exit Activity"
               >
                 ✕
@@ -965,11 +974,11 @@ export default function StudentPortal({
             </div>
           </header>
 
-          {/* Visual Animated Progress Bar under header */}
+          {/* Progress Bar under header */}
           {!quizFinished && activeQuestions.length > 0 && (
-            <div className="w-full bg-stone-800 h-1.5 shrink-0 overflow-hidden">
+            <div className="w-full bg-[#eef4ff] h-1.5 shrink-0 overflow-hidden">
               <div 
-                className="bg-gradient-to-r from-amber-500 via-orange-500 to-emerald-500 h-full transition-all duration-300 shadow-xs"
+                className="bg-gradient-to-r from-[#f20b86] via-[#168bea] to-[#16c47f] h-full transition-all duration-300 shadow-xs"
                 style={{ width: `${((currentQuestionIndex + (isAnswerSubmitted ? 1 : 0)) / activeQuestions.length) * 100}%` }}
               />
             </div>
@@ -977,14 +986,14 @@ export default function StudentPortal({
 
           {/* Boss Battle Health HUD (if applicable) */}
           {activePlayActivity.type === 'boss_battle' && !quizFinished && (
-            <div className="bg-stone-950 text-white px-4 sm:px-8 py-2.5 border-b border-stone-800 shrink-0">
+            <div className="bg-white text-[#10246f] px-4 sm:px-8 py-2 border-b border-[#e1e6f1] shrink-0">
               <div className="max-w-3xl mx-auto grid grid-cols-2 gap-4 sm:gap-8">
                 <div>
                   <div className="flex justify-between text-xs font-bold mb-1">
-                    <span className="text-rose-400">{activePlayActivity.bossName || 'Boss'} {activePlayActivity.bossAvatar || '👾'}</span>
+                    <span className="text-rose-600">{activePlayActivity.bossName || 'Boss'} {activePlayActivity.bossAvatar || '👾'}</span>
                     <span className="font-mono">{bossHp}/100 HP</span>
                   </div>
-                  <div className="w-full bg-stone-800 h-2.5 rounded-full overflow-hidden">
+                  <div className="w-full bg-stone-100 h-2 rounded-full overflow-hidden">
                     <div 
                       className="bg-rose-500 h-full rounded-full transition-all duration-300"
                       style={{ width: `${bossHp}%` }}
@@ -994,12 +1003,12 @@ export default function StudentPortal({
 
                 <div>
                   <div className="flex justify-between text-xs font-bold mb-1">
-                    <span className="text-emerald-400">You ({studentProgress.studentName}) {studentProgress.avatar}</span>
+                    <span className="text-[#16c47f]">You ({studentProgress.studentName}) {studentProgress.avatar}</span>
                     <span className="font-mono">{playerHp}/100 HP</span>
                   </div>
-                  <div className="w-full bg-stone-800 h-2.5 rounded-full overflow-hidden">
+                  <div className="w-full bg-stone-100 h-2 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full rounded-full transition-all duration-300 ${isBossAttacking ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500'}`}
+                      className={`h-full rounded-full transition-all duration-300 ${isBossAttacking ? 'bg-amber-400 animate-pulse' : 'bg-[#16c47f]'}`}
                       style={{ width: `${playerHp}%` }}
                     />
                   </div>
@@ -1007,292 +1016,277 @@ export default function StudentPortal({
               </div>
 
               {battleMessage && (
-                <div className="mt-2 text-center text-xs font-mono text-amber-300 bg-stone-900 py-1 px-3 rounded-xl max-w-md mx-auto">
+                <div className="mt-1 text-center text-xs font-mono text-[#10246f] bg-[#f8faff] py-0.5 px-3 rounded-xl max-w-md mx-auto border border-[#e1e6f1]">
                   {battleMessage}
                 </div>
               )}
             </div>
           )}
 
-          {/* 2. CENTRAL RESPONSIVE STAGE (FITS SINGLE SCREEN ON DESKTOP/TABLET, COMPACT PADDING) */}
-          <main className="flex-1 overflow-y-auto bg-stone-100 px-3 sm:px-6 py-3 sm:py-4 flex flex-col justify-start">
-            <div className="max-w-3xl w-full mx-auto space-y-3 sm:space-y-4">
-              {!quizFinished ? (
-                currentQ ? (
-                  <div className="space-y-3 sm:space-y-4 animate-in fade-in duration-200">
-                    
-                    {/* Top Row: Question Step indicator & Skill Category badge */}
-                    <div className="bg-white rounded-2xl border border-stone-200/80 p-2.5 sm:p-3 shadow-2xs flex items-center justify-between flex-wrap gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-black px-2.5 py-0.5 rounded-xl bg-amber-100 text-amber-950 border border-amber-200 shadow-2xs">
-                          Question {currentQuestionIndex + 1} of {activeQuestions.length}
-                        </span>
-                        <span className="text-xs font-bold text-stone-600 bg-stone-100 px-2.5 py-0.5 rounded-xl border border-stone-200">
-                          {currentQ.category} • {currentQ.skill}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <span className="flex items-center gap-1 text-xs text-stone-600 bg-stone-50 px-2 py-0.5 rounded-xl border border-stone-200 font-bold shadow-2xs">
-                          <Clock className="w-3.5 h-3.5 text-amber-500" />
-                          <span>{questionElapsedTime}s elapsed</span>
-                        </span>
-                        <span className="text-xs font-black text-emerald-900 bg-emerald-50 px-2.5 py-0.5 rounded-xl border border-emerald-200">
-                          +{currentQ.points} Points
-                        </span>
-                      </div>
+          {/* 2. CENTRAL SINGLE-SCREEN QUESTION ARENA (FIT ENTIRELY WITHOUT SCROLLING ON STANDARD SCREENS) */}
+          <main className="flex-1 overflow-y-auto lg:overflow-hidden bg-[#f8faff] px-3 sm:px-6 py-2.5 sm:py-4 flex flex-col justify-between items-center max-w-4xl w-full mx-auto min-h-0">
+            {!quizFinished ? (
+              currentQ ? (
+                <div className="w-full h-full flex flex-col justify-between gap-2.5 sm:gap-3.5 animate-in fade-in duration-200">
+                  
+                  {/* Top Bar inside question: Skill Pill + Points + Hint Button */}
+                  <div className="flex items-center justify-between gap-2 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] sm:text-xs font-bold text-[#10246f] bg-white px-3 py-1 rounded-full border border-[#e1e6f1] shadow-2xs">
+                        {currentQ.category} • {currentQ.skill}
+                      </span>
                     </div>
 
-                    {/* Media / Video Stage (if present) */}
-                    {currentQ.mediaUrl && (
-                      <div className="flex justify-center">
-                        {currentQ.mediaUrl.match(/\.(mp4|webm)$/i) ? (
-                          <video 
-                            src={currentQ.mediaUrl} 
-                            autoPlay 
-                            loop 
-                            muted 
-                            playsInline
-                            className="max-h-36 sm:max-h-44 rounded-2xl shadow-sm border-2 border-stone-200 bg-stone-100"
-                          />
-                        ) : (
-                          <img 
-                            src={currentQ.mediaUrl} 
-                            alt="Question Illustration" 
-                            className="max-h-36 sm:max-h-44 rounded-2xl shadow-sm border-2 border-stone-200 bg-stone-100 object-contain"
-                          />
-                        )}
-                      </div>
-                    )}
-
-                    {/* QUESTION PROMPT - Big, Bold, Clean & Legible */}
-                    <div className="bg-white rounded-2xl border-2 border-stone-200/90 p-3.5 sm:p-4 shadow-xs flex flex-row items-center justify-between gap-3">
-                      <h4 className="text-base sm:text-lg md:text-xl font-black text-stone-900 leading-snug tracking-tight flex-1">
-                        {currentQ.prompt}
-                      </h4>
-                      <button
-                        type="button"
-                        onClick={() => handleReadAloud(currentQ.prompt)}
-                        className="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border-2 border-amber-200 hover:border-amber-300 font-black text-xs flex items-center gap-1.5 shrink-0 cursor-pointer shadow-2xs transition-all hover:scale-105 active:scale-95"
-                        title="Read aloud 🔊"
-                      >
-                        <Volume2 className="w-3.5 h-3.5 text-amber-600" />
-                        <span>Listen 🔊</span>
-                      </button>
-                    </div>
-
-                    {/* INTERACTIVE QUESTION CARD (SUPPORTS ALL 11 QUESTION TYPES) */}
-                    <div className="w-full">
-                      <InteractiveQuestionCard
-                        question={currentQ}
-                        isSubmitted={isAnswerSubmitted}
-                        selectedOption={selectedOption}
-                        onSelectOption={handleSelectOption}
-                        openBoxInput={openBoxInput}
-                        onChangeOpenBoxInput={setOpenBoxInput}
-                        userDragPlacements={userDragPlacements}
-                        onUpdateDragPlacements={setUserDragPlacements}
-                        userMatchPairs={userMatchPairs}
-                        onUpdateMatchPairs={setUserMatchPairs}
-                        userOrderedList={userOrderedList}
-                        onUpdateOrderedList={setUserOrderedList}
-                        userBuckets={userBuckets}
-                        onUpdateBuckets={setUserBuckets}
-                        tappedObjectIds={tappedObjectIds}
-                        onToggleTapObject={(id) => {
-                          setTappedObjectIds((prev) =>
-                            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-                          );
-                        }}
-                        onReadAloud={handleReadAloud}
-                      />
-                    </div>
-
-                    {/* Teacher Hint callout */}
-                    {currentQ.hint && !isAnswerSubmitted && (
-                      <div>
+                    <div className="flex items-center gap-2">
+                      {currentQ.hint && !isAnswerSubmitted && (
                         <button
                           type="button"
                           onClick={() => setShowHint(!showHint)}
-                          className="text-xs font-bold text-amber-800 hover:text-amber-950 inline-flex items-center gap-1.5 cursor-pointer bg-amber-50 px-3.5 py-1.5 rounded-xl border border-amber-200"
+                          className="text-xs font-bold text-[#13b7ad] hover:text-[#0f928a] inline-flex items-center gap-1.5 cursor-pointer bg-white px-3 py-1 rounded-full border border-[#e1e6f1] hover:bg-[#eaf8f5] transition-colors"
                         >
-                          <HelpCircle className="w-4 h-4 text-amber-600" />
-                          <span>{showHint ? 'Hide Teacher Hint' : 'Need a Hint? 💡'}</span>
+                          <HelpCircle className="w-3.5 h-3.5 text-[#13b7ad]" />
+                          <span>{showHint ? 'Hide Hint' : 'Hint 💡'}</span>
                         </button>
-                        {showHint && (
-                          <div className="mt-2 p-3 bg-amber-50 border-2 border-amber-200 rounded-2xl text-xs sm:text-sm text-amber-950 font-medium">
-                            💡 <strong>Teacher Hint:</strong> {currentQ.hint}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                      )}
 
-                    {/* Instant Feedback Banner upon submission */}
-                    {isAnswerSubmitted && answerFeedback && (
-                      <div className={`p-4 rounded-3xl border-2 flex items-center justify-between gap-4 shadow-sm animate-in fade-in duration-200 ${
-                        answerFeedback.status === 'correct' 
-                          ? 'bg-emerald-50 border-emerald-400 text-emerald-950' 
-                          : 'bg-rose-50 border-rose-400 text-rose-950'
-                      }`}>
-                        <div className="flex items-center gap-3 min-w-0">
-                          {answerFeedback.status === 'correct' ? (
-                            <div className="w-9 h-9 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-lg shrink-0 shadow-xs font-black">
-                              ✓
-                            </div>
-                          ) : (
-                            <div className="w-9 h-9 rounded-2xl bg-rose-500 text-white flex items-center justify-center text-lg shrink-0 shadow-xs font-black">
-                              ✗
-                            </div>
-                          )}
-                          <div className="min-w-0">
-                            <span className="font-black text-sm sm:text-base block">
-                              {answerFeedback.title}
-                            </span>
-                            <span className="text-xs sm:text-sm opacity-90 block mt-0.5">
-                              {answerFeedback.message}
-                            </span>
-                          </div>
-                        </div>
-
-                        {currentQ.explanation && (
-                          <div className="hidden md:block text-xs bg-white/90 p-2.5 rounded-2xl border border-black/5 font-medium text-stone-800 max-w-sm">
-                            📖 <strong>Explanation:</strong> {currentQ.explanation}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-12 text-stone-500 font-bold text-base">
-                    No questions found for this activity.
-                  </div>
-                )
-              ) : (
-                /* 3. ACTIVITY RESULTS SUMMARY (GORGEOUS FULL-SCREEN CARD) */
-                <div className="bg-white rounded-3xl border-2 border-stone-200 p-6 sm:p-8 shadow-lg text-center space-y-5 max-w-xl mx-auto w-full animate-in zoom-in-95 duration-200">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-gradient-to-tr from-amber-400 to-orange-500 text-stone-950 flex items-center justify-center text-3xl sm:text-4xl shadow-md mx-auto">
-                    🏆
-                  </div>
-                  <div>
-                    <span className="text-xs font-black uppercase tracking-wider text-amber-700 bg-amber-100 px-3 py-1 rounded-full border border-amber-200">
-                      Activity Completed!
-                    </span>
-                    <h3 className="text-xl sm:text-2xl font-black text-stone-900 mt-2">
-                      Fantastic Job, {studentProgress.studentName}!
-                    </h3>
-                    <p className="text-stone-600 text-xs sm:text-sm mt-1">
-                      You earned <strong className="text-amber-800">+{activePlayActivity.rewardXP + (speedBonusesEarned * 10)} XP</strong> and <strong className="text-amber-800">+{activePlayActivity.rewardCoins} 🪙 Coins</strong>!
-                    </p>
-                  </div>
-
-                  {/* Summary Metric Badges */}
-                  <div className="grid grid-cols-3 gap-2.5 w-full text-xs sm:text-sm">
-                    <div className="p-2.5 sm:p-3 bg-stone-50 border border-stone-200 rounded-2xl text-center">
-                      <span className="text-stone-500 font-bold block text-[11px]">Total Score</span>
-                      <strong className="text-base sm:text-lg font-black text-stone-900">{score} Pts</strong>
-                    </div>
-                    <div className="p-2.5 sm:p-3 bg-stone-50 border border-stone-200 rounded-2xl text-center">
-                      <span className="text-stone-500 font-bold block text-[11px]">Streak</span>
-                      <strong className="text-base sm:text-lg font-black text-orange-600">{studentProgress.streakDays} Days 🔥</strong>
-                    </div>
-                    <div className="p-2.5 sm:p-3 bg-stone-50 border border-stone-200 rounded-2xl text-center">
-                      <span className="text-stone-500 font-bold block text-[11px]">Speed Bonus</span>
-                      <strong className="text-base sm:text-lg font-black text-blue-700">+{speedBonusesEarned * 10} XP ⚡</strong>
+                      <span className="text-xs font-bold text-[#16c47f] bg-[#ecfdf5] px-3 py-1 rounded-full border border-[#a7f3d0]">
+                        +{currentQ.points} XP
+                      </span>
                     </div>
                   </div>
 
-                  {/* Supabase Cloud Persistence Status */}
-                  {isSupabaseConfigured() ? (
-                    <div className={`p-3 rounded-2xl border text-xs w-full flex items-center justify-between gap-2 text-left transition shadow-2xs ${
-                      supabaseSyncStatus.status === 'success'
-                        ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
-                        : supabaseSyncStatus.status === 'error'
-                        ? 'bg-rose-50 border-rose-300 text-rose-950'
-                        : 'bg-stone-100 border-stone-300 text-stone-900 animate-pulse'
+                  {/* Teacher Hint Dropdown */}
+                  {showHint && currentQ.hint && !isAnswerSubmitted && (
+                    <div className="p-2.5 sm:p-3 bg-[#fffbeb] border border-[#fde68a] rounded-2xl text-xs text-amber-950 font-medium shrink-0 animate-in fade-in">
+                      💡 <strong>Teacher Hint:</strong> {currentQ.hint}
+                    </div>
+                  )}
+
+                  {/* Question Prompt Card */}
+                  <div className="bg-white rounded-2xl border-2 border-[#e1e6f1] p-3.5 sm:p-4 shadow-xs flex items-center justify-between gap-3 shrink-0">
+                    <h4 className="text-base sm:text-lg md:text-xl font-bold text-[#10246f] leading-snug tracking-tight flex-1">
+                      {currentQ.prompt}
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => handleReadAloud(currentQ.prompt)}
+                      className="px-3.5 py-1.5 rounded-full bg-[#fdf2f8] hover:bg-[#fce7f3] text-[#f20b86] border border-[#fbcfe8] font-bold text-xs flex items-center gap-1.5 shrink-0 cursor-pointer shadow-2xs transition-all hover:scale-105 active:scale-95"
+                      title="Read question aloud"
+                    >
+                      <Volume2 className="w-3.5 h-3.5 text-[#f20b86]" />
+                      <span>Listen 🔊</span>
+                    </button>
+                  </div>
+
+                  {/* Media / Video Stage (if present) */}
+                  {currentQ.mediaUrl && (
+                    <div className="flex justify-center shrink-0">
+                      {currentQ.mediaUrl.match(/\.(mp4|webm)$/i) ? (
+                        <video 
+                          src={currentQ.mediaUrl} 
+                          autoPlay 
+                          loop 
+                          muted 
+                          playsInline
+                          className="max-h-24 sm:max-h-32 rounded-xl shadow-xs border border-[#e1e6f1] bg-white object-contain"
+                        />
+                      ) : (
+                        <img 
+                          src={currentQ.mediaUrl} 
+                          alt="Question Illustration" 
+                          className="max-h-24 sm:max-h-32 rounded-xl shadow-xs border border-[#e1e6f1] bg-white object-contain"
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  {/* Interactive Question Card (Options) */}
+                  <div className="w-full flex-1 flex flex-col justify-center min-h-0">
+                    <InteractiveQuestionCard
+                      question={currentQ}
+                      isSubmitted={isAnswerSubmitted}
+                      selectedOption={selectedOption}
+                      onSelectOption={handleSelectOption}
+                      openBoxInput={openBoxInput}
+                      onChangeOpenBoxInput={setOpenBoxInput}
+                      userDragPlacements={userDragPlacements}
+                      onUpdateDragPlacements={setUserDragPlacements}
+                      userMatchPairs={userMatchPairs}
+                      onUpdateMatchPairs={setUserMatchPairs}
+                      userOrderedList={userOrderedList}
+                      onUpdateOrderedList={setUserOrderedList}
+                      userBuckets={userBuckets}
+                      onUpdateBuckets={setUserBuckets}
+                      tappedObjectIds={tappedObjectIds}
+                      onToggleTapObject={(id) => {
+                        setTappedObjectIds((prev) =>
+                          prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+                        );
+                      }}
+                      onReadAloud={handleReadAloud}
+                    />
+                  </div>
+
+                  {/* Instant Feedback Banner upon submission */}
+                  {isAnswerSubmitted && answerFeedback && (
+                    <div className={`p-3 rounded-2xl border-2 flex items-center justify-between gap-3 shadow-xs shrink-0 animate-in fade-in duration-200 ${
+                      answerFeedback.status === 'correct' 
+                        ? 'bg-[#ecfdf5] border-[#16c47f] text-[#065f46]' 
+                        : 'bg-[#fff1f2] border-[#f43f5e] text-[#9f1239]'
                     }`}>
-                      <div className="flex items-center gap-2">
-                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 shadow-xs ${
-                          supabaseSyncStatus.status === 'success'
-                            ? 'bg-emerald-600 text-white'
-                            : supabaseSyncStatus.status === 'error'
-                            ? 'bg-rose-600 text-white'
-                            : 'bg-stone-900 text-white'
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 text-white ${
+                          answerFeedback.status === 'correct' ? 'bg-[#16c47f]' : 'bg-[#f43f5e]'
                         }`}>
-                          {supabaseSyncStatus.status === 'success' ? (
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                          ) : supabaseSyncStatus.status === 'error' ? (
-                            <XCircle className="w-3.5 h-3.5" />
-                          ) : (
-                            <Sparkles className="w-3 h-3 animate-spin" />
-                          )}
+                          {answerFeedback.status === 'correct' ? '✓' : '✕'}
                         </div>
                         <div className="min-w-0">
-                          <span className="font-bold block truncate">Supabase Cloud Database</span>
-                          <span className="text-[10px] opacity-80 block truncate">
-                            {supabaseSyncStatus.message || (supabaseSyncStatus.status === 'syncing' ? 'Syncing attempt...' : 'Synced')}
+                          <span className="font-bold text-xs sm:text-sm block">
+                            {answerFeedback.title}
+                          </span>
+                          <span className="text-[11px] sm:text-xs opacity-90 block">
+                            {answerFeedback.message}
                           </span>
                         </div>
                       </div>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/80 border border-black/10 shrink-0">
-                        activity_attempts
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="p-2.5 rounded-2xl bg-stone-100 text-stone-600 text-xs w-full border border-stone-200 flex items-center gap-2">
-                      <Database className="w-4 h-4 text-stone-500 shrink-0" />
-                      <span className="truncate">Saved in student progress.</span>
+
+                      {currentQ.explanation && (
+                        <div className="hidden sm:block text-[11px] bg-white/95 px-3 py-1.5 rounded-xl border border-black/5 font-medium text-[#10246f] max-w-xs">
+                          📖 {currentQ.explanation}
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
-              )}
-            </div>
-          </main>
 
-          {/* 3. STICKY BOTTOM ACTION FOOTER */}
-          <footer className="px-4 sm:px-8 py-3 bg-white border-t border-stone-200 flex items-center justify-between shrink-0 shadow-lg z-10">
-            {!quizFinished ? (
-              <>
+                </div>
+              ) : (
+                <div className="text-center py-12 text-[#59627a] font-bold text-base">
+                  No questions found for this activity.
+                </div>
+              )
+            ) : (
+              /* 3. ACTIVITY RESULTS SUMMARY (ELEGANT FULL-SCREEN CARD) */
+              <div className="bg-white rounded-3xl border-2 border-[#e1e6f1] p-6 sm:p-8 shadow-xl text-center space-y-4 max-w-lg mx-auto w-full my-auto animate-in zoom-in-95 duration-200">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-[#fdf2f8] text-[#f20b86] flex items-center justify-center text-3xl sm:text-4xl shadow-xs mx-auto border border-[#fbcfe8]">
+                  🏆
+                </div>
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#f20b86] bg-[#fdf2f8] px-3 py-1 rounded-full border border-[#fbcfe8]">
+                    Activity Completed!
+                  </span>
+                  <h3 className="text-xl sm:text-2xl font-black text-[#10246f] mt-2">
+                    Fantastic Job, {studentProgress.studentName}!
+                  </h3>
+                  <p className="text-[#59627a] text-xs sm:text-sm mt-1">
+                    You earned <strong className="text-[#f20b86]">+{activePlayActivity.rewardXP + (speedBonusesEarned * 10)} XP</strong> and <strong className="text-[#ffbf32]">+{activePlayActivity.rewardCoins} 🪙 Coins</strong>!
+                  </p>
+                </div>
+
+                {/* Summary Metric Badges */}
+                <div className="grid grid-cols-3 gap-2.5 w-full text-xs sm:text-sm">
+                  <div className="p-2.5 bg-[#f8faff] border border-[#e1e6f1] rounded-2xl text-center">
+                    <span className="text-[#59627a] font-semibold block text-[11px]">Total Score</span>
+                    <strong className="text-base sm:text-lg font-black text-[#10246f]">{score} Pts</strong>
+                  </div>
+                  <div className="p-2.5 bg-[#FFF9E8] border border-[#ffbf32]/30 rounded-2xl text-center">
+                    <span className="text-[#59627a] font-semibold block text-[11px]">Streak</span>
+                    <strong className="text-base sm:text-lg font-black text-amber-600">{studentProgress.streakDays} Days 🔥</strong>
+                  </div>
+                  <div className="p-2.5 bg-[#EAFBF2] border border-[#16c47f]/30 rounded-2xl text-center">
+                    <span className="text-[#59627a] font-semibold block text-[11px]">Speed Bonus</span>
+                    <strong className="text-base sm:text-lg font-black text-[#16c47f]">+{speedBonusesEarned * 10} XP ⚡</strong>
+                  </div>
+                </div>
+
+                {/* Supabase Cloud Persistence Status */}
+                {isSupabaseConfigured() ? (
+                  <div className={`p-3 rounded-2xl border text-xs w-full flex items-center justify-between gap-2 text-left transition shadow-2xs ${
+                    supabaseSyncStatus.status === 'success'
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
+                      : supabaseSyncStatus.status === 'error'
+                      ? 'bg-rose-50 border-rose-300 text-rose-950'
+                      : 'bg-stone-100 border-stone-300 text-stone-900 animate-pulse'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 shadow-xs ${
+                        supabaseSyncStatus.status === 'success'
+                          ? 'bg-emerald-600 text-white'
+                          : supabaseSyncStatus.status === 'error'
+                          ? 'bg-rose-600 text-white'
+                          : 'bg-stone-900 text-white'
+                      }`}>
+                        {supabaseSyncStatus.status === 'success' ? (
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        ) : supabaseSyncStatus.status === 'error' ? (
+                          <XCircle className="w-3.5 h-3.5" />
+                        ) : (
+                          <Sparkles className="w-3 h-3 animate-spin" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <span className="font-bold block truncate">Supabase Cloud Database</span>
+                        <span className="text-[10px] opacity-80 block truncate">
+                          {supabaseSyncStatus.message || (supabaseSyncStatus.status === 'syncing' ? 'Syncing attempt...' : 'Synced')}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/80 border border-black/10 shrink-0">
+                      activity_attempts
+                    </span>
+                  </div>
+                ) : (
+                  <div className="p-2 rounded-xl bg-[#f8faff] text-[#59627a] text-xs w-full border border-[#e1e6f1] flex items-center justify-center gap-2">
+                    <Database className="w-3.5 h-3.5 text-[#59627a] shrink-0" />
+                    <span className="truncate">Saved to student learning history</span>
+                  </div>
+                )}
+
                 <button
                   type="button"
                   onClick={() => setActivePlayActivity(null)}
-                  className="px-3 py-2 text-xs sm:text-sm font-bold text-stone-500 hover:text-stone-900 transition-colors cursor-pointer"
+                  className="w-full py-3 px-6 rounded-full bg-[#f20b86] hover:bg-[#df0879] text-white font-bold text-sm shadow-md shadow-[#f20b86]/25 transition-all hover:scale-105 active:scale-95 cursor-pointer mt-2"
                 >
-                  Exit Activity
+                  Return to Student Adventures
                 </button>
+              </div>
+            )}
+          </main>
 
-                {!isAnswerSubmitted ? (
-                  <button
-                    type="button"
-                    id="submit-answer-btn"
-                    disabled={!canSubmitAnswer}
-                    onClick={handleSubmitAnswer}
-                    className="px-6 sm:px-10 py-2.5 sm:py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-stone-950 text-sm sm:text-base font-black shadow-md shadow-amber-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer flex items-center gap-2"
-                  >
-                    <span>Check Answer</span>
-                    <Sparkles className="w-4 h-4" />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    id="next-question-btn"
-                    onClick={handleNextQuestion}
-                    className="px-6 sm:px-10 py-2.5 sm:py-3 rounded-2xl bg-stone-950 hover:bg-stone-800 text-amber-400 text-sm sm:text-base font-black flex items-center gap-2 shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
-                  >
-                    <span>{currentQuestionIndex + 1 < activeQuestions.length ? 'Next Question' : 'View Results'}</span>
-                    <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
-                  </button>
-                )}
-              </>
-            ) : (
+          {/* 3. STICKY BOTTOM ACTION FOOTER */}
+          {!quizFinished && (
+            <footer className="h-14 sm:h-16 px-4 sm:px-8 bg-white border-t border-[#e1e6f1] flex items-center justify-between shrink-0 shadow-xs z-10">
               <button
                 type="button"
                 onClick={() => setActivePlayActivity(null)}
-                className="w-full max-w-md mx-auto py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-stone-950 text-sm sm:text-base font-black shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
+                className="px-3 py-1.5 text-xs sm:text-sm font-semibold text-[#59627a] hover:text-[#10246f] transition-colors cursor-pointer"
               >
-                Return to Student Adventures
+                Exit Activity
               </button>
-            )}
-          </footer>
+
+              {!isAnswerSubmitted ? (
+                <button
+                  type="button"
+                  id="submit-answer-btn"
+                  disabled={!canSubmitAnswer}
+                  onClick={handleSubmitAnswer}
+                  className="px-8 sm:px-12 py-2.5 sm:py-3 rounded-full bg-[#f20b86] hover:bg-[#df0879] disabled:opacity-40 text-white text-xs sm:text-sm font-bold shadow-md shadow-[#f20b86]/25 hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center gap-2"
+                >
+                  <span>Check Answer</span>
+                  <Sparkles className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  id="next-question-btn"
+                  onClick={handleNextQuestion}
+                  className="px-8 sm:px-12 py-2.5 sm:py-3 rounded-full bg-[#10246f] hover:bg-[#0c1a52] text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-md shadow-[#10246f]/25 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                >
+                  <span>{currentQuestionIndex + 1 < activeQuestions.length ? 'Next Question' : 'View Results'}</span>
+                  <ArrowRight className="w-4 h-4 text-white" />
+                </button>
+              )}
+            </footer>
+          )}
 
         </div>
       )}

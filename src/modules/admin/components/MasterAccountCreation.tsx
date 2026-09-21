@@ -199,7 +199,7 @@ export default function MasterAccountCreation({
         id: nextId,
         role: selectedRole,
         name: name.trim(),
-        email: email.trim() || `${name.toLowerCase().replace(/\s+/g, '.')}@funlearn.edu`,
+        email: email.trim() || `${name.toLowerCase().replace(/\s+/g, '.')}@pforpencil.com`,
         avatar,
         enrolledAt: new Date().toISOString().slice(0, 10),
         status: 'active',

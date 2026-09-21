@@ -101,46 +101,46 @@ export default function Navbar({
               id="nav-tab-home"
               onClick={() => onNavigateView('home')}
               className={`relative py-2 transition-colors cursor-pointer ${
-                currentView === 'home' ? 'text-stone-900 font-black' : 'hover:text-stone-950'
+                currentView === 'home' ? 'text-[#10246f] font-black' : 'text-[#59627a] hover:text-[#10246f]'
               }`}
             >
               <span>Home</span>
               {currentView === 'home' && (
-                <span className="absolute -bottom-1 left-0 right-0 h-1 rounded-full bg-[#FF2A7A]" />
+                <span className="absolute -bottom-1 left-0 right-0 h-1 rounded-full bg-[#f20b86]" />
               )}
             </button>
 
             <button
               onClick={() => onNavigateView('home')}
-              className="hover:text-stone-950 transition-colors cursor-pointer"
+              className="text-[#59627a] hover:text-[#10246f] transition-colors cursor-pointer"
             >
               About
             </button>
 
             <button
               onClick={() => onNavigateView('home')}
-              className="hover:text-stone-950 transition-colors cursor-pointer"
+              className="text-[#59627a] hover:text-[#10246f] transition-colors cursor-pointer"
             >
               Math
             </button>
 
             <button
               onClick={() => onOpenAuthModal({ screen: 'register', role: 'parent' })}
-              className="hover:text-stone-950 transition-colors cursor-pointer"
+              className="text-[#59627a] hover:text-[#10246f] transition-colors cursor-pointer"
             >
               For Parents
             </button>
 
             <button
               onClick={() => onOpenAuthModal({ screen: 'register', role: 'school' })}
-              className="hover:text-stone-950 transition-colors cursor-pointer"
+              className="text-[#59627a] hover:text-[#10246f] transition-colors cursor-pointer"
             >
               For Schools
             </button>
 
             <button
               onClick={onOpenPricingModal}
-              className="hover:text-stone-950 transition-colors cursor-pointer"
+              className="text-[#59627a] hover:text-[#10246f] transition-colors cursor-pointer"
             >
               Pricing
             </button>
@@ -155,7 +155,7 @@ export default function Navbar({
               id="nav-region-scope-btn"
               onClick={onOpenRegionModal}
               title={`Active Curriculum: ${currentUser.country || 'Global'} (${currentUser.state || 'All'}) - Click to customize`}
-              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full bg-stone-50 text-stone-700 border border-stone-200 hover:bg-stone-100 transition-colors cursor-pointer"
+              className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-full bg-[#f8faff] text-[#10246f] border border-[#e1e6f1] hover:bg-[#eef4ff] transition-colors cursor-pointer shadow-2xs"
             >
               <span className="text-sm">
                 {currentUser.country === 'India' ? '🇮🇳' : currentUser.country === 'United Kingdom' ? '🇬🇧' : currentUser.country === 'Canada' ? '🇨🇦' : currentUser.country === 'Australia' ? '🇦🇺' : '🇺🇸'}
@@ -172,16 +172,16 @@ export default function Navbar({
             onClick={toggleSound}
             aria-label="Toggle sound effects"
             title={soundOn ? 'Sound Effects Enabled' : 'Sound Muted'}
-            className="w-8 h-8 rounded-full border border-stone-200 bg-stone-50 flex items-center justify-center text-stone-600 hover:bg-stone-100 transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full border border-[#e1e6f1] bg-[#f8faff] flex items-center justify-center text-[#10246f] hover:bg-[#eef4ff] transition-colors cursor-pointer"
           >
-            {soundOn ? <Volume2 className="w-4 h-4 text-emerald-600" /> : <VolumeX className="w-4 h-4 text-stone-400" />}
+            {soundOn ? <Volume2 className="w-4 h-4 text-[#16c47f]" /> : <VolumeX className="w-4 h-4 text-stone-400" />}
           </button>
 
           {/* Log In Pill Button */}
           <button
             id="nav-login-btn"
             onClick={() => onOpenAuthModal ? onOpenAuthModal({ screen: 'signin' }) : onNavigateView('home')}
-            className="px-5 py-2 rounded-full border-2 border-stone-800 text-stone-900 font-extrabold text-xs sm:text-sm hover:bg-stone-900 hover:text-white transition-all cursor-pointer shadow-2xs"
+            className="px-5 py-2 rounded-full border-2 border-[#10246f] text-[#10246f] font-bold text-xs sm:text-sm hover:bg-[#10246f] hover:text-white transition-all cursor-pointer shadow-2xs"
           >
             Log In
           </button>
@@ -190,7 +190,7 @@ export default function Navbar({
           <button
             id="nav-signup-btn"
             onClick={() => onOpenAuthModal ? onOpenAuthModal({ screen: 'register' }) : onNavigateView('home')}
-            className="px-5 py-2.5 rounded-full bg-[#FF2A7A] hover:bg-[#E01F67] text-white font-extrabold text-xs sm:text-sm shadow-md shadow-pink-500/25 transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
+            className="px-5 py-2.5 rounded-full bg-[#f20b86] hover:bg-[#df0879] text-white font-bold text-xs sm:text-sm shadow-md shadow-[#f20b86]/25 transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
           >
             Sign Up
           </button>

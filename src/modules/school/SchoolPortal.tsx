@@ -522,34 +522,34 @@ export default function SchoolPortal({
       </div>
 
       {/* Navigation Tabs Bar */}
-      <div className="bg-white rounded-3xl border border-stone-200 p-4 shadow-xs flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="bg-white rounded-3xl border border-[#e1e6f1] p-4 shadow-xs flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-2 bg-[#eef4ff] p-1.5 rounded-full border border-[#d7def0]">
           <button
             onClick={() => setActiveTab('classes')}
-            className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+            className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'classes'
-                ? 'bg-amber-500 text-stone-950 font-black shadow-xs'
-                : 'text-stone-600 hover:text-stone-950 hover:bg-stone-100'
+                ? 'bg-[#f20b86] text-white shadow-xs'
+                : 'text-[#59627a] hover:text-[#10246f]'
             }`}
           >
             🏫 Active Classes ({schoolClasses.length})
           </button>
           <button
             onClick={() => setActiveTab('teachers')}
-            className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+            className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'teachers'
-                ? 'bg-amber-500 text-stone-950 font-black shadow-xs'
-                : 'text-stone-600 hover:text-stone-950 hover:bg-stone-100'
+                ? 'bg-[#f20b86] text-white shadow-xs'
+                : 'text-[#59627a] hover:text-[#10246f]'
             }`}
           >
             👩‍🏫 Faculty Teachers ({schoolTeachers.length})
           </button>
           <button
             onClick={() => setActiveTab('students')}
-            className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+            className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'students'
-                ? 'bg-amber-500 text-stone-950 font-black shadow-xs'
-                : 'text-stone-600 hover:text-stone-950 hover:bg-stone-100'
+                ? 'bg-[#f20b86] text-white shadow-xs'
+                : 'text-[#59627a] hover:text-[#10246f]'
             }`}
           >
             🎒 Students & Report Cards ({schoolStudents.length})
@@ -561,7 +561,7 @@ export default function SchoolPortal({
           {activeTab === 'classes' && (
             <button
               onClick={() => setShowAddClassModal(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 text-xs font-black transition-all shadow-xs cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#10246f] hover:bg-[#0c1a52] text-white text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-105 active:scale-95"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Create Class</span>
@@ -571,7 +571,7 @@ export default function SchoolPortal({
           {activeTab === 'teachers' && (
             <button
               onClick={() => setShowAddTeacherModal(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 text-xs font-black transition-all shadow-xs cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#10246f] hover:bg-[#0c1a52] text-white text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-105 active:scale-95"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Create Teacher</span>
@@ -588,7 +588,7 @@ export default function SchoolPortal({
                 setNewStudentPin(String(Math.floor(1000 + Math.random() * 9000)));
                 setShowAddStudentModal(true);
               }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 text-xs font-black transition-all shadow-xs cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#f20b86] hover:bg-[#df0879] text-white text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-105 active:scale-95"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Enroll Student</span>
@@ -1755,7 +1755,7 @@ export default function SchoolPortal({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 font-black cursor-pointer shadow-xs"
+                  className="px-6 py-2 rounded-full bg-[#f20b86] hover:bg-[#df0879] text-white font-bold cursor-pointer shadow-xs transition-all hover:scale-105 active:scale-95 text-xs sm:text-sm"
                 >
                   Enroll Student
                 </button>

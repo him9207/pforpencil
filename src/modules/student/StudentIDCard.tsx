@@ -34,7 +34,7 @@ export default function StudentIDCard({
   const avatar = student.avatar || '🦊';
   const grade = student.grade || 'Grade 3';
   const pin = ('pin' in student ? student.pin : '1234') || '1234';
-  const affiliatedSchool = schoolName || ('schoolName' in student ? student.schoolName : undefined) || 'FunLearn Mathematics Academy';
+  const affiliatedSchool = schoolName || ('schoolName' in student ? student.schoolName : undefined) || 'PforPencil Mathematics Academy';
   const guardian = parentName || ('parentName' in student ? student.parentName : undefined) || 'Parent / Guardian';
   const validUntil = ('validUntil' in student ? student.validUntil : undefined) || '2026-08-31';
 

@@ -1388,32 +1388,24 @@ export default function InteractiveQuestionCard({
           TYPE: MULTIPLE_CHOICE / RADIO_SINGLE / NUMBER_LINE / CLOCK
       ------------------------------------------------------------- */}
       {['multiple_choice', 'radio_single', 'number_line', 'clock'].includes(type) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3.5 w-full">
           {question.options.map((option, idx) => {
             const isSelected = selectedOption === idx;
             const isCorrectOption = idx === question.correctIndex;
             const optionClipart = getOptionClipart(option, '');
-            const letterColor =
-              idx === 0
-                ? 'bg-amber-100 text-amber-900 border-amber-300'
-                : idx === 1
-                ? 'bg-sky-100 text-sky-900 border-sky-300'
-                : idx === 2
-                ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
-                : 'bg-purple-100 text-purple-900 border-purple-300';
 
-            let cardStyle = 'bg-white hover:bg-amber-50/50 border-stone-200 hover:border-amber-400 text-stone-800 shadow-xs';
+            let cardStyle = 'bg-white hover:bg-[#f8faff] border-[#e1e6f1] hover:border-[#10246f]/50 text-[#10246f] shadow-xs';
 
             if (isSubmitted) {
               if (isCorrectOption) {
-                cardStyle = 'bg-emerald-50 border-emerald-500 text-emerald-950 font-black ring-4 ring-emerald-400/40 shadow-md';
+                cardStyle = 'bg-[#ecfdf5] border-[#16c47f] text-[#065f46] font-bold ring-2 ring-[#16c47f]/40 shadow-sm';
               } else if (isSelected && !isCorrectOption) {
-                cardStyle = 'bg-rose-50 border-rose-500 text-rose-950 ring-2 ring-rose-400';
+                cardStyle = 'bg-[#fff1f2] border-[#f43f5e] text-[#9f1239] ring-2 ring-[#f43f5e]/40';
               } else {
-                cardStyle = 'bg-stone-50 border-stone-200 text-stone-400 opacity-40';
+                cardStyle = 'bg-[#f8faff] border-[#e1e6f1] text-stone-400 opacity-40';
               }
             } else if (isSelected) {
-              cardStyle = 'bg-amber-50 border-amber-500 text-amber-950 font-black ring-4 ring-amber-400/40 shadow-md scale-[1.01]';
+              cardStyle = 'bg-[#fdf2f8] border-[#f20b86] text-[#10246f] font-bold ring-2 ring-[#f20b86]/30 shadow-sm scale-[1.01]';
             }
 
             return (
@@ -1425,37 +1417,37 @@ export default function InteractiveQuestionCard({
                   playPop();
                   onSelectOption(idx);
                 }}
-                className={`p-4 sm:p-5 rounded-3xl border-2 text-left transition-all flex items-center justify-between cursor-pointer ${cardStyle}`}
+                className={`p-3 sm:p-3.5 rounded-2xl border-2 text-left transition-all flex items-center justify-between cursor-pointer ${cardStyle}`}
               >
-                <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                   <span
-                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center font-black text-base sm:text-lg shrink-0 border-2 transition-colors ${
+                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center font-bold text-sm sm:text-base shrink-0 border transition-colors ${
                       isSelected
-                        ? 'bg-amber-500 text-white border-amber-600'
+                        ? 'bg-[#f20b86] text-white border-[#f20b86]'
                         : isSubmitted && isCorrectOption
-                        ? 'bg-emerald-500 text-white border-emerald-600'
-                        : letterColor
+                        ? 'bg-[#16c47f] text-white border-[#16c47f]'
+                        : 'bg-[#f8faff] text-[#10246f] border-[#e1e6f1]'
                     }`}
                   >
                     {String.fromCharCode(65 + idx)}
                   </span>
                   
                   {optionClipart && !option.includes(optionClipart) && (
-                    <span className="text-2xl sm:text-3xl shrink-0 drop-shadow-2xs">
+                    <span className="text-xl sm:text-2xl shrink-0 drop-shadow-2xs">
                       {optionClipart}
                     </span>
                   )}
 
-                  <span className="font-black text-base sm:text-lg text-stone-900 break-words leading-snug">
+                  <span className="font-bold text-sm sm:text-base text-[#10246f] break-words leading-snug">
                     {option}
                   </span>
                 </div>
 
                 {isSubmitted && isCorrectOption && (
-                  <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600 shrink-0 ml-2" />
+                  <CheckCircle2 className="w-5 h-5 text-[#16c47f] shrink-0 ml-2" />
                 )}
                 {isSubmitted && isSelected && !isCorrectOption && (
-                  <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-rose-500 text-white flex items-center justify-center text-xs font-black shrink-0 ml-2">
+                  <span className="w-5 h-5 rounded-full bg-[#f43f5e] text-white flex items-center justify-center text-xs font-bold shrink-0 ml-2">
                     ✕
                   </span>
                 )}

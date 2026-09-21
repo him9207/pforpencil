@@ -124,13 +124,13 @@ export default function MasterQuestionBank({grades,subjects,questions,onAddQuest
   const toggleCategory=(id:string)=>setMasters(p=>{
     const nextCategories = p.categories.map(c=>c.id===id?{...c,active:!c.active}:c);
     const updatedCategory = nextCategories.find(c=>c.id===id);
-    window.dispatchEvent(new CustomEvent('funlearn_master_data_updated', { detail: { type: 'category', id, active: updatedCategory?.active } }));
+    window.dispatchEvent(new CustomEvent('pforpencil_master_data_updated', { detail: { type: 'category', id, active: updatedCategory?.active } }));
     return {...p, categories: nextCategories};
   });
   const toggleSkill=(id:string)=>setMasters(p=>{
     const nextSkills = p.skills.map(s=>s.id===id?{...s,active:!s.active}:s);
     const updatedSkill = nextSkills.find(s=>s.id===id);
-    window.dispatchEvent(new CustomEvent('funlearn_master_data_updated', { detail: { type: 'skill', id, active: updatedSkill?.active } }));
+    window.dispatchEvent(new CustomEvent('pforpencil_master_data_updated', { detail: { type: 'skill', id, active: updatedSkill?.active } }));
     return {...p, skills: nextSkills};
   });
 

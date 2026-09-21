@@ -19,24 +19,22 @@ export default function PforPencilLogo({
   return (
     <div className={`inline-flex flex-col select-none ${className}`}>
       <img
-        src="/assets/pforpencil-logo.svg"
+        src="/assets/pforpencil-logo.png"
         alt="P for Pencil"
         style={{ width: logoWidth, height: 'auto', objectFit: 'contain' }}
         onError={(e) => {
-          e.currentTarget.style.display = 'none';
-          const n = e.currentTarget.nextElementSibling as HTMLElement | null;
-          if (n) n.style.display = 'inline-flex';
+          e.currentTarget.src = '/assets/pforpencil-logo.svg';
         }}
       />
-      <span className="text-xl font-black text-[#101d5d] tracking-tight" style={{ display: 'none' }}>
-        P<b className="text-[#ed197b]">for</b>Pencil
+      <span className="text-xl font-black text-[#10246f] tracking-tight" style={{ display: 'none' }}>
+        P<b className="text-[#f20b86]">for</b>Pencil
       </span>
 
       {showSubtitle && (
-        <span className={`text-stone-500 font-bold tracking-wide ${
+        <span className={`text-[#59627a] font-semibold tracking-wide ${
           isSm ? 'text-[9px]' : isLg ? 'text-xs mt-1' : 'text-[10px] mt-0.5'
         }`}>
-          Preschool to Grade 8 Learning
+          Practice Today. Brighter Tomorrows.
         </span>
       )}
     </div>

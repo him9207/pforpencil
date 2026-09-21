@@ -80,7 +80,7 @@ export default function CurriculumMaster({ onSuccessMessage }: Props) {
     if (!item) return;
     const next = { ...data, [type]: list.map((x: any) => x.id === id ? { ...x, active: !x.active } : x) } as CurriculumMasterData;
     persist(next, `${item.name} ${item.active ? 'deactivated' : 'activated'}.`);
-    window.dispatchEvent(new CustomEvent('funlearn_master_data_updated', { detail: { type, id } }));
+    window.dispatchEvent(new CustomEvent('pforpencil_master_data_updated', { detail: { type, id } }));
   };
 
   const remove = (type: Section, id: string) => {

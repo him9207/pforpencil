@@ -31,7 +31,8 @@ export interface QuestionBankMasterData {
   skills: SkillMasterRecord[];
 }
 
-export const QUESTION_BANK_MASTER_STORAGE_KEY = 'funlearn_question_bank_masters_v3';
+export const QUESTION_BANK_MASTER_STORAGE_KEY = 'pforpencil_question_bank_masters_v1';
+export const LEGACY_QUESTION_BANK_MASTER_STORAGE_KEY = 'funlearn_question_bank_masters_v3';
 
 const slug = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 const codeFromName = (v: string, prefix = 'CAT') => `${prefix}-${slug(v).split('-').filter(Boolean).map(x => x.slice(0,3)).join('').slice(0,8).toUpperCase() || 'ITEM'}`;
@@ -413,7 +414,7 @@ function ensureCurriculumStandards(data: QuestionBankMasterData, grades: Curricu
 export function loadQuestionBankMasters(grades: CurriculumGrade[] = INITIAL_GRADES, subjects: CurriculumSubject[] = INITIAL_SUBJECTS): QuestionBankMasterData {
   const activeGrades = grades.filter(g => g.active);
   try {
-    const raw = localStorage.getItem(QUESTION_BANK_MASTER_STORAGE_KEY);
+    const raw = localStorage.getItem(QUESTION_BANK_MASTER_STORAGE_KEY) || localStorage.getItem(LEGACY_QUESTION_BANK_MASTER_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed?.categories) && Array.isArray(parsed?.skills)) {

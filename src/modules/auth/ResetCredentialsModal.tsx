@@ -18,7 +18,7 @@ export default function ResetCredentialsModal({
   
   const [pin, setPin] = useState(user.pin || '7392');
   const [username, setUsername] = useState(user.username || '');
-  const [password, setPassword] = useState(user.password || 'FunLearn#2026!');
+  const [password, setPassword] = useState(user.password || 'PforPencil#2026!');
   const [showPassword, setShowPassword] = useState(false);
   const [copied, setCopied] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);

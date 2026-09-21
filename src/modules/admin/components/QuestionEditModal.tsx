@@ -43,6 +43,37 @@ export default function QuestionEditModal({ question, isOpen, onClose, onSave }:
   );
   const [correctIndex, setCorrectIndex] = useState<number>(question.correctIndex ?? 0);
   const [openAnswer, setOpenAnswer] = useState<string>(question.openBoxAnswer || '');
+  const [matchPairs, setMatchPairs] = useState<{ left: string; right: string }[]>(
+    question.matchPairs && question.matchPairs.length
+      ? [...question.matchPairs]
+      : [
+          { left: '🐱 Cat', right: 'Meow' },
+          { left: '🐶 Dog', right: 'Woof' },
+          { left: '🐮 Cow', right: 'Moo' }
+        ]
+  );
+  const [dragItems, setDragItems] = useState<{ item: string; target: string }[]>(
+    question.dragItems && question.dragItems.length
+      ? [...question.dragItems]
+      : [
+          { item: '🍎 Apple', target: '🧺 Fruit Basket' },
+          { item: '🚗 Toy Car', target: '🧸 Toy Box' },
+          { item: '🍌 Banana', target: '🧺 Fruit Basket' }
+        ]
+  );
+  const [orderSequence, setOrderSequence] = useState<string[]>(
+    question.orderSequence && question.orderSequence.length
+      ? [...question.orderSequence]
+      : ['Step 1', 'Step 2', 'Step 3', 'Step 4']
+  );
+  const [sortBuckets, setSortBuckets] = useState<{ bucketName: string; items: string[] }[]>(
+    question.sortBuckets && question.sortBuckets.length
+      ? [...question.sortBuckets]
+      : [
+          { bucketName: '🧺 Fruit Basket', items: ['🍎 Apple', '🍌 Banana', '🍓 Berry'] },
+          { bucketName: '🧸 Toy Box', items: ['🚗 Toy Car', '⚽ Ball', '🎈 Balloon'] }
+        ]
+  );
   const [explanation, setExplanation] = useState<string>(question.explanation || '');
   const [hint, setHint] = useState<string>(question.hint || '');
   const [points, setPoints] = useState<number>(question.points || 20);
@@ -108,6 +139,41 @@ export default function QuestionEditModal({ question, isOpen, onClose, onSave }:
     setVisualObjects(question.visualConfig?.objects?.map(o => o.emoji || o.label).join('|') || '');
     setVisualBackground(question.visualConfig?.background || 'playful');
     setVisualAutoPlay(question.visualConfig?.autoPlay ?? true);
+
+    if (question.matchPairs && question.matchPairs.length) {
+      setMatchPairs([...question.matchPairs]);
+    } else if (question.type === 'match_making') {
+      setMatchPairs([
+        { left: '🐱 Cat', right: 'Meow' },
+        { left: '🐶 Dog', right: 'Woof' },
+        { left: '🐮 Cow', right: 'Moo' }
+      ]);
+    }
+
+    if (question.dragItems && question.dragItems.length) {
+      setDragItems([...question.dragItems]);
+    } else if (question.type === 'drag_and_drop') {
+      setDragItems([
+        { item: '🍎 Apple', target: '🧺 Fruit Basket' },
+        { item: '🚗 Toy Car', target: '🧸 Toy Box' },
+        { item: '🍌 Banana', target: '🧺 Fruit Basket' }
+      ]);
+    }
+
+    if (question.orderSequence && question.orderSequence.length) {
+      setOrderSequence([...question.orderSequence]);
+    } else if (question.type === 'ordering') {
+      setOrderSequence(question.options && question.options.length ? [...question.options] : ['1', '2', '3', '4']);
+    }
+
+    if (question.sortBuckets && question.sortBuckets.length) {
+      setSortBuckets([...question.sortBuckets]);
+    } else if (question.type === 'sorting') {
+      setSortBuckets([
+        { bucketName: '🧺 Fruit Basket', items: ['🍎 Apple', '🍌 Banana', '🍓 Berry'] },
+        { bucketName: '🧸 Toy Box', items: ['🚗 Toy Car', '⚽ Ball', '🎈 Balloon'] }
+      ]);
+    }
   }, [question]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -132,14 +198,37 @@ export default function QuestionEditModal({ question, isOpen, onClose, onSave }:
       };
     }
 
+    let finalOptions = options.map(o => o.trim());
+    let finalCorrectIndex = correctIndex;
+    let finalOpenAnswer: string | undefined = undefined;
+
+    if (type === 'open_box' || type === 'fill_blank') {
+      finalOptions = [openAnswer.trim()];
+      finalCorrectIndex = 0;
+      finalOpenAnswer = openAnswer.trim();
+    } else if (type === 'match_making') {
+      finalOptions = matchPairs.map(p => `${p.left.trim()} -> ${p.right.trim()}`);
+      finalCorrectIndex = 0;
+    } else if (type === 'drag_and_drop') {
+      finalOptions = dragItems.map(d => `${d.item.trim()} -> ${d.target.trim()}`);
+      finalCorrectIndex = 0;
+    } else if (type === 'ordering') {
+      finalOptions = orderSequence.map(s => s.trim());
+      finalCorrectIndex = 0;
+    }
+
     const updated: Question = {
       ...question,
       prompt: prompt.trim(),
       difficulty,
       type,
-      options: (type === 'open_box' || type === 'fill_blank') ? [openAnswer.trim()] : options.map(o => o.trim()),
-      correctIndex: (type === 'open_box' || type === 'fill_blank') ? 0 : correctIndex,
-      openBoxAnswer: (type === 'open_box' || type === 'fill_blank') ? openAnswer.trim() : undefined,
+      options: finalOptions,
+      correctIndex: finalCorrectIndex,
+      openBoxAnswer: finalOpenAnswer,
+      matchPairs: type === 'match_making' ? matchPairs.filter(p => p.left.trim() && p.right.trim()) : undefined,
+      dragItems: type === 'drag_and_drop' ? dragItems.filter(d => d.item.trim() && d.target.trim()) : undefined,
+      orderSequence: type === 'ordering' ? orderSequence.filter(s => s.trim()) : undefined,
+      sortBuckets: type === 'sorting' ? sortBuckets.filter(b => b.bucketName.trim()) : undefined,
       explanation: explanation.trim(),
       hint: hint.trim() || undefined,
       points: Number(points) || 20,
@@ -158,9 +247,13 @@ export default function QuestionEditModal({ question, isOpen, onClose, onSave }:
     prompt: prompt.trim() || question.prompt,
     difficulty,
     type,
-    options: (type === 'open_box' || type === 'fill_blank') ? [openAnswer.trim()] : options.map(o => o.trim()),
-    correctIndex: (type === 'open_box' || type === 'fill_blank') ? 0 : correctIndex,
+    options: type === 'match_making' ? matchPairs.map(p => `${p.left} -> ${p.right}`) : options,
+    correctIndex,
     openBoxAnswer: (type === 'open_box' || type === 'fill_blank') ? openAnswer.trim() : undefined,
+    matchPairs: type === 'match_making' ? matchPairs : undefined,
+    dragItems: type === 'drag_and_drop' ? dragItems : undefined,
+    orderSequence: type === 'ordering' ? orderSequence : undefined,
+    sortBuckets: type === 'sorting' ? sortBuckets : undefined,
     explanation: explanation.trim(),
     hint: hint.trim(),
     points: Number(points) || 20,
@@ -288,7 +381,7 @@ export default function QuestionEditModal({ question, isOpen, onClose, onSave }:
               />
             </label>
 
-            {/* Answer Options or Open Box */}
+            {/* Answer Configuration by Question Type */}
             {(type === 'open_box' || type === 'fill_blank') ? (
               <label className="block font-bold text-stone-800">
                 Correct Expected Answer
@@ -300,7 +393,230 @@ export default function QuestionEditModal({ question, isOpen, onClose, onSave }:
                   className="w-full mt-1 p-2.5 rounded-xl border border-stone-200 font-semibold"
                 />
               </label>
+            ) : type === 'match_making' ? (
+              /* MATCH MAKING PAIRS BUILDER */
+              <div className="p-3.5 rounded-2xl bg-purple-50/60 border border-purple-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-bold text-purple-950 text-xs flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                      Matching Pairs (Left Item ➔ Right Match)
+                    </div>
+                    <div className="text-[10px] text-purple-700 mt-0.5">
+                      Students will drag or tap items on the left to pair them with the matching item on the right.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setMatchPairs(prev => [...prev, { left: '', right: '' }])}
+                    className="px-2 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-[11px] flex items-center gap-1 cursor-pointer transition shadow-2xs"
+                  >
+                    + Add Pair
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {matchPairs.map((pair, idx) => (
+                    <div key={idx} className="p-2.5 bg-white rounded-xl border border-purple-200 space-y-1.5 shadow-2xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-xs text-purple-800 w-5">
+                          #{idx + 1}
+                        </span>
+                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider block mb-0.5">
+                              Left Item (e.g. 🐱 Cat)
+                            </label>
+                            <input
+                              value={pair.left}
+                              onChange={e => {
+                                const next = [...matchPairs];
+                                next[idx].left = e.target.value;
+                                setMatchPairs(next);
+                              }}
+                              placeholder="e.g. 🐱 Cat or 🐒 Monkey"
+                              className="w-full p-2 rounded-lg border border-stone-200 text-xs font-semibold outline-none focus:border-purple-400"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider block mb-0.5">
+                              Right Match (e.g. Meow)
+                            </label>
+                            <input
+                              value={pair.right}
+                              onChange={e => {
+                                const next = [...matchPairs];
+                                next[idx].right = e.target.value;
+                                setMatchPairs(next);
+                              }}
+                              placeholder="e.g. Meow or 🍌 Banana"
+                              className="w-full p-2 rounded-lg border border-stone-200 text-xs font-semibold outline-none focus:border-purple-400"
+                            />
+                          </div>
+                        </div>
+
+                        {matchPairs.length > 2 && (
+                          <button
+                            type="button"
+                            onClick={() => setMatchPairs(prev => prev.filter((_, i) => i !== idx))}
+                            className="text-stone-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition"
+                            title="Delete pair"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1 pl-7 flex-wrap">
+                        <span className="text-[10px] text-stone-400">Insert left:</span>
+                        {['🐱', '🐶', '🐮', '🦁', '🐒', '🐰', '🐸', '🍎', '⭐'].map(em => (
+                          <button
+                            key={em}
+                            type="button"
+                            onClick={() => {
+                              const next = [...matchPairs];
+                              next[idx].left = next[idx].left ? `${next[idx].left} ${em}` : em;
+                              setMatchPairs(next);
+                            }}
+                            className="px-1.5 py-0.2 rounded border border-stone-200 bg-stone-50 hover:bg-purple-50 text-xs"
+                          >
+                            {em}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : type === 'drag_and_drop' ? (
+              /* DRAG AND DROP BUILDER */
+              <div className="p-3.5 rounded-2xl bg-sky-50/60 border border-sky-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-bold text-sky-950 text-xs flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-sky-600" />
+                      Drag & Drop Items (Item ➔ Target Zone)
+                    </div>
+                    <div className="text-[10px] text-sky-700 mt-0.5">
+                      Students will drag items into corresponding targets or containers.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDragItems(prev => [...prev, { item: '', target: '' }])}
+                    className="px-2 py-1 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-bold text-[11px] flex items-center gap-1 cursor-pointer transition shadow-2xs"
+                  >
+                    + Add Item
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {dragItems.map((item, idx) => (
+                    <div key={idx} className="p-2.5 bg-white rounded-xl border border-sky-200 flex items-center gap-2 shadow-2xs">
+                      <span className="font-black text-xs text-sky-800 w-5">
+                        #{idx + 1}
+                      </span>
+                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider block mb-0.5">
+                            Draggable Item
+                          </label>
+                          <input
+                            value={item.item}
+                            onChange={e => {
+                              const next = [...dragItems];
+                              next[idx].item = e.target.value;
+                              setDragItems(next);
+                            }}
+                            placeholder="e.g. 🍎 Apple or 🐱 Kitten"
+                            className="w-full p-2 rounded-lg border border-stone-200 text-xs font-semibold outline-none focus:border-sky-400"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider block mb-0.5">
+                            Target Drop Zone
+                          </label>
+                          <input
+                            value={item.target}
+                            onChange={e => {
+                              const next = [...dragItems];
+                              next[idx].target = e.target.value;
+                              setDragItems(next);
+                            }}
+                            placeholder="e.g. 🧺 Fruit Basket or 🐈 Mama Cat"
+                            className="w-full p-2 rounded-lg border border-stone-200 text-xs font-semibold outline-none focus:border-sky-400"
+                          />
+                        </div>
+                      </div>
+
+                      {dragItems.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => setDragItems(prev => prev.filter((_, i) => i !== idx))}
+                          className="text-stone-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition"
+                          title="Delete item"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : type === 'ordering' ? (
+              /* ORDERING SEQUENCE BUILDER */
+              <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-bold text-amber-950 text-xs flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                      Sequence Items (Correct Order from 1 to End)
+                    </div>
+                    <div className="text-[10px] text-amber-700 mt-0.5">
+                      Enter items in their correct sequential order. They will be shuffled for students to arrange.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setOrderSequence(prev => [...prev, `Step ${prev.length + 1}`])}
+                    className="px-2 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] flex items-center gap-1 cursor-pointer transition shadow-2xs"
+                  >
+                    + Add Step
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {orderSequence.map((seq, idx) => (
+                    <div key={idx} className="p-2 bg-white rounded-xl border border-amber-200 flex items-center gap-2 shadow-2xs">
+                      <span className="font-black text-xs text-amber-800 w-6">
+                        {idx + 1}.
+                      </span>
+                      <input
+                        value={seq}
+                        onChange={e => {
+                          const next = [...orderSequence];
+                          next[idx] = e.target.value;
+                          setOrderSequence(next);
+                        }}
+                        placeholder={`Sequence item ${idx + 1}`}
+                        className="flex-1 p-2 rounded-lg border border-stone-200 text-xs font-semibold outline-none focus:border-amber-400"
+                      />
+                      {orderSequence.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => setOrderSequence(prev => prev.filter((_, i) => i !== idx))}
+                          className="text-stone-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition"
+                          title="Delete step"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : (
+              /* MULTIPLE CHOICE / IMAGE CHOICE / TRUE FALSE BUILDER */
               <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div className="font-bold text-stone-900 text-xs">

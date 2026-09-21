@@ -216,6 +216,7 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
           { item: '🚗 Toy Car', target: '🧸 Toy Box' },
           { item: '🍌 Banana', target: '🧺 Fruit Basket' }
         ];
+        opts = ['🍎 Apple -> 🧺 Fruit Basket', '🚗 Toy Car -> 🧸 Toy Box', '🍌 Banana -> 🧺 Fruit Basket'];
         p = `Drag and place each item into its correct target!`;
       } else if (type === 'match_making') {
         matchPairs = [
@@ -223,6 +224,7 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
           { left: '🐶 Dog', right: 'Woof' },
           { left: '🐮 Cow', right: 'Moo' }
         ];
+        opts = ['🐱 Cat -> Meow', '🐶 Dog -> Woof', '🐮 Cow -> Moo'];
         p = `Match each animal with its sound!`;
       } else if (type === 'ordering') {
         orderSequence = ['1', '2', '3', '4'];

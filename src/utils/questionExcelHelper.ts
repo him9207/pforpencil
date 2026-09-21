@@ -1836,7 +1836,7 @@ export async function parseQuestionExcelFile(file: File, context: ExcelParseCont
         }
       }
 
-      const qId = context.getNextId(grdId, existingTracker, 0, subId);
+      const qId = context.getNextId(grdName || grdId, existingTracker, 0, subName || subId);
 
       const q: Question = {
         id: qId,

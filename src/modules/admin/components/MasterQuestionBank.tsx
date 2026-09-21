@@ -6,6 +6,7 @@ import QuestionPreviewModal from './QuestionPreviewModal';
 import QuestionEditModal from './QuestionEditModal';
 import { loadCurriculumMaster } from '../../../data/curriculumMasterData';
 import { CategoryMasterRecord, SkillMasterRecord, loadQuestionBankMasters, saveQuestionBankMasters } from '../../../data/questionBankMasterData';
+import { MASTER_CATEGORY_SKILL_CATALOG } from '../../../utils/questionExcelHelper';
 
 interface Props {
   grades: CurriculumGrade[];
@@ -55,6 +56,24 @@ export default function MasterQuestionBank({
   const [curriculumMaster, setCurriculumMaster] = useState(loadCurriculumMaster);
   useEffect(() => { setCurriculumMaster(loadCurriculumMaster()); }, []);
 
+  const allCurricula = useMemo(() => {
+    return curriculumMaster.curricula.filter(x => x.active).map(c => {
+      const country = curriculumMaster.countries.find(x => x.id === c.countryId);
+      const region = curriculumMaster.regions.find(x => x.id === c.regionId);
+      let flag = '🌐';
+      if (c.countryId === 'CNT-AU') flag = '🇦🇺';
+      else if (c.countryId === 'CNT-US') flag = '🇺🇸';
+      else if (c.countryId === 'CNT-IN') flag = '🇮🇳';
+      else if (c.countryId === 'CNT-UK') flag = '🇬🇧';
+      else if (c.countryId === 'CNT-CA') flag = '🇨🇦';
+      return {
+        ...c,
+        flag,
+        displayName: `${flag} ${c.name} (${country?.name || 'Global'}${region?.name ? ' · ' + region.name : ''})`
+      };
+    });
+  }, [curriculumMaster]);
+
   const activeCountries = curriculumMaster.countries.filter(x => x.active).sort((a, b) => a.displayOrder - b.displayOrder);
   const [countryId, setCountryId] = useState(activeCountries[0]?.id || 'CNT-AU');
   useEffect(() => {
@@ -63,11 +82,11 @@ export default function MasterQuestionBank({
     }
   }, [activeCountries, countryId]);
 
-  const regions = useMemo(() => curriculumMaster.regions.filter(x => x.active && x.countryId === countryId).sort((a, b) => a.displayOrder - b.displayOrder), [countryId]);
+  const regions = useMemo(() => curriculumMaster.regions.filter(x => x.active && x.countryId === countryId).sort((a, b) => a.displayOrder - b.displayOrder), [curriculumMaster, countryId]);
   const [regionId, setRegionId] = useState('');
 
-  const curricula = useMemo(() => curriculumMaster.curricula.filter(x => x.active && x.countryId === countryId && x.regionId === regionId).sort((a, b) => a.displayOrder - b.displayOrder), [countryId, regionId]);
-  const [curriculumId, setCurriculumId] = useState('');
+  const curricula = useMemo(() => curriculumMaster.curricula.filter(x => x.active && x.countryId === countryId && x.regionId === regionId).sort((a, b) => a.displayOrder - b.displayOrder), [curriculumMaster, countryId, regionId]);
+  const [curriculumId, setCurriculumId] = useState(allCurricula[0]?.id || 'CUR-VCAA20');
 
   const activeGrades = useMemo(() => grades.filter(g => g.active), [grades]);
   const activeSubjects = useMemo(() => subjects.filter(s => s.active), [subjects]);
@@ -113,17 +132,70 @@ export default function MasterQuestionBank({
 
   const selectedCountry = activeCountries.find(x => x.id === countryId);
   const selectedRegion = regions.find(x => x.id === regionId);
-  const selectedCurriculum = curricula.find(x => x.id === curriculumId);
+  const selectedCurriculum = curricula.find(x => x.id === curriculumId) || allCurricula.find(x => x.id === curriculumId);
   const selectedGrade = activeGrades.find(x => x.id === selectedGradeId);
   const selectedSubject = activeSubjects.find(x => x.id === selectedSubjectId);
 
   const categories = useMemo(() => {
-    return masters.categories.filter(c => (showInactive || c.active) && c.curriculumId === curriculumId && c.subjectId === selectedSubjectId && c.gradeId === selectedGradeId);
-  }, [masters, curriculumId, selectedSubjectId, selectedGradeId, showInactive]);
+    const list = masters.categories.filter(c => (showInactive || c.active) && (
+      (!c.curriculumId || c.curriculumId === curriculumId) &&
+      c.subjectId === selectedSubjectId &&
+      c.gradeId === selectedGradeId
+    ));
+
+    // If no custom category records exist for this grade/subject, supply standard ones from catalog
+    if (list.length === 0) {
+      const subCode = selectedSubjectId || 'SUB_MTH';
+      const gradeName = selectedGrade?.name || 'Grade 1';
+      MASTER_CATEGORY_SKILL_CATALOG.forEach(item => {
+        const matchSubject = !item.subject || item.subject === subCode || (subCode === 'SUB_MTH' && item.subject === 'SUB_MTH');
+        const matchGrade = !item.grades || item.grades.includes(gradeName) || gradeName === 'Grade 1';
+        if (matchSubject && matchGrade) {
+          if (!list.some(x => x.name.trim().toLowerCase() === item.catName.trim().toLowerCase() || x.code === item.catCode)) {
+            list.push({
+              id: item.catCode,
+              code: item.catCode,
+              name: item.catName,
+              description: item.catName,
+              curriculumId: curriculumId,
+              subjectId: selectedSubjectId,
+              gradeId: selectedGradeId,
+              active: true
+            });
+          }
+        }
+      });
+    }
+
+    return list;
+  }, [masters, curriculumId, selectedSubjectId, selectedGradeId, showInactive, selectedGrade]);
 
   const selectedCategory = categories.find(c => c.id === selectedCategoryId) || categories.find(c => c.active) || categories[0];
+
   const skills = useMemo(() => {
-    return masters.skills.filter(s => (showInactive || s.active) && s.categoryId === selectedCategory?.id && s.gradeId === selectedGradeId);
+    if (!selectedCategory) return [];
+    const list = masters.skills.filter(s => (showInactive || s.active) && s.categoryId === selectedCategory.id && s.gradeId === selectedGradeId);
+
+    if (list.length === 0) {
+      const catCode = selectedCategory.code || selectedCategory.id;
+      const catNameLower = selectedCategory.name.trim().toLowerCase();
+      MASTER_CATEGORY_SKILL_CATALOG.forEach(item => {
+        if (item.catCode === catCode || item.catName.trim().toLowerCase() === catNameLower) {
+          if (!list.some(x => x.name.trim().toLowerCase() === item.skName.trim().toLowerCase() || x.code === item.skCode)) {
+            list.push({
+              id: item.skCode,
+              code: item.skCode,
+              name: item.skName,
+              categoryId: selectedCategory.id,
+              gradeId: selectedGradeId,
+              active: true
+            });
+          }
+        }
+      });
+    }
+
+    return list;
   }, [masters, selectedCategory, selectedGradeId, showInactive]);
 
   const selectedSkill = skills.find(s => s.id === selectedSkillId) || skills.find(s => s.active) || skills[0];
@@ -386,38 +458,37 @@ export default function MasterQuestionBank({
           </div>
         </div>
 
-        {/* Global Jurisdiction & Curriculum Selector Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-[#f8faff] border border-[#d7def0] rounded-2xl">
-          <label className="text-[11px] font-bold text-[#10246f]">
-            Country
-            <select
-              value={countryId}
-              onChange={e => handleCountry(e.target.value)}
-              className="w-full mt-1 p-2 rounded-xl border border-stone-200 bg-white text-stone-800 text-xs font-semibold"
-            >
-              {activeCountries.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
-            </select>
-          </label>
-          <label className="text-[11px] font-bold text-[#10246f]">
-            State / Region
-            <select
-              value={regionId}
-              onChange={e => handleRegion(e.target.value)}
-              className="w-full mt-1 p-2 rounded-xl border border-stone-200 bg-white text-stone-800 text-xs font-semibold"
-            >
-              {regions.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
-            </select>
-          </label>
-          <label className="text-[11px] font-bold text-[#10246f]">
-            Curriculum
-            <select
-              value={curriculumId}
-              onChange={e => handleCurriculum(e.target.value)}
-              className="w-full mt-1 p-2 rounded-xl border border-stone-200 bg-white text-stone-800 text-xs font-semibold"
-            >
-              {curricula.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
-            </select>
-          </label>
+        {/* Academic Curriculum Standard & Regional Selector */}
+        <div className="p-3 bg-[#f8faff] border border-[#d7def0] rounded-2xl space-y-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <label className="text-[11px] font-bold text-[#10246f] flex items-center gap-1.5">
+              <Globe2 className="w-3.5 h-3.5 text-[#f20b86]" /> Academic Curriculum Standard
+            </label>
+            <span className="text-[10px] text-stone-500 font-medium">
+              Country: <strong className="text-stone-800">{selectedCountry?.name || 'Global'}</strong> · Region: <strong className="text-stone-800">{selectedRegion?.name || 'All'}</strong>
+            </span>
+          </div>
+          <select
+            value={curriculumId}
+            onChange={e => {
+              const nextId = e.target.value;
+              setCurriculumId(nextId);
+              const found = curriculumMaster.curricula.find(c => c.id === nextId);
+              if (found) {
+                setCountryId(found.countryId);
+                setRegionId(found.regionId);
+              }
+              setSelectedCategoryId(null);
+              setSelectedSkillId(null);
+            }}
+            className="w-full p-2.5 rounded-xl border border-stone-200 bg-white text-stone-900 text-xs font-bold focus:ring-2 focus:ring-[#10246f]"
+          >
+            {allCurricula.map(c => (
+              <option key={c.id} value={c.id}>
+                {c.displayName}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 

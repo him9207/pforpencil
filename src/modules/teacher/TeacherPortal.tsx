@@ -396,7 +396,7 @@ export default function TeacherPortal({
       return;
     }
 
-    const nextId = getNextQuestionId(customGrade, questions);
+    const nextId = getNextQuestionId(customGrade, questions, 0, customSubject);
     const newQuestion: Question = {
       id: nextId,
       subject: customSubject,

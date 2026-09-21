@@ -27,6 +27,7 @@ import {
   COUNTRY_STATE_MAP, 
   COUNTRY_CURRICULUM_MAP 
 } from '../../data/curriculumData';
+import { fetchUsersFromSupabase, isSupabaseConfigured } from '../../database';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -127,15 +128,39 @@ export default function AuthModal({
 
   if (!isOpen) return null;
 
-  const handleStudentLogin = (e: React.FormEvent) => {
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  const handleStudentLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setStudentError('');
 
-    const targetUser = allUsers.find(
+    let targetUser = allUsers.find(
       (u) => u.role === 'student' && 
              u.username?.toUpperCase() === studentUsername.trim().toUpperCase() &&
              u.pin === studentPin.trim()
     );
+
+    // If not found in current memory state and Supabase is configured, fetch live from database
+    if (!targetUser && isSupabaseConfigured()) {
+      setIsVerifying(true);
+      try {
+        const result = await fetchUsersFromSupabase();
+        if (result.success && Array.isArray(result.users)) {
+          targetUser = result.users.find(
+            (u) => u.role === 'student' && 
+                   u.username?.toUpperCase() === studentUsername.trim().toUpperCase() &&
+                   u.pin === studentPin.trim()
+          );
+          if (targetUser && onRegisterUser) {
+            onRegisterUser(targetUser);
+          }
+        }
+      } catch (err) {
+        console.warn('Live student auth verification error:', err);
+      } finally {
+        setIsVerifying(false);
+      }
+    }
 
     if (targetUser) {
       sounds.playCorrect();
@@ -147,16 +172,39 @@ export default function AuthModal({
     }
   };
 
-  const handleAdultLogin = (e: React.FormEvent) => {
+  const handleAdultLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAdultError('');
 
-    const targetUser = allUsers.find(
+    let targetUser = allUsers.find(
       (u) => u.role !== 'student' && (
         u.email?.toLowerCase() === adultEmail.trim().toLowerCase() ||
         u.username?.toLowerCase() === adultEmail.trim().toLowerCase()
       )
     );
+
+    // If not found in current memory state and Supabase is configured, fetch live from database
+    if (!targetUser && isSupabaseConfigured()) {
+      setIsVerifying(true);
+      try {
+        const result = await fetchUsersFromSupabase();
+        if (result.success && Array.isArray(result.users)) {
+          targetUser = result.users.find(
+            (u) => u.role !== 'student' && (
+              u.email?.toLowerCase() === adultEmail.trim().toLowerCase() ||
+              u.username?.toLowerCase() === adultEmail.trim().toLowerCase()
+            )
+          );
+          if (targetUser && onRegisterUser) {
+            onRegisterUser(targetUser);
+          }
+        }
+      } catch (err) {
+        console.warn('Live adult auth verification error:', err);
+      } finally {
+        setIsVerifying(false);
+      }
+    }
 
     if (targetUser) {
       sounds.playCorrect();

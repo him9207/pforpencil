@@ -104,6 +104,42 @@ export const DATABASE_TABLES: DatabaseTableDefinition[] = [
     ]
   },
   {
+    name: 'category_masters',
+    category: 'academic',
+    description: 'Master taxonomy categories scoped by Curriculum, Subject, and Grade',
+    primaryKey: 'id',
+    columns: [
+      { name: 'id', type: 'TEXT', required: true, description: 'Category Master ID' },
+      { name: 'code', type: 'TEXT', required: true, description: 'Unique category code' },
+      { name: 'curriculum_id', type: 'TEXT', required: true, description: 'Curriculum Framework ID' },
+      { name: 'subject_id', type: 'TEXT', required: true, description: 'Subject ID' },
+      { name: 'grade_id', type: 'TEXT', description: 'Scoped Grade ID' },
+      { name: 'name', type: 'TEXT', required: true, description: 'Category Name' },
+      { name: 'description', type: 'TEXT', description: 'Category Scope Description' },
+      { name: 'active', type: 'BOOLEAN', description: 'Whether active' },
+      { name: 'created_at', type: 'TIMESTAMPTZ', description: 'Creation timestamp' }
+    ]
+  },
+  {
+    name: 'skill_masters',
+    category: 'academic',
+    description: 'Master pedagogical learning skills linked to Categories and Grades',
+    primaryKey: 'id',
+    foreignKeys: [{ column: 'category_id', references: 'category_masters.id' }],
+    columns: [
+      { name: 'id', type: 'TEXT', required: true, description: 'Skill Master ID' },
+      { name: 'code', type: 'TEXT', required: true, description: 'Unique skill code' },
+      { name: 'category_id', type: 'TEXT', required: true, description: 'Parent Category ID' },
+      { name: 'grade_id', type: 'TEXT', required: true, description: 'Target Grade ID' },
+      { name: 'name', type: 'TEXT', required: true, description: 'Specific Skill Name' },
+      { name: 'curriculum_reference', type: 'TEXT', description: 'Official Standard Code' },
+      { name: 'learning_objective', type: 'TEXT', description: 'Pedagogical Learning Objective' },
+      { name: 'description', type: 'TEXT', description: 'Practice drill description' },
+      { name: 'active', type: 'BOOLEAN', description: 'Whether active' },
+      { name: 'created_at', type: 'TIMESTAMPTZ', description: 'Creation timestamp' }
+    ]
+  },
+  {
     name: 'questions',
     category: 'academic',
     description: 'Universal Question Bank items with options, explanations, and curriculum alignment',

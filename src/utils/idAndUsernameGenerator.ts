@@ -346,23 +346,69 @@ export function ensureUniqueUsername(
  */
 export function getQuestionSubjectCode(subject?: string): string {
   const value = (subject || 'Mathematics').trim().toLowerCase();
-  if (value.includes('math')) return 'M';
-  if (value.includes('english') || value === 'eng') return 'ENG';
-  if (value.includes('science')) return 'SCI';
-  if (value.includes('computer') || value.includes('technology')) return 'ICT';
-  const letters = value.replace(/[^a-z]/g, '').toUpperCase();
-  return letters.slice(0, 3) || 'SUB';
+  if (value.includes('math') || value.includes('mth') || value.includes('sub_m')) return 'MAT';
+  if (value.includes('english') || value.includes('phonics') || value.includes('sub_eng') || value === 'eng') return 'ENG';
+  if (value.includes('science') || value.includes('nature') || value.includes('sub_sci')) return 'SCI';
+  if (value.includes('art') || value.includes('creative') || value.includes('sub_art')) return 'ART';
+  if (value.includes('computer') || value.includes('technology') || value.includes('sub_ict')) return 'ICT';
+  const clean = value.replace(/^sub[_-]?/i, '').replace(/[^a-z]/g, '').toUpperCase();
+  return clean.slice(0, 3) || 'SUB';
 }
 
 export function getQuestionGradeCode(grade?: string): string {
   const normalized = (grade || '').trim().toLowerCase();
-  if (normalized === 'preschool' || normalized.startsWith('pre')) return 'PS';
-  if (normalized === 'foundation' || normalized.startsWith('fnd') || normalized.startsWith('found')) return 'FN';
-  if (normalized === 'kindergarten' || normalized.startsWith('kin')) return 'KG';
-  const gradeMatch = normalized.match(/grade\s*(\d+)/i) || normalized.match(/^g(\d+)/i);
-  if (gradeMatch) return `G${gradeMatch[1]}`;
+
+  // Preschool / Pre-K / Pre Kindergarten / GRD_PRE / GRD_PRE_K / GRD_PS / PK
+  if (
+    normalized.includes('preschool') ||
+    normalized.includes('pre_k') ||
+    normalized.includes('pre-k') ||
+    normalized.includes('prek') ||
+    normalized.includes('pre_primary') ||
+    normalized.includes('preprimary') ||
+    normalized.includes('grd_pre') ||
+    normalized.includes('grd_ps') ||
+    normalized.includes('grd_pk') ||
+    normalized.endsWith('_pre') ||
+    normalized.startsWith('pre') ||
+    normalized === 'ps' ||
+    normalized === 'pk'
+  ) {
+    return 'PRE';
+  }
+
+  // Foundation / Fnd / GRD_FND
+  if (
+    normalized.includes('foundation') ||
+    normalized.includes('fnd') ||
+    normalized.includes('found') ||
+    normalized.includes('grd_fnd')
+  ) {
+    return 'FND';
+  }
+
+  // Kindergarten / Kin / KG / GRD_KIN / GRD_KG
+  if (
+    normalized.includes('kindergarten') ||
+    normalized.includes('kin') ||
+    normalized.includes('kg') ||
+    normalized.includes('grd_kin') ||
+    normalized.includes('grd_kg')
+  ) {
+    return 'KG';
+  }
+
+  // Grade 1..12 / G1..G12 / GRD_G1..GRD_G12
+  const gradeMatch = normalized.match(/(?:grade|grd|g)\s*[_|-]?\s*(\d+)/i) || normalized.match(/^g(\d+)/i);
+  if (gradeMatch) {
+    return `G${gradeMatch[1]}`;
+  }
+
   const numMatch = normalized.match(/\d+/);
-  if (numMatch) return `G${numMatch[0]}`;
+  if (numMatch) {
+    return `G${numMatch[0]}`;
+  }
+
   return 'G1';
 }
 
@@ -405,4 +451,36 @@ export function getNextQuestionId(
     candidate = `${prefix}-${String(nextSeq).padStart(6, '0')}`;
   }
   return candidate;
+}
+
+/**
+ * Universal Sanitizer: Re-indexes all questions in a question bank to strictly adhere
+ * to the centralized formula [SUBJECT]-[GRADE]-[6-DIGIT SEQUENCE].
+ * Completely cleanses legacy and incorrectly formatted IDs (like SUB-G1 for Preschool).
+ */
+export function sanitizeQuestionBank<T extends { id: string; grade?: string; subject?: string }>(
+  rawQuestions: T[]
+): { questions: T[]; idMap: Record<string, string> } {
+  const normalized: T[] = [];
+  const idMap: Record<string, string> = {};
+
+  (rawQuestions || []).forEach((q) => {
+    if (!q) return;
+    const cleanSubject = q.subject || 'Mathematics';
+    const cleanGrade = q.grade || 'Grade 1';
+
+    const canonicalId = getNextQuestionId(cleanGrade, normalized, 0, cleanSubject);
+    if (q.id) {
+      idMap[q.id] = canonicalId;
+    }
+
+    normalized.push({
+      ...q,
+      id: canonicalId,
+      subject: cleanSubject,
+      grade: cleanGrade
+    });
+  });
+
+  return { questions: normalized, idMap };
 }

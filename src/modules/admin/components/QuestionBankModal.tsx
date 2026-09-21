@@ -6,7 +6,7 @@ import { getNextQuestionId } from '../../../utils/idAndUsernameGenerator';
 import { loadCurriculumMaster } from '../../../data/curriculumMasterData';
 import { CategoryMasterRecord, SkillMasterRecord } from '../../../data/questionBankMasterData';
 import { fixMojibake, parseVisualObjectsString } from '../../../utils/visualUtils';
-import { generateQuestionMasterExcel, parseQuestionExcelFile } from '../../../utils/questionExcelHelper';
+import { generateQuestionMasterExcel, parseQuestionExcelFile, MASTER_CATEGORY_SKILL_CATALOG } from '../../../utils/questionExcelHelper';
 import { CLIPART_LIBRARY } from '../../../data/clipartLibraryData';
 import QuestionPreviewModal from './QuestionPreviewModal';
 import QuestionEditModal from './QuestionEditModal';
@@ -37,33 +37,161 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
   const cm=loadCurriculumMaster();
   const countries=cm.countries.filter(x=>x.active).sort((a,b)=>a.displayOrder-b.displayOrder);
   const [mode,setMode]=useState<'single'|'batch'|'csv_upload'|'clipart_library'>('single');
-  const [countryId,setCountryId]=useState(initialCountryId||countries[0]?.id||'');
-  const regions=useMemo(()=>cm.regions.filter(x=>x.active&&x.countryId===countryId).sort((a,b)=>a.displayOrder-b.displayOrder),[countryId]);
-  const [regionId,setRegionId]=useState(initialRegionId||'');
-  const curricula=useMemo(()=>cm.curricula.filter(x=>x.active&&x.countryId===countryId&&x.regionId===regionId).sort((a,b)=>a.displayOrder-b.displayOrder),[countryId,regionId]);
-  const [curriculumId,setCurriculumId]=useState(initialCurriculumId||'');
-  const [grade,setGrade]=useState<GradeLevel>((initialGrade as GradeLevel)||availableGrades[0]||'Grade 1');
-  const [subject,setSubject]=useState<Subject>((initialSubject as Subject)||availableSubjects[0]||'Mathematics');
-  const selectedGrade=grades.find(g=>g.name===grade); const selectedSubject=subjects.find(s=>s.name===subject);
-  const categoryOptions=useMemo(()=>categoryMasters.filter(c=>c.active&&c.curriculumId===curriculumId&&c.subjectId===(selectedSubject?.id||'')&&c.gradeId===(selectedGrade?.id||'')),[categoryMasters,curriculumId,selectedSubject,selectedGrade]);
-  const [categoryId,setCategoryId]=useState('');
+  
+  // Standardized Curriculum List with country and regional indicators
+  const allCurricula = useMemo(() => {
+    return cm.curricula.filter(x => x.active).map(c => {
+      const country = cm.countries.find(x => x.id === c.countryId);
+      const region = cm.regions.find(x => x.id === c.regionId);
+      let flag = '🌐';
+      if (c.countryId === 'CNT-AU') flag = '🇦🇺';
+      else if (c.countryId === 'CNT-US') flag = '🇺🇸';
+      else if (c.countryId === 'CNT-IN') flag = '🇮🇳';
+      else if (c.countryId === 'CNT-UK') flag = '🇬🇧';
+      else if (c.countryId === 'CNT-CA') flag = '🇨🇦';
+      return {
+        ...c,
+        flag,
+        countryName: country?.name || 'Global',
+        regionName: region?.name || 'National / General',
+        displayName: `${flag} ${c.name} (${country?.name || 'Global'}${region?.name ? ' · ' + region.name : ''})`
+      };
+    });
+  }, [cm]);
+
+  const [curriculumId, setCurriculumId] = useState(() => {
+    if (initialCurriculumId && cm.curricula.some(c => c.id === initialCurriculumId)) return initialCurriculumId;
+    return cm.curricula.find(c => c.active)?.id || 'CUR-VCAA20';
+  });
+
+  const activeCurriculum = useMemo(() => {
+    return allCurricula.find(c => c.id === curriculumId) || allCurricula[0];
+  }, [allCurricula, curriculumId]);
+
+  const [countryId, setCountryId] = useState(() => activeCurriculum?.countryId || initialCountryId || countries[0]?.id || 'CNT-AU');
+  const [regionId, setRegionId] = useState(() => activeCurriculum?.regionId || initialRegionId || '');
+
+  const [grade, setGrade] = useState<GradeLevel>((initialGrade as GradeLevel) || (availableGrades[0] as GradeLevel) || 'Grade 1');
+  const [subject, setSubject] = useState<Subject>((initialSubject as Subject) || (availableSubjects[0] as Subject) || 'Mathematics');
+
+  const selectedGrade = grades.find(g => g.name === grade) || { id: 'GRD_G1', name: grade };
+  const selectedSubject = subjects.find(s => s.name === subject) || { id: 'SUB_MTH', name: subject };
+
+  // Custom Topic / Skill typing overrides
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
+  const [customCategoryText, setCustomCategoryText] = useState('');
+  const [isCustomSkill, setIsCustomSkill] = useState(false);
+  const [customSkillText, setCustomSkillText] = useState('');
+
+  // Comprehensive Category Options: Master Records + Standard Catalog Taxonomy (Never Empty)
+  const categoryOptions = useMemo(() => {
+    const list: Array<{ id: string; code: string; name: string }> = [];
+
+    // 1. Custom master categories matching current curriculum, subject, grade
+    const custom = categoryMasters.filter(c => c.active && (
+      (!curriculumId || c.curriculumId === curriculumId) &&
+      c.subjectId === (selectedSubject?.id || '') &&
+      c.gradeId === (selectedGrade?.id || '')
+    ));
+    custom.forEach(c => {
+      if (!list.some(x => x.name.trim().toLowerCase() === c.name.trim().toLowerCase())) {
+        list.push({ id: c.id, code: c.code || `CAT-${c.id}`, name: c.name });
+      }
+    });
+
+    // 2. Standard master catalog taxonomy matching subject and grade
+    const subCode = selectedSubject?.id || (subject.toLowerCase().includes('sci') ? 'SUB_SCI' : subject.toLowerCase().includes('eng') ? 'SUB_ENG' : subject.toLowerCase().includes('art') ? 'SUB_ART' : 'SUB_MTH');
+    MASTER_CATEGORY_SKILL_CATALOG.forEach(item => {
+      const matchSubject = !item.subject || item.subject === subCode || (subCode === 'SUB_MTH' && item.subject === 'SUB_MTH');
+      const matchGrade = !item.grades || item.grades.includes(grade) || grade === 'Grade 1';
+      if (matchSubject && matchGrade) {
+        if (!list.some(x => x.name.trim().toLowerCase() === item.catName.trim().toLowerCase() || x.code === item.catCode)) {
+          list.push({ id: item.catCode, code: item.catCode, name: item.catName });
+        }
+      }
+    });
+
+    // 3. Fallback standard subjects categories to ensure it is always populated
+    if (list.length === 0) {
+      if (subject.toLowerCase().includes('math')) {
+        list.push({ id: 'CAT-NUM', code: 'CAT-NUM', name: 'Numbers & Quantities' });
+        list.push({ id: 'CAT-ADD', code: 'CAT-ADD', name: 'Addition & Subtraction' });
+        list.push({ id: 'CAT-GEO', code: 'CAT-GEO', name: 'Geometry & Shapes' });
+      } else if (subject.toLowerCase().includes('sci')) {
+        list.push({ id: 'CAT-SCI', code: 'CAT-SCI', name: 'Living Things & Nature' });
+        list.push({ id: 'CAT-BIO', code: 'CAT-BIO', name: 'Animals & Habitats' });
+      } else if (subject.toLowerCase().includes('eng')) {
+        list.push({ id: 'CAT-ENG', code: 'CAT-ENG', name: 'English & Phonics' });
+      } else {
+        list.push({ id: 'CAT-ART', code: 'CAT-ART', name: 'Art & Creativity' });
+      }
+    }
+
+    return list;
+  }, [categoryMasters, curriculumId, selectedSubject, selectedGrade, grade, subject]);
+
+  const [categoryId, setCategoryId] = useState('');
+
+  const selectedCategory = useMemo(() => {
+    if (isCustomCategory) {
+      return { id: 'CAT-CUSTOM', code: 'CAT-CUSTOM', name: customCategoryText.trim() || 'Custom Category' };
+    }
+    return categoryOptions.find(c => c.id === categoryId)
+      || categoryOptions.find(c => c.name.trim().toLowerCase() === String(initialCategory || '').trim().toLowerCase())
+      || categoryOptions[0];
+  }, [isCustomCategory, customCategoryText, categoryOptions, categoryId, initialCategory]);
+
+  // Comprehensive Skill Options: Master Skills + Standard Catalog Skills (Never Empty)
+  const skillOptions = useMemo(() => {
+    const list: Array<{ id: string; code: string; name: string; curriculumReference?: string }> = [];
+
+    if (!selectedCategory) return list;
+
+    // 1. Custom master skills
+    const custom = skillMasters.filter(s => s.active && s.categoryId === selectedCategory.id && s.gradeId === (selectedGrade?.id || ''));
+    custom.forEach(s => {
+      if (!list.some(x => x.name.trim().toLowerCase() === s.name.trim().toLowerCase())) {
+        list.push({ id: s.id, code: s.code || `SK-${s.id}`, name: s.name, curriculumReference: s.curriculumReference });
+      }
+    });
+
+    // 2. Standard catalog skills for this category
+    const catNameLower = (selectedCategory.name || '').trim().toLowerCase();
+    const catCode = selectedCategory.code || '';
+    MASTER_CATEGORY_SKILL_CATALOG.forEach(item => {
+      if (item.catCode === catCode || item.catName.trim().toLowerCase() === catNameLower) {
+        if (!list.some(x => x.name.trim().toLowerCase() === item.skName.trim().toLowerCase() || x.code === item.skCode)) {
+          list.push({ id: item.skCode, code: item.skCode, name: item.skName });
+        }
+      }
+    });
+
+    // 3. Fallback standard skill if none matched
+    if (list.length === 0) {
+      list.push({
+        id: `SK-${selectedCategory.code || 'GEN'}-01`,
+        code: `SK-${selectedCategory.code || 'GEN'}-01`,
+        name: `${selectedCategory.name} Core Skills`
+      });
+    }
+
+    return list;
+  }, [skillMasters, selectedCategory, selectedGrade]);
+
+  const [skillId, setSkillId] = useState('');
+
+  const selectedSkill = useMemo(() => {
+    if (isCustomSkill) {
+      return { id: 'SK-CUSTOM', code: 'SK-CUSTOM', name: customSkillText.trim() || 'Custom Skill', curriculumReference: undefined };
+    }
+    return skillOptions.find(s => s.id === skillId)
+      || skillOptions.find(s => s.name.trim().toLowerCase() === String(initialSkill || '').trim().toLowerCase())
+      || skillOptions[0];
+  }, [isCustomSkill, customSkillText, skillOptions, skillId, initialSkill]);
+
   const [clipartSearch, setClipartSearch] = useState('');
   const [clipartCategoryFilter, setClipartCategoryFilter] = useState('All');
   const [copiedClipartCode, setCopiedClipartCode] = useState<string | null>(null);
-  // When opened from a selected Skill, resolve the exact master category from
-  // that Skill first. This prevents a stale/duplicate category name from
-  // selecting an empty category and showing "No skill" in the creator.
-  const initialSkillRecord=useMemo(()=>{
-    if(!initialSkill||!selectedGrade)return undefined;
-    return skillMasters.find(s=>s.active&&s.gradeId===selectedGrade.id&&s.name.trim().toLowerCase()===String(initialSkill).trim().toLowerCase());
-  },[skillMasters,initialSkill,selectedGrade]);
-  const selectedCategory=categoryOptions.find(c=>c.id===categoryId)
-    || (initialSkillRecord ? categoryOptions.find(c=>c.id===initialSkillRecord.categoryId) : undefined)
-    || categoryOptions.find(c=>c.name.trim().toLowerCase()===String(initialCategory||'').trim().toLowerCase())
-    || categoryOptions[0];
-  const skillOptions=useMemo(()=>skillMasters.filter(s=>s.active&&s.categoryId===selectedCategory?.id&&s.gradeId===(selectedGrade?.id||'')),[skillMasters,selectedCategory,selectedGrade]);
-  const [skillId,setSkillId]=useState('');
-  const selectedSkill=skillOptions.find(s=>s.id===skillId)||skillOptions.find(s=>s.name===initialSkill)||skillOptions[0];
   const [difficulty,setDifficulty]=useState<'Easy'|'Medium'|'Hard'>('Easy');
   const [questionType,setQuestionType]=useState<QuestionType>('multiple_choice');
   const [prompt,setPrompt]=useState(''); const [options,setOptions]=useState(['','','','']); const [correctIndex,setCorrectIndex]=useState(0); const [openAnswer,setOpenAnswer]=useState('');
@@ -133,14 +261,20 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
     setPoints(20);
   };
 
-  useEffect(()=>{
-    if(!isOpen) return;
+  useEffect(() => {
+    if (!isOpen) return;
     setMode('single');
-    setCountryId(initialCountryId||countries[0]?.id||'');
-    setRegionId(initialRegionId||'');
-    setCurriculumId(initialCurriculumId||'');
-    setGrade((initialGrade as GradeLevel)||availableGrades[0]||'Grade 1');
-    setSubject((initialSubject as Subject)||availableSubjects[0]||'Mathematics');
+    const initCurr = initialCurriculumId || cm.curricula.find(c => c.active)?.id || 'CUR-VCAA20';
+    setCurriculumId(initCurr);
+    const currObj = cm.curricula.find(c => c.id === initCurr);
+    setCountryId(currObj?.countryId || initialCountryId || countries[0]?.id || 'CNT-AU');
+    setRegionId(currObj?.regionId || initialRegionId || '');
+    setGrade((initialGrade as GradeLevel) || (availableGrades[0] as GradeLevel) || 'Grade 1');
+    setSubject((initialSubject as Subject) || (availableSubjects[0] as Subject) || 'Mathematics');
+    setIsCustomCategory(false);
+    setCustomCategoryText('');
+    setIsCustomSkill(false);
+    setCustomSkillText('');
     setCategoryId('');
     setSkillId('');
     setGenerated([]);
@@ -148,20 +282,52 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
     setBatchVisualMode('text');
     setParsed([]);
     resetSingleForm();
-  },[isOpen]);
-  useEffect(()=>{if(!regionId||!regions.some(r=>r.id===regionId))setRegionId(regions[0]?.id||'');},[regions,regionId]);
-  useEffect(()=>{if(!curriculumId||!curricula.some(c=>c.id===curriculumId))setCurriculumId(curricula[0]?.id||'');},[curricula,curriculumId]);
-  useEffect(()=>{if(selectedCategory&&selectedCategory.id!==categoryId)setCategoryId(selectedCategory.id);else if(!selectedCategory)setCategoryId('');},[selectedCategory,categoryId]);
-  useEffect(()=>{if(selectedSkill&&selectedSkill.id!==skillId)setSkillId(selectedSkill.id);else if(!selectedSkill)setSkillId('');},[selectedSkill,skillId]);
+  }, [isOpen]);
 
-  const hierarchy={countryId,regionId,curriculumId,subjectId:selectedSubject?.id||'',gradeId:selectedGrade?.id||'',categoryId:selectedCategory?.id||'',skillId:selectedSkill?.id||''};
-  const names={country:countries.find(x=>x.id===countryId)?.name||'',region:regions.find(x=>x.id===regionId)?.name||'',curriculum:curricula.find(x=>x.id===curriculumId)?.name||'',subject,grade,category:selectedCategory?.name||'',skill:selectedSkill?.name||''};
-  const canCreate=Boolean(hierarchy.curriculumId&&hierarchy.subjectId&&hierarchy.gradeId&&hierarchy.categoryId&&hierarchy.skillId);
-  const setCountry=(id:string)=>{setCountryId(id);const r=cm.regions.find(x=>x.active&&x.countryId===id);setRegionId(r?.id||'');setCurriculumId('');setCategoryId('');setSkillId('');};
-  const setRegion=(id:string)=>{setRegionId(id);const c=cm.curricula.find(x=>x.active&&x.regionId===id);setCurriculumId(c?.id||'');setCategoryId('');setSkillId('');};
-  const setCurriculum=(id:string)=>{setCurriculumId(id);setCategoryId('');setSkillId('');};
-  const setSubjectAndReset=(v:string)=>{setSubject(v);setCategoryId('');setSkillId('');};
-  const setGradeAndReset=(v:string)=>{setGrade(v as GradeLevel);setCategoryId('');setSkillId('');};
+  const hierarchy = {
+    countryId,
+    regionId,
+    curriculumId,
+    subjectId: selectedSubject?.id || '',
+    gradeId: selectedGrade?.id || '',
+    categoryId: selectedCategory?.id || 'CAT-GEN',
+    skillId: selectedSkill?.id || 'SK-GEN-01'
+  };
+
+  const names = {
+    country: cm.countries.find(x => x.id === countryId)?.name || 'Global',
+    region: cm.regions.find(x => x.id === regionId)?.name || 'General',
+    curriculum: activeCurriculum?.name || 'Victorian Curriculum 2.0',
+    subject,
+    grade,
+    category: selectedCategory?.name || 'General',
+    skill: selectedSkill?.name || 'Core Concepts'
+  };
+
+  const canCreate = Boolean(prompt.trim() && names.category && names.skill);
+
+  const handleCurriculumChange = (id: string) => {
+    setCurriculumId(id);
+    const c = cm.curricula.find(x => x.id === id);
+    if (c) {
+      setCountryId(c.countryId);
+      setRegionId(c.regionId);
+    }
+    setCategoryId('');
+    setSkillId('');
+  };
+
+  const handleSubjectChange = (v: string) => {
+    setSubject(v as Subject);
+    setCategoryId('');
+    setSkillId('');
+  };
+
+  const handleGradeChange = (v: string) => {
+    setGrade(v as GradeLevel);
+    setCategoryId('');
+    setSkillId('');
+  };
 
   const buildQuestion=(id:string, p:string, opts:string[], correct:number, diff:'Easy'|'Medium'|'Hard', type:QuestionType, extra:any={}):Question=>{
     const visualConfig: VisualQuestionConfig | undefined = extra.visualConfig ?? (visualEnabled ? {
@@ -454,9 +620,9 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
       const catc=useSelectedForCsv?(selectedCategory?.code||''):val('Category Code')||(selectedCategory?.code||'');
       const skc=useSelectedForCsv?(selectedSkill?.code||''):val('Skill Code')||(selectedSkill?.code||'');
 
-      const country=cm.countries.find(x=>x.code===cc&&x.active)||countries[0];
-      const region=cm.regions.find(x=>x.code===rc&&x.active)||regions[0];
-      const cur=cm.curricula.find(x=>x.code===cuc&&x.active)||curricula[0];
+      const country=cm.countries.find(x=>(x.code===cc||x.id===cc)&&x.active)||countries[0];
+      const region=cm.regions.find(x=>(x.code===rc||x.id===rc)&&x.active)||cm.regions[0];
+      const cur=cm.curricula.find(x=>(x.code===cuc||x.id===cuc)&&x.active)||allCurricula[0];
       const sub=(subjects.length?subjects:[]).find(x=>x.id===sc&&x.active)||selectedSubject;
       const grd=(grades.length?grades:[]).find(x=>x.id===gc&&x.active)||selectedGrade;
       const cat=categoryMasters.find(x=>(x.code===catc||x.name.toLowerCase()===catc.toLowerCase())&&x.active)||selectedCategory;
@@ -683,7 +849,185 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
   const importCsv=()=>{if(!parsed.length||csvErrors.length)return;if(onAddBatchQuestions)onAddBatchQuestions(parsed);else parsed.forEach(onAddQuestion);onSuccess();};
   const onSuccess=()=>{sounds.success();onClose();};
   if(!isOpen)return null;
-  const hierarchyBlock=<div className="p-3.5 bg-[#f8faff] border border-[#d7def0] rounded-2xl"><div className="flex items-center gap-1.5 font-bold text-xs text-[#10246f] mb-2"><Globe className="w-3.5 h-3.5 text-[#10246f]"/> Curriculum Hierarchy</div><div className="grid grid-cols-1 sm:grid-cols-3 gap-3"><label className="text-[11px] font-semibold text-stone-700">Country<select value={countryId} onChange={e=>setCountry(e.target.value)} className="w-full mt-1 px-2.5 py-1.5 rounded-xl border border-stone-200 bg-white text-stone-800">{countries.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label><label className="text-[11px] font-semibold text-stone-700">State / Region<select value={regionId} onChange={e=>setRegion(e.target.value)} className="w-full mt-1 px-2.5 py-1.5 rounded-xl border border-stone-200 bg-white text-stone-800">{regions.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label><label className="text-[11px] font-semibold text-stone-700">Curriculum<select value={curriculumId} onChange={e=>setCurriculum(e.target.value)} className="w-full mt-1 px-2.5 py-1.5 rounded-xl border border-stone-200 bg-white text-stone-800">{curricula.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label></div><div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3"><label className="text-[11px] font-semibold text-stone-700">Subject<select value={subject} onChange={e=>setSubjectAndReset(e.target.value)} className="w-full mt-1 px-2.5 py-1.5 rounded-xl border border-stone-200 bg-white text-stone-800">{availableSubjects.map(x=><option key={x} value={x}>{x}</option>)}</select></label><label className="text-[11px] font-semibold text-stone-700">Grade / Level<select value={grade} onChange={e=>setGradeAndReset(e.target.value)} className="w-full mt-1 px-2.5 py-1.5 rounded-xl border border-stone-200 bg-white text-stone-800">{availableGrades.map(x=><option key={x} value={x}>{x}</option>)}</select></label><label className="text-[11px] font-semibold text-stone-700">Category<select value={selectedCategory?.id||''} onChange={e=>{setCategoryId(e.target.value);setSkillId('')}} disabled={!categoryOptions.length} className="w-full mt-1 px-2.5 py-1.5 rounded-xl border border-stone-200 bg-white text-stone-800 disabled:bg-stone-50"><option value="">{categoryOptions.length?'Select category':'No category'}</option>{categoryOptions.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label><label className="text-[11px] font-semibold text-stone-700">Skill<select value={selectedSkill?.id||''} onChange={e=>setSkillId(e.target.value)} disabled={!skillOptions.length} className="w-full mt-1 px-2.5 py-1.5 rounded-xl border border-stone-200 bg-white text-stone-800 disabled:bg-stone-50"><option value="">{skillOptions.length?'Select skill':'No skill'}</option>{skillOptions.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label></div>{!canCreate&&<div className="mt-2 text-[10px] text-amber-700">Select a valid Curriculum → Subject → Grade → Category → Skill combination before creating a question.</div>}</div>;
+  const hierarchyBlock = (
+    <div className="p-4 bg-[#f8faff] border border-[#d7def0] rounded-2xl space-y-3">
+      {/* 1. Visual Breadcrumb Pathway */}
+      <div className="flex flex-wrap items-center gap-1.5 p-2.5 bg-white border border-[#d7def0] rounded-xl text-[11px] font-bold text-stone-800 shadow-2xs">
+        <span className="text-[#10246f] flex items-center gap-1">
+          <Globe className="w-3.5 h-3.5 text-[#f20b86]" /> Standard Pathway:
+        </span>
+        <span className="bg-[#f0f4ff] px-2 py-0.5 rounded-md text-[#10246f] font-extrabold border border-[#c3d1f8]">
+          {activeCurriculum?.flag || '🌐'} {names.curriculum}
+        </span>
+        <span className="text-stone-400">›</span>
+        <span className="bg-stone-100 px-2 py-0.5 rounded-md text-stone-800 border border-stone-200">
+          🎒 {names.grade}
+        </span>
+        <span className="text-stone-400">›</span>
+        <span className="bg-stone-100 px-2 py-0.5 rounded-md text-stone-800 border border-stone-200">
+          📚 {names.subject}
+        </span>
+        <span className="text-stone-400">›</span>
+        <span className="bg-amber-50 px-2 py-0.5 rounded-md text-amber-900 border border-amber-200">
+          📂 {names.category}
+        </span>
+        <span className="text-stone-400">›</span>
+        <span className="bg-emerald-50 px-2 py-0.5 rounded-md text-emerald-900 border border-emerald-200">
+          🎯 {names.skill}
+        </span>
+      </div>
+
+      {/* 2. Structured 5-Step Control Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {/* Step 1: Curriculum Framework */}
+        <div className="space-y-1">
+          <label className="text-[11px] font-bold text-[#10246f] flex items-center justify-between">
+            <span>1. Curriculum Framework</span>
+            <span className="text-[10px] text-stone-400 font-normal">Board & Standard</span>
+          </label>
+          <select
+            value={curriculumId}
+            onChange={e => handleCurriculumChange(e.target.value)}
+            className="w-full p-2 rounded-xl border border-stone-200 bg-white text-stone-800 text-xs font-semibold focus:ring-2 focus:ring-[#10246f] focus:outline-hidden"
+          >
+            {allCurricula.map(c => (
+              <option key={c.id} value={c.id}>
+                {c.displayName}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Step 2: Grade Level */}
+        <div className="space-y-1">
+          <label className="text-[11px] font-bold text-[#10246f] flex items-center justify-between">
+            <span>2. Grade Level</span>
+            <span className="text-[10px] text-stone-400 font-normal">Year / Age</span>
+          </label>
+          <select
+            value={grade}
+            onChange={e => handleGradeChange(e.target.value)}
+            className="w-full p-2 rounded-xl border border-stone-200 bg-white text-stone-800 text-xs font-semibold focus:ring-2 focus:ring-[#10246f] focus:outline-hidden"
+          >
+            {availableGrades.map(g => (
+              <option key={g} value={g}>
+                {g}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Step 3: Subject */}
+        <div className="space-y-1">
+          <label className="text-[11px] font-bold text-[#10246f] flex items-center justify-between">
+            <span>3. Subject Area</span>
+            <span className="text-[10px] text-stone-400 font-normal">Discipline</span>
+          </label>
+          <select
+            value={subject}
+            onChange={e => handleSubjectChange(e.target.value)}
+            className="w-full p-2 rounded-xl border border-stone-200 bg-white text-stone-800 text-xs font-semibold focus:ring-2 focus:ring-[#10246f] focus:outline-hidden"
+          >
+            {availableSubjects.map(s => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Step 4 & 5: Topic/Category and Specific Skill */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-stone-200/60">
+        {/* Step 4: Category / Topic */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <label className="text-[11px] font-bold text-[#10246f] flex items-center gap-1">
+              <span>4. Topic / Category</span>
+              <span className="text-[10px] text-stone-400 font-normal">({categoryOptions.length} available)</span>
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                setIsCustomCategory(!isCustomCategory);
+                if (!isCustomCategory) setCustomCategoryText('');
+              }}
+              className="text-[10px] font-bold text-[#f20b86] hover:underline"
+            >
+              {isCustomCategory ? '← Choose from List' : '+ Custom Topic'}
+            </button>
+          </div>
+
+          {isCustomCategory ? (
+            <input
+              type="text"
+              value={customCategoryText}
+              onChange={e => setCustomCategoryText(e.target.value)}
+              placeholder="e.g. Fractions & Decimals"
+              className="w-full p-2 rounded-xl border border-[#f20b86]/40 bg-pink-50/30 text-stone-900 text-xs font-semibold focus:ring-2 focus:ring-[#f20b86]"
+            />
+          ) : (
+            <select
+              value={selectedCategory?.id || ''}
+              onChange={e => {
+                setCategoryId(e.target.value);
+                setSkillId('');
+              }}
+              className="w-full p-2 rounded-xl border border-stone-200 bg-white text-stone-800 text-xs font-semibold focus:ring-2 focus:ring-[#10246f]"
+            >
+              {categoryOptions.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        {/* Step 5: Skill / Learning Objective */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <label className="text-[11px] font-bold text-[#10246f] flex items-center gap-1">
+              <span>5. Specific Skill</span>
+              <span className="text-[10px] text-stone-400 font-normal">({skillOptions.length} available)</span>
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                setIsCustomSkill(!isCustomSkill);
+                if (!isCustomSkill) setCustomSkillText('');
+              }}
+              className="text-[10px] font-bold text-[#f20b86] hover:underline"
+            >
+              {isCustomSkill ? '← Choose from List' : '+ Custom Skill'}
+            </button>
+          </div>
+
+          {isCustomSkill ? (
+            <input
+              type="text"
+              value={customSkillText}
+              onChange={e => setCustomSkillText(e.target.value)}
+              placeholder="e.g. Identifying 1/2 and 1/4 fractions"
+              className="w-full p-2 rounded-xl border border-[#f20b86]/40 bg-pink-50/30 text-stone-900 text-xs font-semibold focus:ring-2 focus:ring-[#f20b86]"
+            />
+          ) : (
+            <select
+              value={selectedSkill?.id || ''}
+              onChange={e => setSkillId(e.target.value)}
+              className="w-full p-2 rounded-xl border border-stone-200 bg-white text-stone-800 text-xs font-semibold focus:ring-2 focus:ring-[#10246f]"
+            >
+              {skillOptions.map(s => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 
   const clipartCategories = ['All', ...Array.from(new Set(CLIPART_LIBRARY.map(c => c.category)))];
   const filteredClipart = CLIPART_LIBRARY.filter(c => {

@@ -31,6 +31,7 @@ import {
   SUBSCRIPTION_PLANS
 } from './mockData';
 import { sounds } from './utils/audio';
+import { sanitizeQuestionBank } from './utils/idAndUsernameGenerator';
 
 // Common & Shared Layout
 import { Navbar, HomePage, RegionSelectorModal, ErrorBoundary } from './common';
@@ -55,9 +56,19 @@ import {
   syncQuestionToSupabase, 
   syncSchoolToSupabase, 
   syncClassToSupabase, 
-  syncActivityToSupabase 
+  syncActivityToSupabase,
+  fetchUsersFromSupabase,
+  fetchQuestionsFromSupabase,
+  fetchActivitiesFromSupabase,
+  fetchSchoolsFromSupabase,
+  fetchClassesFromSupabase,
+  fetchStudentProgressFromSupabase,
+  fetchCategoryMastersFromSupabase,
+  fetchSkillMastersFromSupabase,
+  isSupabaseConfigured
 } from './database';
 import { ensureActivityId, getActivityDatabaseView, loadActivityDatabase, saveActivityDatabase } from './data/activityData';
+import { loadQuestionBankMasters, saveQuestionBankMasters } from './data/questionBankMasterData';
 
 let logCounter = 0;
 function generateLogId(): string {
@@ -66,12 +77,37 @@ function generateLogId(): string {
 }
 
 export default function App() {
-  // Core Platform State
-  const [allUsers, setAllUsers] = useState<UserAccount[]>(INITIAL_USERS);
+  // Core Platform State - Persistent with localStorage
+  const [allUsers, setAllUsers] = useState<UserAccount[]>(() => {
+    try {
+      const saved = localStorage.getItem('pforpencil_all_users_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Merge initial system users so demo accounts always stay accessible
+          const existingIds = new Set(parsed.map((u: UserAccount) => u.id));
+          const missingDefaults = INITIAL_USERS.filter((u) => !existingIds.has(u.id));
+          return [...parsed, ...missingDefaults];
+        }
+      }
+    } catch {}
+    return INITIAL_USERS;
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('pforpencil_all_users_v1', JSON.stringify(allUsers));
+    } catch {}
+  }, [allUsers]);
+
   // Default to Emma Watson (Student STU00001) with active region preference (defaults to Australia / NSW)
   const [currentUser, setCurrentUser] = useState<UserAccount>(() => {
     const base = INITIAL_USERS[5];
     try {
+      const savedUser = localStorage.getItem('pforpencil_current_user_v1');
+      if (savedUser) {
+        const parsedUser = JSON.parse(savedUser);
+        if (parsedUser && parsedUser.id) return parsedUser;
+      }
       const saved = localStorage.getItem('pforpencil_active_region');
       if (saved) {
         const parsed = JSON.parse(saved);
@@ -89,33 +125,39 @@ export default function App() {
       state: 'NSW',
       curriculum: 'Australian Curriculum (ACARA)'
     };
-  }); 
+  });
+  useEffect(() => {
+    try {
+      if (currentUser) {
+        localStorage.setItem('pforpencil_current_user_v1', JSON.stringify(currentUser));
+      }
+    } catch {}
+  }, [currentUser]);
+
   const [questions, setQuestions] = useState<Question[]>(() => {
     try {
-      const saved = localStorage.getItem('pforpencil_question_bank_v1') || localStorage.getItem('funlearn_question_bank_v3');
+      // Clear legacy storage keys containing stale or incorrectly populated QIDs
+      localStorage.removeItem('pforpencil_question_bank_v1');
+      localStorage.removeItem('funlearn_question_bank_v3');
+      
+      const saved = localStorage.getItem('pforpencil_question_bank_v2');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const missing = INITIAL_QUESTIONS.filter(iq => !parsed.some((q: Question) => q.id === iq.id));
-          const migrated = parsed.map((q: Question) => {
-            const fresh = INITIAL_QUESTIONS.find(iq => iq.id === q.id);
-            if (fresh && (q.category === 'Preschool Wonder World' || q.skill === 'Early Discovery & Play Quest')) {
-              return fresh;
-            }
-            return q;
-          });
-          const merged = missing.length > 0 ? [...migrated, ...missing] : migrated;
-          try { localStorage.setItem('pforpencil_question_bank_v1', JSON.stringify(merged)); } catch {}
-          return merged;
+          const sanitized = sanitizeQuestionBank(parsed).questions;
+          try { localStorage.setItem('pforpencil_question_bank_v2', JSON.stringify(sanitized)); } catch {}
+          return sanitized;
         }
       }
-      return INITIAL_QUESTIONS;
+      const initialSanitized = sanitizeQuestionBank(INITIAL_QUESTIONS).questions;
+      try { localStorage.setItem('pforpencil_question_bank_v2', JSON.stringify(initialSanitized)); } catch {}
+      return initialSanitized;
     } catch {
-      return INITIAL_QUESTIONS;
+      return sanitizeQuestionBank(INITIAL_QUESTIONS).questions;
     }
   });
   useEffect(() => {
-    try { localStorage.setItem('pforpencil_question_bank_v1', JSON.stringify(questions)); } catch {}
+    try { localStorage.setItem('pforpencil_question_bank_v2', JSON.stringify(questions)); } catch {}
   }, [questions]);
   // Interactive Activities use their own normalized database store.
   // The Activity[] state is the hydrated UI view; Question Bank storage remains separate.
@@ -123,16 +165,164 @@ export default function App() {
   useEffect(() => {
     saveActivityDatabase(activities);
   }, [activities]);
-  const [studentProgressMap, setStudentProgressMap] = useState<Record<string, StudentProgress>>(INITIAL_STUDENT_PROGRESS);
-  const [classes, setClasses] = useState<ClassRoom[]>(INITIAL_CLASSES);
-  const [assignments, setAssignments] = useState<ClassAssignment[]>(INITIAL_ASSIGNMENTS);
-  const [schools, setSchools] = useState<SchoolOrganization[]>(INITIAL_SCHOOLS);
+
+  const [studentProgressMap, setStudentProgressMap] = useState<Record<string, StudentProgress>>(() => {
+    try {
+      const saved = localStorage.getItem('pforpencil_student_progress_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          return { ...INITIAL_STUDENT_PROGRESS, ...parsed };
+        }
+      }
+    } catch {}
+    return INITIAL_STUDENT_PROGRESS;
+  });
+  useEffect(() => {
+    try { localStorage.setItem('pforpencil_student_progress_v1', JSON.stringify(studentProgressMap)); } catch {}
+  }, [studentProgressMap]);
+
+  const [classes, setClasses] = useState<ClassRoom[]>(() => {
+    try {
+      const saved = localStorage.getItem('pforpencil_classes_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_CLASSES;
+  });
+  useEffect(() => {
+    try { localStorage.setItem('pforpencil_classes_v1', JSON.stringify(classes)); } catch {}
+  }, [classes]);
+
+  const [assignments, setAssignments] = useState<ClassAssignment[]>(() => {
+    try {
+      const saved = localStorage.getItem('pforpencil_assignments_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_ASSIGNMENTS;
+  });
+  useEffect(() => {
+    try { localStorage.setItem('pforpencil_assignments_v1', JSON.stringify(assignments)); } catch {}
+  }, [assignments]);
+
+  const [schools, setSchools] = useState<SchoolOrganization[]>(() => {
+    try {
+      const saved = localStorage.getItem('pforpencil_schools_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const existingIds = new Set(parsed.map((s: SchoolOrganization) => s.id));
+          const missing = INITIAL_SCHOOLS.filter((s) => !existingIds.has(s.id));
+          return [...parsed, ...missing];
+        }
+      }
+    } catch {}
+    return INITIAL_SCHOOLS;
+  });
+  useEffect(() => {
+    try { localStorage.setItem('pforpencil_schools_v1', JSON.stringify(schools)); } catch {}
+  }, [schools]);
   const [subscriptions, setSubscriptions] = useState<SubscriptionRecord[]>(INITIAL_SUBSCRIPTION_RECORDS);
   const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>(SUBSCRIPTION_PLANS);
   const [vouchers, setVouchers] = useState<Voucher[]>(INITIAL_VOUCHERS);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(INITIAL_AUDIT_LOGS);
   const [grades, setGrades] = useState<CurriculumGrade[]>(INITIAL_GRADES);
   const [subjects, setSubjects] = useState<CurriculumSubject[]>(INITIAL_SUBJECTS);
+
+  // -------------------------------------------------------------
+  // Live Supabase Database Hydration & Synchronization
+  // Pulls real tables (profiles, questions, activities, schools, classes, student_progress, category_masters, skill_masters)
+  // so the entire project syncs with live database storage.
+  // -------------------------------------------------------------
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+    let isMounted = true;
+
+    async function hydrateAllFromSupabase() {
+      try {
+        // 1. User Profiles
+        const usersRes = await fetchUsersFromSupabase();
+        if (usersRes.success && Array.isArray(usersRes.users) && usersRes.users.length > 0 && isMounted) {
+          setAllUsers((prev) => {
+            const map = new Map<string, UserAccount>();
+            INITIAL_USERS.forEach((u) => map.set(u.id, u));
+            prev.forEach((u) => map.set(u.id, u));
+            usersRes.users?.forEach((u) => map.set(u.id, u));
+            return Array.from(map.values());
+          });
+        }
+
+        // 2. Questions (Master Question Bank)
+        const questionsRes = await fetchQuestionsFromSupabase();
+        if (questionsRes.success && Array.isArray(questionsRes.questions) && questionsRes.questions.length > 0 && isMounted) {
+          const sanitized = sanitizeQuestionBank(questionsRes.questions).questions;
+          setQuestions(sanitized);
+        }
+
+        // 3. Interactive Activities
+        const actRes = await fetchActivitiesFromSupabase();
+        if (actRes.success && Array.isArray(actRes.activities) && actRes.activities.length > 0 && isMounted) {
+          setActivities(actRes.activities);
+        }
+
+        // 4. Schools
+        const schoolsRes = await fetchSchoolsFromSupabase();
+        if (schoolsRes.success && Array.isArray(schoolsRes.schools) && schoolsRes.schools.length > 0 && isMounted) {
+          setSchools((prev) => {
+            const map = new Map<string, SchoolOrganization>();
+            INITIAL_SCHOOLS.forEach((s) => map.set(s.id, s));
+            prev.forEach((s) => map.set(s.id, s));
+            schoolsRes.schools?.forEach((s) => map.set(s.id, s));
+            return Array.from(map.values());
+          });
+        }
+
+        // 5. Classes
+        const classesRes = await fetchClassesFromSupabase();
+        if (classesRes.success && Array.isArray(classesRes.classes) && classesRes.classes.length > 0 && isMounted) {
+          setClasses((prev) => {
+            const map = new Map<string, ClassRoom>();
+            INITIAL_CLASSES.forEach((c) => map.set(c.id, c));
+            prev.forEach((c) => map.set(c.id, c));
+            classesRes.classes?.forEach((c) => map.set(c.id, c));
+            return Array.from(map.values());
+          });
+        }
+
+        // 6. Student Progress
+        const progressRes = await fetchStudentProgressFromSupabase();
+        if (progressRes.success && progressRes.progressMap && Object.keys(progressRes.progressMap).length > 0 && isMounted) {
+          setStudentProgressMap((prev) => ({
+            ...prev,
+            ...progressRes.progressMap
+          }));
+        }
+
+        // 7. Categories and Skills Masters
+        const catRes = await fetchCategoryMastersFromSupabase();
+        const skillRes = await fetchSkillMastersFromSupabase();
+        if (isMounted && ((catRes.success && catRes.categories && catRes.categories.length > 0) || (skillRes.success && skillRes.skills && skillRes.skills.length > 0))) {
+          const currentMasters = loadQuestionBankMasters(grades, subjects);
+          const mergedCategories = catRes.categories && catRes.categories.length > 0 ? catRes.categories : currentMasters.categories;
+          const mergedSkills = skillRes.skills && skillRes.skills.length > 0 ? skillRes.skills : currentMasters.skills;
+          saveQuestionBankMasters({
+            categories: mergedCategories,
+            skills: mergedSkills
+          });
+        }
+      } catch (syncErr) {
+        console.warn('Live Supabase hydration notice:', syncErr);
+      }
+    }
+
+    hydrateAllFromSupabase();
+    return () => { isMounted = false; };
+  }, []);
 
   // Navigation & Modals
   const [currentView, setCurrentView] = useState<string>('home');
@@ -723,7 +913,10 @@ export default function App() {
       );
     }
 
-    // 5. Audit Log
+    // 5. Sync to Supabase live database
+    syncUserToSupabase(updatedUser);
+
+    // 6. Audit Log
     const newLog: AuditLog = {
       id: generateLogId(),
       timestamp: new Date().toISOString().replace('T', ' ').slice(0, 19),
@@ -740,9 +933,20 @@ export default function App() {
 
   // Update User Status (Admin)
   const handleUpdateUserStatus = (userId: string, status: 'active' | 'pending' | 'suspended') => {
+    let updatedObj: UserAccount | undefined;
     setAllUsers((prev) =>
-      prev.map((u) => (u.id === userId ? { ...u, status } : u))
+      prev.map((u) => {
+        if (u.id === userId) {
+          updatedObj = { ...u, status };
+          return updatedObj;
+        }
+        return u;
+      })
     );
+
+    if (updatedObj) {
+      syncUserToSupabase(updatedObj);
+    }
 
     const user = allUsers.find((u) => u.id === userId);
     const newLog: AuditLog = {

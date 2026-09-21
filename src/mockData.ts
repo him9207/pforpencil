@@ -23,6 +23,7 @@ import {
   COUNTRY_CURRICULUM_MAP
 } from './data/curriculumData';
 import { PRESCHOOL_QUESTIONS, PRESCHOOL_ACTIVITIES } from './data/preschoolMasterQuestions';
+import { sanitizeQuestionBank } from './utils/idAndUsernameGenerator';
 
 export { INITIAL_FRAMEWORKS, COUNTRIES, COUNTRY_STATE_MAP, COUNTRY_CURRICULUM_MAP };
 
@@ -216,7 +217,10 @@ export const INITIAL_USERS: UserAccount[] = [
   }
 ];
 
-export const INITIAL_QUESTIONS: Question[] = [...COMPREHENSIVE_QUESTIONS, ...PRESCHOOL_QUESTIONS];
+const rawInitialQuestions = [...COMPREHENSIVE_QUESTIONS, ...PRESCHOOL_QUESTIONS];
+const sanitizedBankResult = sanitizeQuestionBank(rawInitialQuestions);
+export const INITIAL_QUESTIONS: Question[] = sanitizedBankResult.questions;
+export const QUESTION_ID_MAP: Record<string, string> = sanitizedBankResult.idMap;
 
 export const INITIAL_ACTIVITIES: Activity[] = [...PRESCHOOL_ACTIVITIES, ...COMPREHENSIVE_ACTIVITIES];
 

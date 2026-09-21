@@ -159,6 +159,37 @@ CREATE TABLE IF NOT EXISTS curriculum_frameworks (
 );
 
 -- -------------------------------------------------------------
+-- 4b. Category Masters (Hierarchical Taxonomies)
+-- -------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS category_masters (
+  id VARCHAR(64) PRIMARY KEY,
+  code VARCHAR(64) NOT NULL,
+  curriculum_id VARCHAR(32) NOT NULL,
+  subject_id VARCHAR(32) NOT NULL,
+  grade_id VARCHAR(32),
+  name TEXT NOT NULL,
+  description TEXT,
+  active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- -------------------------------------------------------------
+-- 4c. Skill Masters (Learning Skills & Objectives)
+-- -------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS skill_masters (
+  id VARCHAR(64) PRIMARY KEY,
+  code VARCHAR(64) NOT NULL,
+  category_id VARCHAR(64) NOT NULL,
+  grade_id VARCHAR(32) NOT NULL,
+  name TEXT NOT NULL,
+  curriculum_reference TEXT,
+  learning_objective TEXT,
+  description TEXT,
+  active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- -------------------------------------------------------------
 -- 5. Curriculum Questions (Question Bank)
 -- -------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS questions (
@@ -305,6 +336,8 @@ ALTER TABLE IF EXISTS profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS classes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS curriculum_frameworks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS category_masters ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS skill_masters ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS activities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS activity_steps ENABLE ROW LEVEL SECURITY;
@@ -327,6 +360,12 @@ CREATE POLICY "anon_all_classes" ON classes FOR ALL USING (true) WITH CHECK (tru
 
 DROP POLICY IF EXISTS "anon_all_curriculum" ON curriculum_frameworks;
 CREATE POLICY "anon_all_curriculum" ON curriculum_frameworks FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_all_category_masters" ON category_masters;
+CREATE POLICY "anon_all_category_masters" ON category_masters FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_all_skill_masters" ON skill_masters;
+CREATE POLICY "anon_all_skill_masters" ON skill_masters FOR ALL USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "anon_all_questions" ON questions;
 CREATE POLICY "anon_all_questions" ON questions FOR ALL USING (true) WITH CHECK (true);

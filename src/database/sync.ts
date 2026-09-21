@@ -1,5 +1,6 @@
 import { supabaseRestFetch, isSupabaseConfigured, getSupabaseCredentials } from './client';
 import { UserAccount, Question, Activity, StudentProgress, SchoolOrganization, ClassRoom, CurriculumFramework } from '../types';
+import { CategoryMasterRecord, SkillMasterRecord, loadQuestionBankMasters } from '../data/questionBankMasterData';
 
 /**
  * Database Sync & Mutation Service
@@ -256,6 +257,79 @@ export async function syncUserToSupabase(user: UserAccount): Promise<SyncResult>
 }
 
 /**
+ * 3a. Fetch all Users / Profiles directly from Supabase
+ */
+export async function fetchUsersFromSupabase(): Promise<{
+  success: boolean;
+  users?: UserAccount[];
+  error?: string;
+}> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase credentials not configured' };
+  }
+
+  try {
+    let rows: any[] = [];
+    try {
+      const res = await supabaseRestFetch('profiles', {
+        method: 'GET',
+        params: { select: '*', limit: '1000' }
+      });
+      if (Array.isArray(res) && res.length > 0) {
+        rows = res;
+      }
+    } catch (profileErr) {
+      console.warn('Could not fetch from profiles table, trying users:', profileErr);
+    }
+
+    if (rows.length === 0) {
+      try {
+        const res = await supabaseRestFetch('users', {
+          method: 'GET',
+          params: { select: '*', limit: '1000' }
+        });
+        if (Array.isArray(res) && res.length > 0) {
+          rows = res;
+        }
+      } catch (userErr) {
+        console.warn('Could not fetch from users table:', userErr);
+      }
+    }
+
+    if (rows.length === 0) {
+      return { success: true, users: [] };
+    }
+
+    const mappedUsers: UserAccount[] = rows.map((r) => ({
+      id: r.id,
+      role: r.role || 'student',
+      name: r.name || 'User',
+      email: r.email || undefined,
+      username: r.username || undefined,
+      pin: r.pin_hash || r.pin || undefined,
+      password: r.password || undefined,
+      avatar: r.avatar || (r.role === 'school' ? '🏫' : r.role === 'teacher' ? '👩‍🏫' : r.role === 'parent' ? '👨‍👧‍👦' : '🦊'),
+      country: r.country || undefined,
+      state: r.state || undefined,
+      curriculum: r.curriculum || undefined,
+      organizationId: r.school_id || r.organization_id || (r.role === 'school' ? r.id : undefined),
+      schoolName: r.school_name || undefined,
+      schoolCode: r.school_code || undefined,
+      parentId: r.parent_id || undefined,
+      parentName: r.parent_name || undefined,
+      studentIds: r.student_ids || undefined,
+      grade: r.grade || undefined,
+      enrolledAt: r.created_at ? r.created_at.split('T')[0] : '2026-01-01',
+      status: (r.status === 'active' || r.status === 'pending' || r.status === 'suspended') ? r.status : 'active'
+    }));
+
+    return { success: true, users: mappedUsers };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to fetch users from Supabase' };
+  }
+}
+
+/**
  * 3b. Sync a Question to Supabase
  */
 export async function syncQuestionToSupabase(q: Question): Promise<SyncResult> {
@@ -397,6 +471,491 @@ export async function syncActivityToSupabase(a: Activity): Promise<SyncResult> {
   } catch (err: any) {
     console.warn('Sync activity error:', err);
     return { success: false, error: err?.message };
+  }
+}
+
+/**
+ * 3f. Sync Category Master to Supabase
+ */
+export async function syncCategoryMasterToSupabase(cat: CategoryMasterRecord): Promise<SyncResult> {
+  if (!isSupabaseConfigured()) return { success: false, message: 'Supabase not configured' };
+  try {
+    const result = await supabaseRestFetch('category_masters', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: {
+        id: cat.id,
+        code: cat.code,
+        curriculum_id: cat.curriculumId,
+        subject_id: cat.subjectId,
+        grade_id: cat.gradeId || null,
+        name: cat.name,
+        description: cat.description || null,
+        active: cat.active !== false
+      }
+    });
+    return { success: true, data: result };
+  } catch (err: any) {
+    console.warn('Sync category master error:', err);
+    return { success: false, error: err?.message };
+  }
+}
+
+/**
+ * 3g. Sync Skill Master to Supabase
+ */
+export async function syncSkillMasterToSupabase(skl: SkillMasterRecord): Promise<SyncResult> {
+  if (!isSupabaseConfigured()) return { success: false, message: 'Supabase not configured' };
+  try {
+    const result = await supabaseRestFetch('skill_masters', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: {
+        id: skl.id,
+        code: skl.code,
+        category_id: skl.categoryId,
+        grade_id: skl.gradeId,
+        name: skl.name,
+        curriculum_reference: skl.curriculumReference || null,
+        learning_objective: skl.learningObjective || null,
+        description: skl.description || null,
+        active: skl.active !== false
+      }
+    });
+    return { success: true, data: result };
+  } catch (err: any) {
+    console.warn('Sync skill master error:', err);
+    return { success: false, error: err?.message };
+  }
+}
+
+/**
+ * 3h. Bulk Sync Category Masters to Supabase
+ */
+export async function syncCategoryMastersBulkToSupabase(categories: CategoryMasterRecord[]): Promise<SyncResult> {
+  if (!isSupabaseConfigured()) return { success: false, message: 'Supabase not configured' };
+  try {
+    const payload = categories.map(cat => ({
+      id: cat.id,
+      code: cat.code,
+      curriculum_id: cat.curriculumId,
+      subject_id: cat.subjectId,
+      grade_id: cat.gradeId || null,
+      name: cat.name,
+      description: cat.description || null,
+      active: cat.active !== false
+    }));
+
+    // Post in batches of 100
+    for (let i = 0; i < payload.length; i += 100) {
+      const chunk = payload.slice(i, i + 100);
+      await supabaseRestFetch('category_masters', {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+        body: chunk
+      });
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message };
+  }
+}
+
+/**
+ * 3i. Bulk Sync Skill Masters to Supabase
+ */
+export async function syncSkillMastersBulkToSupabase(skills: SkillMasterRecord[]): Promise<SyncResult> {
+  if (!isSupabaseConfigured()) return { success: false, message: 'Supabase not configured' };
+  try {
+    const payload = skills.map(skl => ({
+      id: skl.id,
+      code: skl.code,
+      category_id: skl.categoryId,
+      grade_id: skl.gradeId,
+      name: skl.name,
+      curriculum_reference: skl.curriculumReference || null,
+      learning_objective: skl.learningObjective || null,
+      description: skl.description || null,
+      active: skl.active !== false
+    }));
+
+    for (let i = 0; i < payload.length; i += 100) {
+      const chunk = payload.slice(i, i + 100);
+      await supabaseRestFetch('skill_masters', {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+        body: chunk
+      });
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message };
+  }
+}
+
+/**
+ * 3j. Bulk Sync Questions to Supabase
+ */
+export async function syncQuestionsBulkToSupabase(questions: Question[]): Promise<SyncResult> {
+  if (!isSupabaseConfigured()) return { success: false, message: 'Supabase not configured' };
+  try {
+    const payload = questions.map(q => ({
+      id: q.id,
+      grade: q.grade,
+      subject: q.subject,
+      category: q.category,
+      skill: q.skill || q.category,
+      question_type: q.type || 'multiple_choice',
+      prompt: q.prompt,
+      options: q.options || [],
+      correct_index: q.correctIndex || 0,
+      explanation: q.explanation || null,
+      hint: q.hint || null,
+      points: q.points || 10,
+      difficulty: q.difficulty || 'Medium',
+      country: q.country || 'Global',
+      state: q.state || 'All States',
+      curriculum: q.curriculum || null,
+      media_url: q.mediaUrl || null,
+      visual_clipart: q.visualClipart || null,
+      school_id: q.schoolId || null,
+      status: q.status || 'approved'
+    }));
+
+    for (let i = 0; i < payload.length; i += 100) {
+      const chunk = payload.slice(i, i + 100);
+      await supabaseRestFetch('questions', {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+        body: chunk
+      });
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message };
+  }
+}
+
+/**
+ * 3k. Fetch all Questions directly from Supabase
+ */
+export async function fetchQuestionsFromSupabase(): Promise<{
+  success: boolean;
+  questions?: Question[];
+  error?: string;
+}> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase credentials not configured' };
+  }
+
+  try {
+    const res = await supabaseRestFetch('questions', {
+      method: 'GET',
+      params: { select: '*', limit: '2000' }
+    });
+
+    if (!Array.isArray(res)) {
+      return { success: true, questions: [] };
+    }
+
+    const mappedQuestions: Question[] = res.map((r: any) => ({
+      id: r.id,
+      grade: r.grade,
+      subject: r.subject,
+      category: r.category,
+      skill: r.skill || r.category,
+      type: r.question_type || 'multiple_choice',
+      prompt: r.prompt,
+      options: Array.isArray(r.options) ? r.options : typeof r.options === 'string' ? JSON.parse(r.options) : [],
+      correctIndex: typeof r.correct_index === 'number' ? r.correct_index : 0,
+      explanation: r.explanation || undefined,
+      hint: r.hint || undefined,
+      points: typeof r.points === 'number' ? r.points : 10,
+      difficulty: r.difficulty || 'Medium',
+      country: r.country || 'Global',
+      state: r.state || 'All States',
+      curriculum: r.curriculum || undefined,
+      mediaUrl: r.media_url || undefined,
+      visualClipart: r.visual_clipart || undefined,
+      schoolId: r.school_id || undefined,
+      status: r.status || 'approved'
+    }));
+
+    return { success: true, questions: mappedQuestions };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to fetch questions' };
+  }
+}
+
+/**
+ * 3l. Fetch Category Masters directly from Supabase
+ */
+export async function fetchCategoryMastersFromSupabase(): Promise<{
+  success: boolean;
+  categories?: CategoryMasterRecord[];
+  error?: string;
+}> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase credentials not configured' };
+  }
+
+  try {
+    const res = await supabaseRestFetch('category_masters', {
+      method: 'GET',
+      params: { select: '*', limit: '1000' }
+    });
+
+    if (!Array.isArray(res) || res.length === 0) {
+      return { success: true, categories: [] };
+    }
+
+    const mapped: CategoryMasterRecord[] = res.map((r: any) => ({
+      id: r.id,
+      code: r.code,
+      curriculumId: r.curriculum_id,
+      subjectId: r.subject_id,
+      gradeId: r.grade_id || undefined,
+      name: r.name,
+      description: r.description || '',
+      active: r.active !== false
+    }));
+
+    return { success: true, categories: mapped };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to fetch categories' };
+  }
+}
+
+/**
+ * 3m. Fetch Skill Masters directly from Supabase
+ */
+export async function fetchSkillMastersFromSupabase(): Promise<{
+  success: boolean;
+  skills?: SkillMasterRecord[];
+  error?: string;
+}> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase credentials not configured' };
+  }
+
+  try {
+    const res = await supabaseRestFetch('skill_masters', {
+      method: 'GET',
+      params: { select: '*', limit: '2000' }
+    });
+
+    if (!Array.isArray(res) || res.length === 0) {
+      return { success: true, skills: [] };
+    }
+
+    const mapped: SkillMasterRecord[] = res.map((r: any) => ({
+      id: r.id,
+      code: r.code,
+      categoryId: r.category_id,
+      gradeId: r.grade_id,
+      name: r.name,
+      curriculumReference: r.curriculum_reference || undefined,
+      learningObjective: r.learning_objective || undefined,
+      description: r.description || '',
+      active: r.active !== false
+    }));
+
+    return { success: true, skills: mapped };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to fetch skills' };
+  }
+}
+
+/**
+ * 3n. Fetch Activities directly from Supabase
+ */
+export async function fetchActivitiesFromSupabase(): Promise<{
+  success: boolean;
+  activities?: Activity[];
+  error?: string;
+}> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase credentials not configured' };
+  }
+
+  try {
+    const res = await supabaseRestFetch('activities', {
+      method: 'GET',
+      params: { select: '*', limit: '500' }
+    });
+
+    if (!Array.isArray(res) || res.length === 0) {
+      return { success: true, activities: [] };
+    }
+
+    const mapped: Activity[] = res.map((r: any) => ({
+      id: r.id,
+      title: r.title,
+      type: r.type,
+      format: r.format || 'question_run',
+      subject: r.subject,
+      grade: r.grade,
+      grades: Array.isArray(r.grades) ? r.grades : (r.grade ? [r.grade] : []),
+      description: r.description || '',
+      instructions: r.instructions || '',
+      learningTags: Array.isArray(r.learning_tags) ? r.learning_tags : [],
+      status: r.status || 'Published',
+      difficulty: r.difficulty || 'Easy',
+      rewardXP: typeof r.reward_xp === 'number' ? r.reward_xp : 50,
+      rewardCoins: typeof r.reward_coins === 'number' ? r.reward_coins : 20,
+      durationMinutes: typeof r.duration_minutes === 'number' ? r.duration_minutes : 10,
+      timerEnabled: r.timer_enabled !== false,
+      scoreEnabled: r.score_enabled !== false,
+      starsEnabled: r.stars_enabled !== false,
+      soundEnabled: r.sound_enabled !== false,
+      animationEnabled: r.animation_enabled !== false,
+      unlocked: r.unlocked !== false,
+      recurrence: r.recurrence || 'permanent',
+      questionIds: Array.isArray(r.question_ids) ? r.question_ids : [],
+      country: r.country || 'Global',
+      state: r.state || 'All States',
+      curriculum: r.curriculum || undefined
+    }));
+
+    return { success: true, activities: mapped };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to fetch activities' };
+  }
+}
+
+/**
+ * 3o. Fetch Schools directly from Supabase
+ */
+export async function fetchSchoolsFromSupabase(): Promise<{
+  success: boolean;
+  schools?: SchoolOrganization[];
+  error?: string;
+}> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase credentials not configured' };
+  }
+
+  try {
+    const res = await supabaseRestFetch('schools', {
+      method: 'GET',
+      params: { select: '*', limit: '100' }
+    });
+
+    if (!Array.isArray(res) || res.length === 0) {
+      return { success: true, schools: [] };
+    }
+
+    const mapped: SchoolOrganization[] = res.map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      schoolCode: r.school_code,
+      adminEmail: r.admin_email,
+      country: r.country,
+      state: r.state,
+      curriculum: r.curriculum,
+      totalSeats: r.total_seats,
+      allocatedSeats: r.allocated_seats,
+      activeTeachers: r.active_teachers || 5,
+      activeClasses: r.active_classes || 2,
+      plan: r.plan,
+      expiresAt: r.expires_at || '2027-12-31',
+      status: r.status
+    }));
+
+    return { success: true, schools: mapped };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to fetch schools' };
+  }
+}
+
+/**
+ * 3p. Fetch Classes directly from Supabase
+ */
+export async function fetchClassesFromSupabase(): Promise<{
+  success: boolean;
+  classes?: ClassRoom[];
+  error?: string;
+}> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase credentials not configured' };
+  }
+
+  try {
+    const res = await supabaseRestFetch('classes', {
+      method: 'GET',
+      params: { select: '*', limit: '200' }
+    });
+
+    if (!Array.isArray(res) || res.length === 0) {
+      return { success: true, classes: [] };
+    }
+
+    const mapped: ClassRoom[] = res.map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      grade: r.grade,
+      teacherId: r.teacher_id,
+      teacherName: r.teacher_name,
+      schoolId: r.school_id,
+      studentIds: Array.isArray(r.student_ids) ? r.student_ids : [],
+      activeAssignments: Array.isArray(r.active_assignments) ? r.active_assignments : [],
+      averageScore: r.average_score,
+      status: r.status
+    }));
+
+    return { success: true, classes: mapped };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to fetch classes' };
+  }
+}
+
+/**
+ * 3q. Fetch Student Progress directly from Supabase
+ */
+export async function fetchStudentProgressFromSupabase(): Promise<{
+  success: boolean;
+  progressMap?: Record<string, StudentProgress>;
+  error?: string;
+}> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase credentials not configured' };
+  }
+
+  try {
+    const res = await supabaseRestFetch('student_progress', {
+      method: 'GET',
+      params: { select: '*', limit: '500' }
+    });
+
+    if (!Array.isArray(res) || res.length === 0) {
+      return { success: true, progressMap: {} };
+    }
+
+    const map: Record<string, StudentProgress> = {};
+    res.forEach((r: any) => {
+      map[r.student_id] = {
+        studentId: r.student_id,
+        studentUsername: r.student_username || r.student_id,
+        studentName: r.student_name || r.student_id,
+        avatar: r.avatar || '🎒',
+        grade: r.grade || 'Grade 1',
+        schoolOrParent: r.school_or_parent || 'parent',
+        xp: r.xp || 0,
+        coins: r.coins || 0,
+        level: r.level || 1,
+        streakDays: r.current_streak_days || r.streak || 0,
+        dailyQuizCompletedToday: Boolean(r.daily_quiz_completed_today),
+        totalQuizzesTaken: r.total_quizzes_taken || r.completed_activities || 0,
+        averageScore: r.average_score || 80,
+        subjectMastery: r.subject_mastery || r.subject_breakdown || {},
+        badges: Array.isArray(r.unlocked_badges) ? r.unlocked_badges : (Array.isArray(r.badges) ? r.badges : []),
+        recentActivities: Array.isArray(r.recent_activities) ? r.recent_activities : []
+      };
+    });
+
+    return { success: true, progressMap: map };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to fetch student progress' };
   }
 }
 
@@ -668,6 +1227,41 @@ export async function seedInitialDataToSupabase(
     }));
     const classReport = await seedTableRows('classes', 'Classrooms', classRows);
     tableReports.push(classReport);
+  }
+
+  // 4b. Seed Category & Skill Masters (Taxonomy Master Tables)
+  try {
+    const masters = loadQuestionBankMasters();
+    if (masters.categories && masters.categories.length > 0) {
+      const catRows = masters.categories.map((c) => ({
+        id: c.id,
+        category_code: c.code,
+        name: c.name,
+        subject: c.subjectId,
+        grade: c.gradeId || 'Universal',
+        description: c.description || null,
+        active: c.active !== false
+      }));
+      const catReport = await seedTableRows('category_masters', 'Category Masters (Taxonomy)', catRows, 50);
+      tableReports.push(catReport);
+    }
+
+    if (masters.skills && masters.skills.length > 0) {
+      const skillRows = masters.skills.map((s) => ({
+        id: s.id,
+        skill_code: s.code,
+        category_id: s.categoryId || null,
+        name: s.name,
+        subject: (s as any).subject || (s as any).subjectId || 'Universal',
+        grade: s.gradeId || 'Universal',
+        description: s.description || null,
+        active: s.active !== false
+      }));
+      const skillReport = await seedTableRows('skill_masters', 'Skill Masters (Taxonomy)', skillRows, 50);
+      tableReports.push(skillReport);
+    }
+  } catch (taxErr) {
+    console.warn('[Supabase Seed] Skipped master categories/skills seeding:', taxErr);
   }
 
   // 5. Seed Questions (Question Bank)

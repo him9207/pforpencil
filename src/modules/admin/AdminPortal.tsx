@@ -634,7 +634,7 @@ export default function AdminPortal({
       return;
     }
 
-    const nextQId = getNextQuestionId(formGrade, questions);
+    const nextQId = getNextQuestionId(formGrade, questions, 0, formSubject);
     const newQuestion: Question = {
       id: nextQId,
       subject: formSubject,

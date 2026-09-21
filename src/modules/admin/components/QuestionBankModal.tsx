@@ -134,9 +134,9 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
       enabled:true, template:visualTemplate, animation:visualAnimation, interaction:visualInteraction,
       visualInstructions:visualInstructions.trim()||undefined, imageUrl:visualImageUrl.trim()||undefined,
       audioUrl:visualAudioUrl.trim()||undefined, background:visualBackground, autoPlay:visualAutoPlay,
-      objects: visualObjects.trim() ? visualObjects.split('|').map((item,index)=>({id:`obj-${index+1}`,label:item.trim(),emoji:item.trim()})).filter(x=>x.label) : undefined
+      objects: visualObjects.trim() ? visualObjects.split('|').map((item,index)=>({id:`obj-${index+1}`,label:item.trim(),emoji:item.trim()})).filter(x=>x.label) : (visualClipart.trim() ? visualClipart.trim().split(/\s+/).map((item,index)=>({id:`obj-${index+1}`,label:item.trim(),emoji:item.trim()})).filter(x=>x.label) : undefined)
     } : undefined);
-    return {id,subject,grade,category:names.category,skill:names.skill,prompt:p,options:opts,correctIndex:correct,explanation:extra.explanation||explanation||'Review the answer and try again.',hint:extra.hint||hint||undefined,points:extra.points||points,difficulty:diff,type,country:names.country,state:names.region,curriculum:names.curriculum,countryId,regionId,curriculumId,subjectId:selectedSubject?.id,gradeId:selectedGrade?.id,categoryId:selectedCategory?.id,categoryCode:selectedCategory?.code,skillId:selectedSkill?.id,skillCode:selectedSkill?.code,curriculumReference:selectedSkill?.curriculumReference,status:'Draft',visualClipart:extra.visualClipart||visualClipart||undefined,mediaUrl:extra.mediaUrl||mediaUrl||undefined,openBoxAnswer:extra.openBoxAnswer,visualConfig};
+    return {id,subject,grade,category:names.category,skill:names.skill,prompt:p,options:opts,correctIndex:correct,explanation:extra.explanation||explanation||'Review the answer and try again.',hint:extra.hint||hint||undefined,points:extra.points||points,difficulty:diff,type,country:names.country,state:names.region,curriculum:names.curriculum,countryId,regionId,curriculumId,subjectId:selectedSubject?.id,gradeId:selectedGrade?.id,categoryId:selectedCategory?.id,categoryCode:selectedCategory?.code,skillId:selectedSkill?.id,skillCode:selectedSkill?.code,curriculumReference:selectedSkill?.curriculumReference,status:'Draft',visualClipart:visualEnabled ? (extra.visualClipart || visualClipart.trim() || undefined) : undefined,mediaUrl:extra.mediaUrl||mediaUrl||undefined,openBoxAnswer:extra.openBoxAnswer,visualConfig};
   };
 
   const saveSingle=(e:React.FormEvent)=>{
@@ -578,103 +578,136 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
         </div>
       )}
 
-      {/* Visual / Animated Layer */}
-      <div className="p-4 rounded-2xl border border-stone-200 bg-stone-50 space-y-3">
+      {/* UNIFIED VISUAL & ANIMATED LAYER (Single Section) */}
+      <div className={`p-4 rounded-2xl border transition ${
+        visualEnabled
+          ? 'bg-amber-50/40 border-amber-300 space-y-3'
+          : 'bg-stone-50 border-stone-200 space-y-2'
+      }`}>
         <div className="flex items-center justify-between">
           <div>
-            <div className="font-black text-stone-900 text-xs">Visual / Animated Layer</div>
-            <div className="text-[10px] text-stone-600 mt-0.5">Optional interactive layer for counting, matching, or animations.</div>
-          </div>
-          <label className="flex items-center gap-2 font-bold text-xs">
-            <input type="checkbox" checked={visualEnabled} onChange={e=>setVisualEnabled(e.target.checked)}/> Enable visuals
-          </label>
-        </div>
-
-        {visualEnabled&&<>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <label className="text-xs">Template
-              <select value={visualTemplate} onChange={e=>setVisualTemplate(e.target.value as VisualQuestionTemplate)} className="w-full mt-1 p-2 rounded-xl border bg-white text-xs">
-                <option value="picture_counting">Picture Counting</option>
-                <option value="picture_choice">Picture Choice</option>
-                <option value="drag_drop">Drag & Drop</option>
-                <option value="matching">Matching</option>
-                <option value="sorting">Sorting</option>
-                <option value="ordering">Ordering</option>
-                <option value="pattern">Pattern</option>
-                <option value="number_line">Number Line</option>
-                <option value="interactive_story">Interactive Story</option>
-              </select>
-            </label>
-            <label className="text-xs">Animation
-              <select value={visualAnimation} onChange={e=>setVisualAnimation(e.target.value as VisualAnimation)} className="w-full mt-1 p-2 rounded-xl border bg-white text-xs">
-                <option>none</option><option>bounce</option><option>float</option><option>pulse</option><option>wiggle</option><option>pop</option><option>spin</option>
-              </select>
-            </label>
-            <label className="text-xs">Interaction
-              <select value={visualInteraction} onChange={e=>setVisualInteraction(e.target.value as VisualQuestionConfig['interaction'])} className="w-full mt-1 p-2 rounded-xl border bg-white text-xs">
-                <option value="tap">Tap</option><option value="count">Count</option><option value="drag">Drag</option><option value="match">Match</option><option value="sort">Sort</option><option value="order">Order</option><option value="none">None</option>
-              </select>
-            </label>
-          </div>
-          <label className="block text-xs">Visual Instructions
-            <textarea value={visualInstructions} onChange={e=>setVisualInstructions(e.target.value)} rows={2} className="w-full mt-1 p-2 rounded-xl border bg-white text-xs" placeholder="e.g. Tap all the apples, then choose how many you counted."/>
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-            <label>Visual Image / GIF URL
-              <input value={visualImageUrl} onChange={e=>setVisualImageUrl(e.target.value)} className="w-full mt-1 p-2 rounded-xl border bg-white text-xs" placeholder="https://..."/>
-            </label>
-            <label>Audio URL
-              <input value={visualAudioUrl} onChange={e=>setVisualAudioUrl(e.target.value)} className="w-full mt-1 p-2 rounded-xl border bg-white text-xs" placeholder="https://...mp3"/>
-            </label>
-          </div>
-          <label className="text-xs block">Visual Objects <span className="font-normal text-stone-500">(separate with |, e.g. 🍎|🍎|🍎)</span>
-            <input value={visualObjects} onChange={e=>setVisualObjects(e.target.value)} className="w-full mt-1 p-2 rounded-xl border bg-white text-xs" placeholder="🍎|🍎|🍎|🍎|🍎"/>
-          </label>
-          <div className="flex flex-wrap gap-2 items-center text-xs">
-            <label>Background
-              <select value={visualBackground} onChange={e=>setVisualBackground(e.target.value as any)} className="ml-1 p-1.5 rounded-lg border bg-white text-xs">
-                <option value="playful">Playful</option><option value="soft">Soft</option><option value="none">None</option>
-              </select>
-            </label>
-            <label className="flex items-center gap-1.5">
-              <input type="checkbox" checked={visualAutoPlay} onChange={e=>setVisualAutoPlay(e.target.checked)}/> Auto-play animation/audio
-            </label>
-          </div>
-          <div className="p-3 rounded-xl bg-white border flex items-center justify-center min-h-20">
-            <div className="text-center">
-              <div className="text-[10px] text-stone-400 mb-1">Live visual preview</div>
-              <div className="text-3xl">{visualObjects||visualClipart||'🍎 🍎 🍎'}</div>
-              <div className="text-[10px] text-stone-600 mt-1">{visualInstructions||'Your visual question will appear here.'}</div>
+            <div className="font-black text-stone-900 text-xs flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              Visual / Animated Layer & Clipart
+            </div>
+            <div className="text-[10px] text-stone-600 mt-0.5">
+              {visualEnabled
+                ? 'Interactive visual layer, counting templates, and clipart badges are active for this question.'
+                : 'Disabled — standard clean text question without clipart banners or counting templates.'}
             </div>
           </div>
-        </>}
-      </div>
+          <label className="flex items-center gap-2 font-black text-xs cursor-pointer select-none bg-white px-3 py-1.5 rounded-xl border border-stone-200 shadow-2xs">
+            <input
+              type="checkbox"
+              checked={visualEnabled}
+              onChange={e => {
+                setVisualEnabled(e.target.checked);
+                if (!e.target.checked) {
+                  setVisualClipart('');
+                }
+              }}
+              className="cursor-pointer rounded text-amber-500 focus:ring-amber-400"
+            />
+            <span>{visualEnabled ? 'Visuals Enabled' : 'Enable Visuals'}</span>
+          </label>
+        </div>
 
-      {/* Question Header Clipart Badge (Optional) */}
-      <div className="p-3.5 rounded-2xl bg-amber-50/50 border border-amber-200/60 space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="font-bold text-stone-800 text-xs">
-            Question Header Clipart Badge (Optional)
-            {visualClipart && <span className="ml-2 font-mono text-xs px-2 py-0.5 rounded-md bg-white border border-amber-300">{visualClipart}</span>}
+        {visualEnabled && (
+          <div className="pt-2 border-t border-amber-200/70 space-y-3">
+            {/* Clipart / Header Badge */}
+            <div className="p-3 rounded-xl bg-white border border-amber-200/80 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="font-bold text-stone-800 text-xs flex items-center gap-2">
+                  <span>Question Clipart Badge / Symbols</span>
+                  {visualClipart && (
+                    <span className="font-mono text-xs px-2 py-0.5 rounded-md bg-amber-50 border border-amber-300 text-amber-900 font-bold">
+                      {visualClipart}
+                    </span>
+                  )}
+                </div>
+                {visualClipart && (
+                  <button
+                    type="button"
+                    onClick={() => setVisualClipart('')}
+                    className="text-[11px] text-rose-600 hover:text-rose-700 font-bold flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3 h-3" /> Clear
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-1.5">
+                {CLIPART.map(x => (
+                  <button
+                    key={x}
+                    type="button"
+                    onClick={() => setVisualClipart(p => p ? `${p} ${x}` : x)}
+                    className="w-8 h-8 border border-stone-200 rounded-lg bg-stone-50 hover:bg-amber-100 transition flex items-center justify-center text-sm shadow-2xs"
+                  >
+                    {x}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <label className="text-xs font-semibold">Template
+                <select value={visualTemplate} onChange={e=>setVisualTemplate(e.target.value as VisualQuestionTemplate)} className="w-full mt-1 p-2 rounded-xl border bg-white text-xs">
+                  <option value="picture_counting">Picture Counting</option>
+                  <option value="picture_choice">Picture Choice</option>
+                  <option value="drag_drop">Drag & Drop</option>
+                  <option value="matching">Matching</option>
+                  <option value="sorting">Sorting</option>
+                  <option value="ordering">Ordering</option>
+                  <option value="pattern">Pattern</option>
+                  <option value="number_line">Number Line</option>
+                  <option value="interactive_story">Interactive Story</option>
+                </select>
+              </label>
+              <label className="text-xs font-semibold">Animation
+                <select value={visualAnimation} onChange={e=>setVisualAnimation(e.target.value as VisualAnimation)} className="w-full mt-1 p-2 rounded-xl border bg-white text-xs">
+                  <option>none</option><option>bounce</option><option>float</option><option>pulse</option><option>wiggle</option><option>pop</option><option>spin</option>
+                </select>
+              </label>
+              <label className="text-xs font-semibold">Interaction
+                <select value={visualInteraction} onChange={e=>setVisualInteraction(e.target.value as VisualQuestionConfig['interaction'])} className="w-full mt-1 p-2 rounded-xl border bg-white text-xs">
+                  <option value="tap">Tap</option><option value="count">Count</option><option value="drag">Drag</option><option value="match">Match</option><option value="sort">Sort</option><option value="order">Order</option><option value="none">None</option>
+                </select>
+              </label>
+            </div>
+            <label className="block text-xs font-semibold">Visual Instructions
+              <textarea value={visualInstructions} onChange={e=>setVisualInstructions(e.target.value)} rows={2} className="w-full mt-1 p-2 rounded-xl border bg-white text-xs" placeholder="e.g. Tap all the apples, then choose how many you counted."/>
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <label className="font-semibold">Visual Image / GIF URL
+                <input value={visualImageUrl} onChange={e=>setVisualImageUrl(e.target.value)} className="w-full mt-1 p-2 rounded-xl border bg-white text-xs" placeholder="https://..."/>
+              </label>
+              <label className="font-semibold">Audio URL
+                <input value={visualAudioUrl} onChange={e=>setVisualAudioUrl(e.target.value)} className="w-full mt-1 p-2 rounded-xl border bg-white text-xs" placeholder="https://...mp3"/>
+              </label>
+            </div>
+            <label className="text-xs font-semibold block">Visual Objects <span className="font-normal text-stone-500">(separate with |, e.g. 🍎|🍎|🍎)</span>
+              <input value={visualObjects} onChange={e=>setVisualObjects(e.target.value)} className="w-full mt-1 p-2 rounded-xl border bg-white text-xs" placeholder="🍎|🍎|🍎|🍎|🍎"/>
+            </label>
+            <div className="flex flex-wrap gap-2 items-center text-xs">
+              <label className="font-semibold">Background
+                <select value={visualBackground} onChange={e=>setVisualBackground(e.target.value as any)} className="ml-1 p-1.5 rounded-lg border bg-white text-xs">
+                  <option value="playful">Playful</option><option value="soft">Soft</option><option value="none">None</option>
+                </select>
+              </label>
+              <label className="flex items-center gap-1.5 font-semibold">
+                <input type="checkbox" checked={visualAutoPlay} onChange={e=>setVisualAutoPlay(e.target.checked)}/> Auto-play animation/audio
+              </label>
+            </div>
+            <div className="p-3 rounded-xl bg-white border border-amber-200 flex items-center justify-center min-h-20">
+              <div className="text-center">
+                <div className="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">Live visual preview</div>
+                <div className="text-3xl">{visualObjects||visualClipart||'🍎 🍎 🍎'}</div>
+                <div className="text-[10px] text-stone-600 mt-1 font-medium">{visualInstructions||'Your visual question will appear here.'}</div>
+              </div>
+            </div>
           </div>
-          {visualClipart && (
-            <button
-              type="button"
-              onClick={()=>setVisualClipart('')}
-              className="text-[11px] text-rose-600 hover:text-rose-700 font-bold flex items-center gap-1"
-            >
-              <Trash2 className="w-3 h-3" /> Clear Badge
-            </button>
-          )}
-        </div>
-        <div className="text-[10px] text-stone-500">Click any symbol below to append to question banner:</div>
-        <div className="flex flex-wrap gap-1.5">
-          {CLIPART.map(x=>(
-            <button key={x} type="button" onClick={()=>setVisualClipart(p=>p ? `${p} ${x}` : x)} className="w-8 h-8 border border-stone-200 rounded-lg bg-white hover:bg-amber-100/80 transition flex items-center justify-center text-sm shadow-2xs">
-              {x}
-            </button>
-          ))}
-        </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

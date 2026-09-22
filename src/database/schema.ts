@@ -283,5 +283,80 @@ export const DATABASE_TABLES: DatabaseTableDefinition[] = [
       { name: 'time_spent_seconds', type: 'INTEGER', description: 'Time taken in seconds' },
       { name: 'timestamp', type: 'TIMESTAMPTZ', description: 'Submission timestamp' }
     ]
+  },
+  {
+    name: 'assignments',
+    category: 'academic',
+    description: 'Class assignments assigned by teachers to classrooms or student cohorts',
+    primaryKey: 'id',
+    foreignKeys: [{ column: 'class_id', references: 'classes.id' }],
+    columns: [
+      { name: 'id', type: 'TEXT', required: true, description: 'Assignment ID (e.g. ASN001)' },
+      { name: 'title', type: 'TEXT', required: true, description: 'Assignment Title' },
+      { name: 'class_id', type: 'TEXT', required: true, description: 'Classroom ID' },
+      { name: 'class_name', type: 'TEXT', description: 'Classroom Name' },
+      { name: 'subject', type: 'TEXT', required: true, description: 'Subject' },
+      { name: 'grade', type: 'TEXT', required: true, description: 'Grade level' },
+      { name: 'question_ids', type: 'JSONB', description: 'Assigned Question IDs array' },
+      { name: 'due_date', type: 'TEXT', description: 'Due date string' },
+      { name: 'status', type: 'TEXT', description: 'Status (active, completed)' },
+      { name: 'created_at', type: 'TIMESTAMPTZ', description: 'Creation timestamp' }
+    ]
+  },
+  {
+    name: 'audit_logs',
+    category: 'operations',
+    description: 'Security and administrative audit trail of all platform events',
+    primaryKey: 'id',
+    columns: [
+      { name: 'id', type: 'TEXT', required: true, description: 'Log ID (e.g. LOG-001)' },
+      { name: 'timestamp', type: 'TEXT', required: true, description: 'Event timestamp string' },
+      { name: 'account_id', type: 'TEXT', required: true, description: 'User account ID that triggered the action' },
+      { name: 'account_name', type: 'TEXT', description: 'User account name' },
+      { name: 'role', type: 'TEXT', description: 'User role at time of action' },
+      { name: 'action', type: 'TEXT', required: true, description: 'Action code (e.g. USER_LOGIN, QUESTION_CREATE)' },
+      { name: 'details', type: 'TEXT', description: 'Human readable event details' },
+      { name: 'ip_address', type: 'TEXT', description: 'Origin IP address' },
+      { name: 'created_at', type: 'TIMESTAMPTZ', description: 'Creation timestamp' }
+    ]
+  },
+  {
+    name: 'vouchers',
+    category: 'operations',
+    description: 'Promotional discount voucher codes and redemption limits',
+    primaryKey: 'id',
+    columns: [
+      { name: 'id', type: 'TEXT', required: true, description: 'Voucher ID (e.g. VOUCH_001)' },
+      { name: 'code', type: 'TEXT', required: true, description: 'Uppercase promo code' },
+      { name: 'discount_type', type: 'TEXT', description: 'Discount type (percentage, flat)' },
+      { name: 'discount_value', type: 'NUMERIC', description: 'Discount numerical value' },
+      { name: 'applicable_to', type: 'TEXT', description: 'Applicable user role (parent, school, all)' },
+      { name: 'max_uses', type: 'INTEGER', description: 'Maximum total redemptions' },
+      { name: 'current_uses', type: 'INTEGER', description: 'Current redemption count' },
+      { name: 'expires_at', type: 'TEXT', description: 'Expiration date' },
+      { name: 'validity_duration', type: 'TEXT', description: 'Validity duration code' },
+      { name: 'active', type: 'BOOLEAN', description: 'Whether active' },
+      { name: 'created_at', type: 'TIMESTAMPTZ', description: 'Creation timestamp' }
+    ]
+  },
+  {
+    name: 'subscriptions',
+    category: 'operations',
+    description: 'Billing records and subscription activations for schools and parents',
+    primaryKey: 'id',
+    columns: [
+      { name: 'id', type: 'TEXT', required: true, description: 'Subscription Record ID' },
+      { name: 'account_id', type: 'TEXT', required: true, description: 'Subscriber Account ID' },
+      { name: 'account_name', type: 'TEXT', description: 'Subscriber Name' },
+      { name: 'role', type: 'TEXT', description: 'Subscriber Role (parent, school)' },
+      { name: 'plan_name', type: 'TEXT', description: 'Plan Name' },
+      { name: 'amount', type: 'NUMERIC', description: 'Payment Amount' },
+      { name: 'currency', type: 'TEXT', description: 'Currency code (USD, INR, etc.)' },
+      { name: 'status', type: 'TEXT', description: 'Payment status (paid, active, expired)' },
+      { name: 'payment_date', type: 'TEXT', description: 'Payment date' },
+      { name: 'renewal_date', type: 'TEXT', description: 'Renewal date' },
+      { name: 'voucher_used', type: 'TEXT', description: 'Redeemed voucher code' },
+      { name: 'created_at', type: 'TIMESTAMPTZ', description: 'Creation timestamp' }
+    ]
   }
 ];

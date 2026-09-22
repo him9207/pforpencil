@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   name TEXT NOT NULL,
   email TEXT,
   username TEXT UNIQUE, -- e.g. HAM0001, EMMWAT1
+  password TEXT, -- Encrypted or plain hash credential
   pin_hash TEXT, -- 4-digit PIN for students
   avatar TEXT DEFAULT '🦊',
   grade TEXT, -- 'Preschool', 'Foundation', 'Grade 1'...'Grade 6'
@@ -97,6 +98,7 @@ CREATE TABLE IF NOT EXISTS profiles (
 
 -- Safely add columns if profiles already existed
 ALTER TABLE IF EXISTS profiles ADD COLUMN IF NOT EXISTS username TEXT;
+ALTER TABLE IF EXISTS profiles ADD COLUMN IF NOT EXISTS password TEXT;
 ALTER TABLE IF EXISTS profiles ADD COLUMN IF NOT EXISTS pin_hash TEXT;
 ALTER TABLE IF EXISTS profiles ADD COLUMN IF NOT EXISTS country VARCHAR(100) DEFAULT 'United States';
 ALTER TABLE IF EXISTS profiles ADD COLUMN IF NOT EXISTS state VARCHAR(100) DEFAULT 'California';
@@ -328,6 +330,72 @@ CREATE TABLE IF NOT EXISTS activity_step_results (
 );
 
 -- -------------------------------------------------------------
+-- 8b. Class Assignments
+-- -------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS assignments (
+  id VARCHAR(32) PRIMARY KEY, -- ASN001
+  title TEXT NOT NULL,
+  class_id VARCHAR(32) REFERENCES classes(id) ON DELETE CASCADE,
+  class_name TEXT,
+  subject TEXT NOT NULL,
+  grade TEXT NOT NULL,
+  question_ids JSONB DEFAULT '[]'::jsonb,
+  due_date TEXT,
+  status VARCHAR(20) DEFAULT 'active',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- -------------------------------------------------------------
+-- 8c. Audit Logs
+-- -------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id VARCHAR(64) PRIMARY KEY,
+  timestamp TEXT NOT NULL,
+  account_id VARCHAR(32) NOT NULL,
+  account_name TEXT,
+  role VARCHAR(32),
+  action TEXT NOT NULL,
+  details TEXT,
+  ip_address TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- -------------------------------------------------------------
+-- 8d. Vouchers (Discounts & Codes)
+-- -------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS vouchers (
+  id VARCHAR(32) PRIMARY KEY,
+  code VARCHAR(64) UNIQUE NOT NULL,
+  discount_type VARCHAR(20) DEFAULT 'percentage',
+  discount_value NUMERIC(10,2) DEFAULT 0,
+  applicable_to VARCHAR(20) DEFAULT 'all',
+  max_uses INT DEFAULT 100,
+  current_uses INT DEFAULT 0,
+  expires_at TEXT,
+  validity_duration VARCHAR(32),
+  active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- -------------------------------------------------------------
+-- 8e. Subscriptions & Billing Records
+-- -------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id VARCHAR(64) PRIMARY KEY,
+  account_id VARCHAR(32) NOT NULL,
+  account_name TEXT,
+  role VARCHAR(32),
+  plan_name TEXT,
+  amount NUMERIC(10,2) DEFAULT 0,
+  currency VARCHAR(10) DEFAULT 'USD',
+  status VARCHAR(20) DEFAULT 'paid',
+  payment_date TEXT,
+  renewal_date TEXT,
+  voucher_used TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- -------------------------------------------------------------
 -- 9. Row Level Security (RLS) & Anon Access Policies
 -- Allows the client app with the anon public key to read and write
 -- -------------------------------------------------------------
@@ -345,6 +413,10 @@ ALTER TABLE IF EXISTS activity_question_links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS activity_attempts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS activity_step_results ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS student_progress ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS assignments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS vouchers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS subscriptions ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "anon_all_schools" ON schools;
 CREATE POLICY "anon_all_schools" ON schools FOR ALL USING (true) WITH CHECK (true);
@@ -387,6 +459,18 @@ CREATE POLICY "anon_all_activity_step_results" ON activity_step_results FOR ALL 
 
 DROP POLICY IF EXISTS "anon_all_student_progress" ON student_progress;
 CREATE POLICY "anon_all_student_progress" ON student_progress FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_all_assignments" ON assignments;
+CREATE POLICY "anon_all_assignments" ON assignments FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_all_audit_logs" ON audit_logs;
+CREATE POLICY "anon_all_audit_logs" ON audit_logs FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_all_vouchers" ON vouchers;
+CREATE POLICY "anon_all_vouchers" ON vouchers FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_all_subscriptions" ON subscriptions;
+CREATE POLICY "anon_all_subscriptions" ON subscriptions FOR ALL USING (true) WITH CHECK (true);
 `;
 }
 

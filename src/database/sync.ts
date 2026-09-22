@@ -1,5 +1,5 @@
 import { supabaseRestFetch, isSupabaseConfigured, getSupabaseCredentials } from './client';
-import { UserAccount, Question, Activity, StudentProgress, SchoolOrganization, ClassRoom, CurriculumFramework } from '../types';
+import { UserAccount, Question, Activity, StudentProgress, SchoolOrganization, ClassRoom, CurriculumFramework, ClassAssignment, AuditLog, Voucher, SubscriptionRecord } from '../types';
 import { CategoryMasterRecord, SkillMasterRecord, loadQuestionBankMasters } from '../data/questionBankMasterData';
 
 /**
@@ -209,6 +209,7 @@ export async function syncUserToSupabase(user: UserAccount): Promise<SyncResult>
         name: user.name,
         email: user.email || null,
         username: user.username || null,
+        password: user.password || null,
         pin_hash: user.pin || null,
         avatar: user.avatar || '👤',
         grade: user.grade || null,
@@ -960,6 +961,330 @@ export async function fetchStudentProgressFromSupabase(): Promise<{
 }
 
 /**
+ * 3r. Fetch Class Assignments directly from Supabase
+ */
+export async function fetchAssignmentsFromSupabase(): Promise<{
+  success: boolean;
+  assignments?: ClassAssignment[];
+  error?: string;
+}> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase credentials not configured' };
+  }
+
+  try {
+    const res = await supabaseRestFetch('assignments', {
+      method: 'GET',
+      params: { select: '*', limit: '300', order: 'created_at.desc' }
+    });
+
+    if (!Array.isArray(res) || res.length === 0) {
+      return { success: true, assignments: [] };
+    }
+
+    const mapped: ClassAssignment[] = res.map((r: any) => ({
+      id: r.id,
+      title: r.title,
+      classId: r.class_id,
+      className: r.class_name || 'Classroom',
+      subject: r.subject || 'Mathematics',
+      grade: r.grade || 'Grade 1',
+      questionIds: Array.isArray(r.question_ids) ? r.question_ids : [],
+      dueDate: r.due_date || '',
+      status: r.status || 'active',
+      createdAt: r.created_at || new Date().toISOString()
+    }));
+
+    return { success: true, assignments: mapped };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to fetch assignments' };
+  }
+}
+
+/**
+ * Sync single Class Assignment to Supabase
+ */
+export async function syncAssignmentToSupabase(assignment: ClassAssignment): Promise<SyncResult> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase credentials not configured' };
+  }
+
+  try {
+    const row = {
+      id: assignment.id,
+      title: assignment.title,
+      class_id: assignment.classId,
+      class_name: assignment.className,
+      subject: assignment.subject,
+      grade: assignment.grade,
+      question_ids: assignment.questionIds || [],
+      due_date: assignment.dueDate,
+      status: assignment.status || 'active'
+    };
+
+    await supabaseRestFetch('assignments', {
+      method: 'POST',
+      headers: {
+        'Prefer': 'resolution=merge-duplicates,return=representation'
+      },
+      body: [row]
+    });
+
+    return { success: true, message: `Assignment ${assignment.id} saved to Supabase` };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to sync assignment' };
+  }
+}
+
+/**
+ * Delete Class Assignment from Supabase
+ */
+export async function deleteAssignmentFromSupabase(assignmentId: string): Promise<SyncResult> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase credentials not configured' };
+  }
+
+  try {
+    await supabaseRestFetch('assignments', {
+      method: 'DELETE',
+      params: { id: `eq.${assignmentId}` }
+    });
+    return { success: true, message: `Assignment ${assignmentId} removed from Supabase` };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to delete assignment' };
+  }
+}
+
+/**
+ * 3s. Fetch Audit Logs from Supabase
+ */
+export async function fetchAuditLogsFromSupabase(): Promise<{
+  success: boolean;
+  logs?: AuditLog[];
+  error?: string;
+}> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase credentials not configured' };
+  }
+
+  try {
+    const res = await supabaseRestFetch('audit_logs', {
+      method: 'GET',
+      params: { select: '*', limit: '200', order: 'created_at.desc' }
+    });
+
+    if (!Array.isArray(res) || res.length === 0) {
+      return { success: true, logs: [] };
+    }
+
+    const mapped: AuditLog[] = res.map((r: any) => ({
+      id: r.id,
+      timestamp: r.timestamp || r.created_at,
+      accountId: r.account_id,
+      accountName: r.account_name || 'User',
+      role: r.role || 'admin',
+      action: r.action,
+      details: r.details || '',
+      ipAddress: r.ip_address || '127.0.0.1'
+    }));
+
+    return { success: true, logs: mapped };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to fetch audit logs' };
+  }
+}
+
+/**
+ * Sync single Audit Log to Supabase
+ */
+export async function syncAuditLogToSupabase(log: AuditLog): Promise<SyncResult> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase credentials not configured' };
+  }
+
+  try {
+    const row = {
+      id: log.id,
+      timestamp: log.timestamp,
+      account_id: log.accountId,
+      account_name: log.accountName,
+      role: log.role,
+      action: log.action,
+      details: log.details,
+      ip_address: log.ipAddress
+    };
+
+    await supabaseRestFetch('audit_logs', {
+      method: 'POST',
+      headers: {
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
+      },
+      body: [row]
+    });
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message };
+  }
+}
+
+/**
+ * 3t. Fetch Vouchers from Supabase
+ */
+export async function fetchVouchersFromSupabase(): Promise<{
+  success: boolean;
+  vouchers?: Voucher[];
+  error?: string;
+}> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase credentials not configured' };
+  }
+
+  try {
+    const res = await supabaseRestFetch('vouchers', {
+      method: 'GET',
+      params: { select: '*', limit: '100' }
+    });
+
+    if (!Array.isArray(res) || res.length === 0) {
+      return { success: true, vouchers: [] };
+    }
+
+    const mapped: Voucher[] = res.map((r: any) => ({
+      id: r.id,
+      code: r.code,
+      discountType: r.discount_type || 'percentage',
+      discountValue: typeof r.discount_value === 'number' ? r.discount_value : 20,
+      applicableTo: r.applicable_to || 'all',
+      maxUses: r.max_uses || 100,
+      currentUses: r.current_uses || 0,
+      expiresAt: r.expires_at || '2027-12-31',
+      validityDuration: r.validity_duration || '365_days',
+      active: r.active !== false
+    }));
+
+    return { success: true, vouchers: mapped };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to fetch vouchers' };
+  }
+}
+
+/**
+ * Sync single Voucher to Supabase
+ */
+export async function syncVoucherToSupabase(voucher: Voucher): Promise<SyncResult> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase credentials not configured' };
+  }
+
+  try {
+    const row = {
+      id: voucher.id,
+      code: voucher.code,
+      discount_type: voucher.discountType || 'percentage',
+      discount_value: voucher.discountValue || 0,
+      applicable_to: voucher.applicableTo || 'all',
+      max_uses: voucher.maxUses || 100,
+      current_uses: voucher.currentUses || 0,
+      expires_at: voucher.expiresAt,
+      validity_duration: voucher.validityDuration || '365_days',
+      active: voucher.active !== false
+    };
+
+    await supabaseRestFetch('vouchers', {
+      method: 'POST',
+      headers: {
+        'Prefer': 'resolution=merge-duplicates,return=representation'
+      },
+      body: [row]
+    });
+
+    return { success: true, message: `Voucher ${voucher.code} saved to Supabase` };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to sync voucher' };
+  }
+}
+
+/**
+ * 3u. Fetch Subscriptions from Supabase
+ */
+export async function fetchSubscriptionsFromSupabase(): Promise<{
+  success: boolean;
+  subscriptions?: SubscriptionRecord[];
+  error?: string;
+}> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase credentials not configured' };
+  }
+
+  try {
+    const res = await supabaseRestFetch('subscriptions', {
+      method: 'GET',
+      params: { select: '*', limit: '200', order: 'created_at.desc' }
+    });
+
+    if (!Array.isArray(res) || res.length === 0) {
+      return { success: true, subscriptions: [] };
+    }
+
+    const mapped: SubscriptionRecord[] = res.map((r: any) => ({
+      id: r.id,
+      accountId: r.account_id,
+      accountName: r.account_name || 'Subscriber',
+      role: r.role || 'school',
+      planName: r.plan_name || 'Campus Plan',
+      amount: typeof r.amount === 'number' ? r.amount : 0,
+      currency: r.currency || 'USD',
+      status: r.status || 'paid',
+      paymentDate: r.payment_date || new Date().toISOString().slice(0, 10),
+      renewalDate: r.renewal_date || '2027-12-31',
+      voucherUsed: r.voucher_used || undefined
+    }));
+
+    return { success: true, subscriptions: mapped };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to fetch subscriptions' };
+  }
+}
+
+/**
+ * Sync single Subscription to Supabase
+ */
+export async function syncSubscriptionToSupabase(sub: SubscriptionRecord): Promise<SyncResult> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase credentials not configured' };
+  }
+
+  try {
+    const row = {
+      id: sub.id,
+      account_id: sub.accountId,
+      account_name: sub.accountName,
+      role: sub.role,
+      plan_name: sub.planName,
+      amount: sub.amount,
+      currency: sub.currency,
+      status: sub.status,
+      payment_date: sub.paymentDate,
+      renewal_date: sub.renewalDate,
+      voucher_used: sub.voucherUsed || null
+    };
+
+    await supabaseRestFetch('subscriptions', {
+      method: 'POST',
+      headers: {
+        'Prefer': 'resolution=merge-duplicates,return=representation'
+      },
+      body: [row]
+    });
+
+    return { success: true, message: `Subscription ${sub.id} saved to Supabase` };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to sync subscription' };
+  }
+}
+
+/**
  * 4. Fetch live rows from Supabase for any table
  */
 export async function fetchSupabaseTableRows(table: string, limit: number = 25): Promise<{
@@ -1130,7 +1455,11 @@ export async function seedInitialDataToSupabase(
   schools?: SchoolOrganization[],
   classes?: ClassRoom[],
   studentProgressMap?: Record<string, StudentProgress>,
-  frameworks?: CurriculumFramework[]
+  frameworks?: CurriculumFramework[],
+  assignments?: ClassAssignment[],
+  auditLogs?: AuditLog[],
+  vouchers?: Voucher[],
+  subscriptions?: SubscriptionRecord[]
 ): Promise<DetailedSeedReport> {
   const { url, anonKey } = getSupabaseCredentials();
   if (!url || !anonKey || anonKey.length < 20) {
@@ -1383,6 +1712,76 @@ export async function seedInitialDataToSupabase(
   }];
   const attemptReport = await seedTableRows('activity_attempts', 'Activity Attempts (Sample)', sampleAttempt);
   tableReports.push(attemptReport);
+
+  // 9. Seed Class Assignments
+  if (assignments && assignments.length > 0) {
+    const asnRows = assignments.map((a) => ({
+      id: a.id,
+      title: a.title,
+      class_id: a.classId,
+      class_name: a.className,
+      subject: a.subject,
+      grade: a.grade,
+      question_ids: a.questionIds || [],
+      due_date: a.dueDate,
+      status: a.status || 'active'
+    }));
+    const asnReport = await seedTableRows('assignments', 'Class Assignments', asnRows, 40);
+    tableReports.push(asnReport);
+  }
+
+  // 10. Seed Audit Logs
+  if (auditLogs && auditLogs.length > 0) {
+    const logRows = auditLogs.map((l) => ({
+      id: l.id,
+      timestamp: l.timestamp,
+      account_id: l.accountId,
+      account_name: l.accountName,
+      role: l.role,
+      action: l.action,
+      details: l.details,
+      ip_address: l.ipAddress
+    }));
+    const logReport = await seedTableRows('audit_logs', 'Audit Logs', logRows, 50);
+    tableReports.push(logReport);
+  }
+
+  // 11. Seed Vouchers
+  if (vouchers && vouchers.length > 0) {
+    const voucherRows = vouchers.map((v) => ({
+      id: v.id,
+      code: v.code,
+      discount_type: v.discountType || 'percentage',
+      discount_value: v.discountValue || 20,
+      applicable_to: v.applicableTo || 'all',
+      max_uses: v.maxUses || 100,
+      current_uses: v.currentUses || 0,
+      expires_at: v.expiresAt,
+      validity_duration: v.validityDuration || '365_days',
+      active: v.active !== false
+    }));
+    const voucherReport = await seedTableRows('vouchers', 'Vouchers', voucherRows, 50);
+    tableReports.push(voucherReport);
+  }
+
+  // 12. Seed Subscriptions
+  if (subscriptions && subscriptions.length > 0) {
+    const subRows = subscriptions.map((s) => ({
+      id: s.id,
+      account_id: s.accountId,
+      account_name: s.accountName,
+      role: s.role,
+      plan_name: s.planName,
+      amount: s.amount,
+      currency: s.currency,
+      status: s.status,
+      payment_date: s.paymentDate,
+      renewal_date: s.renewalDate,
+      voucher_used: s.voucherUsed || null
+    }));
+    const subReport = await seedTableRows('subscriptions', 'Subscriptions & Billing', subRows, 50);
+    tableReports.push(subReport);
+  }
 
   const totalRowsInserted = tableReports.reduce((sum, r) => sum + r.inserted, 0);
   const successTables = tableReports.filter(r => r.success).length;

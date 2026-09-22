@@ -57,6 +57,10 @@ import {
   syncSchoolToSupabase, 
   syncClassToSupabase, 
   syncActivityToSupabase,
+  syncAssignmentToSupabase,
+  syncAuditLogToSupabase,
+  syncVoucherToSupabase,
+  syncSubscriptionToSupabase,
   fetchUsersFromSupabase,
   fetchQuestionsFromSupabase,
   fetchActivitiesFromSupabase,
@@ -65,6 +69,10 @@ import {
   fetchStudentProgressFromSupabase,
   fetchCategoryMastersFromSupabase,
   fetchSkillMastersFromSupabase,
+  fetchAssignmentsFromSupabase,
+  fetchAuditLogsFromSupabase,
+  fetchVouchersFromSupabase,
+  fetchSubscriptionsFromSupabase,
   isSupabaseConfigured
 } from './database';
 import { ensureActivityId, getActivityDatabaseView, loadActivityDatabase, saveActivityDatabase } from './data/activityData';
@@ -77,10 +85,12 @@ function generateLogId(): string {
 }
 
 export default function App() {
-  // Core Platform State - Persistent with localStorage
+  // Core Platform State - Persistent with localStorage (Standardized V2 auth with unique usernames & passwords)
   const [allUsers, setAllUsers] = useState<UserAccount[]>(() => {
     try {
-      const saved = localStorage.getItem('pforpencil_all_users_v1');
+      // Clear legacy accounts created under old random schema
+      localStorage.removeItem('pforpencil_all_users_v1');
+      const saved = localStorage.getItem('pforpencil_all_users_v2');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -95,7 +105,7 @@ export default function App() {
   });
   useEffect(() => {
     try {
-      localStorage.setItem('pforpencil_all_users_v1', JSON.stringify(allUsers));
+      localStorage.setItem('pforpencil_all_users_v2', JSON.stringify(allUsers));
     } catch {}
   }, [allUsers]);
 
@@ -314,6 +324,30 @@ export default function App() {
             categories: mergedCategories,
             skills: mergedSkills
           });
+        }
+
+        // 8. Class Assignments
+        const asnRes = await fetchAssignmentsFromSupabase();
+        if (asnRes.success && Array.isArray(asnRes.assignments) && asnRes.assignments.length > 0 && isMounted) {
+          setAssignments(asnRes.assignments);
+        }
+
+        // 9. Audit Logs
+        const logsRes = await fetchAuditLogsFromSupabase();
+        if (logsRes.success && Array.isArray(logsRes.logs) && logsRes.logs.length > 0 && isMounted) {
+          setAuditLogs(logsRes.logs);
+        }
+
+        // 10. Vouchers
+        const vouchersRes = await fetchVouchersFromSupabase();
+        if (vouchersRes.success && Array.isArray(vouchersRes.vouchers) && vouchersRes.vouchers.length > 0 && isMounted) {
+          setVouchers(vouchersRes.vouchers);
+        }
+
+        // 11. Subscriptions
+        const subsRes = await fetchSubscriptionsFromSupabase();
+        if (subsRes.success && Array.isArray(subsRes.subscriptions) && subsRes.subscriptions.length > 0 && isMounted) {
+          setSubscriptions(subsRes.subscriptions);
         }
       } catch (syncErr) {
         console.warn('Live Supabase hydration notice:', syncErr);
@@ -643,6 +677,7 @@ export default function App() {
   // Create Assignment handler from Master Question Bank (Teacher)
   const handleCreateAssignment = (asg: ClassAssignment) => {
     setAssignments((prev) => [asg, ...prev]);
+    syncAssignmentToSupabase(asg);
 
     // Also update class active assignments
     setClasses((prev) =>
@@ -664,6 +699,7 @@ export default function App() {
       ipAddress: '127.0.0.1'
     };
     setAuditLogs((prev) => [newLog, ...prev]);
+    syncAuditLogToSupabase(newLog);
   };
 
   // Add User handler (Admin master provisioning - synchronized to single backend DB)
@@ -854,13 +890,15 @@ export default function App() {
     setAuditLogs((prev) => [newLog, ...prev]);
   };
 
-  // Update User Profile (Basic Details: name, avatar, grade, schoolName, status, phone)
+  // Update User Profile (Basic Details: name, username, password, avatar, grade, schoolName, status, phone)
   const handleUpdateUserProfile = (updatedUser: UserAccount) => {
     // 1. Update in allUsers master list while locking unique system keys
     setAllUsers((prev) =>
       prev.map((u) => (u.id === updatedUser.id ? {
         ...u,
         name: updatedUser.name,
+        username: updatedUser.username || u.username,
+        password: updatedUser.password || u.password,
         avatar: updatedUser.avatar,
         grade: updatedUser.grade,
         schoolName: updatedUser.schoolName,
@@ -876,6 +914,8 @@ export default function App() {
       setCurrentUser((prev) => ({
         ...prev,
         name: updatedUser.name,
+        username: updatedUser.username || prev.username,
+        password: updatedUser.password || prev.password,
         avatar: updatedUser.avatar,
         grade: updatedUser.grade,
         schoolName: updatedUser.schoolName,
@@ -982,9 +1022,14 @@ export default function App() {
 
   // Toggle Voucher Active (Admin)
   const handleToggleVoucherActive = (voucherId: string) => {
-    setVouchers((prev) =>
-      prev.map((v) => (v.id === voucherId ? { ...v, active: !v.active } : v))
-    );
+    setVouchers((prev) => {
+      const next = prev.map((v) => (v.id === voucherId ? { ...v, active: !v.active } : v));
+      const target = next.find((v) => v.id === voucherId);
+      if (target) {
+        syncVoucherToSupabase(target);
+      }
+      return next;
+    });
   };
 
   // Parent assigns activity to Child
@@ -1003,6 +1048,7 @@ export default function App() {
       ipAddress: '127.0.0.1'
     };
     setAuditLogs((prev) => [newLog, ...prev]);
+    syncAuditLogToSupabase(newLog);
   };
 
   // Subscription payment simulation
@@ -1021,6 +1067,7 @@ export default function App() {
       planDuration: 'annual'
     };
     setSubscriptions((prev) => [newRecord, ...prev]);
+    syncSubscriptionToSupabase(newRecord);
   };
 
   // Add Grade handler (Admin only)
@@ -1825,6 +1872,7 @@ export default function App() {
           setCurrentView('dashboard');
         }}
         onRegisterUser={handleRegisterUser}
+        onUpdateUser={handleUpdateUserProfile}
         allUsers={allUsers}
       />
 

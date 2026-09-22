@@ -23,7 +23,9 @@ import {
   Check,
   AlertCircle,
   HelpCircle,
-  RotateCcw
+  RotateCcw,
+  Key,
+  Smartphone
 } from 'lucide-react';
 import { sounds } from '../../utils/audio';
 import { generateAccountId, generateSchoolCode } from '../../utils/idAndUsernameGenerator';
@@ -34,6 +36,7 @@ import {
 } from '../../data/curriculumData';
 import { fetchUsersFromSupabase, isSupabaseConfigured, syncUserToSupabase } from '../../database';
 import { useBodyScrollLock } from '../../utils/useBodyScrollLock';
+import OtpVerificationView from './OtpVerificationView';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -67,15 +70,19 @@ export default function AuthModal({
   onOpenRegionModal,
   onSaveRegion
 }: AuthModalProps) {
-  // Navigation Screens: 'signin' | 'register' | 'forgot_password'
-  const [activeScreen, setActiveScreen] = useState<'signin' | 'register' | 'forgot_password'>(initialScreen);
+  // Navigation Screens: 'signin' | 'register' | 'forgot_password' | 'register_otp' | 'signin_otp'
+  const [activeScreen, setActiveScreen] = useState<'signin' | 'register' | 'forgot_password' | 'register_otp' | 'signin_otp'>(initialScreen);
   const [authMode, setAuthMode] = useState<'student' | 'adult'>('student');
+  const [adultAuthType, setAdultAuthType] = useState<'password' | 'otp'>('password');
 
   // Active region state synchronized with Home Page & platform
   const [selectedCountry, setSelectedCountry] = useState<string>(country);
   const [selectedState, setSelectedState] = useState<string>(state);
   const [selectedCurriculum, setSelectedCurriculum] = useState<string>(curriculum);
   const [isEditingRegion, setIsEditingRegion] = useState<boolean>(false);
+
+  // Helper to generate 6-digit OTP codes
+  const generateOtpCode = () => String(Math.floor(100000 + Math.random() * 900000));
 
   // Synchronize regional props
   React.useEffect(() => {
@@ -117,7 +124,7 @@ export default function AuthModal({
   useBodyScrollLock(isOpen);
 
   // ---------------------------------------------------------------------------
-  // 1. SIGN-IN STATE (Unified Adult Identifier + Kid PIN)
+  // 1. SIGN-IN STATE (Unified Adult Identifier + Kid PIN + OTP)
   // ---------------------------------------------------------------------------
   const [studentUsername, setStudentUsername] = useState('EMMWAT1');
   const [studentPin, setStudentPin] = useState('1234');
@@ -129,9 +136,10 @@ export default function AuthModal({
   const [showAdultPassword, setShowAdultPassword] = useState(false);
   const [adultError, setAdultError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
+  const [loginOtp, setLoginOtp] = useState<string>('');
 
   // ---------------------------------------------------------------------------
-  // 2. REGISTRATION STATE (Mandatory Unique Username + Email + Password)
+  // 2. REGISTRATION STATE (Mandatory Unique Username + Email + Password + OTP)
   // ---------------------------------------------------------------------------
   const [regRole, setRegRole] = useState<'parent' | 'school'>(initialRole === 'school' ? 'school' : 'parent');
   const [regName, setRegName] = useState('');
@@ -143,13 +151,16 @@ export default function AuthModal({
   const [regSchoolName, setRegSchoolName] = useState('');
   const [regError, setRegError] = useState('');
   const [regSuccess, setRegSuccess] = useState('');
+  const [pendingRegistrationUser, setPendingRegistrationUser] = useState<UserAccount | null>(null);
+  const [registrationOtp, setRegistrationOtp] = useState<string>('');
 
   // ---------------------------------------------------------------------------
-  // 3. FORGOT PASSWORD STATE
+  // 3. FORGOT PASSWORD STATE (With OTP verification step)
   // ---------------------------------------------------------------------------
   const [forgotIdentifier, setForgotIdentifier] = useState('');
-  const [forgotStep, setForgotStep] = useState<'identify' | 'reset'>('identify');
+  const [forgotStep, setForgotStep] = useState<'identify' | 'otp' | 'reset'>('identify');
   const [matchedUser, setMatchedUser] = useState<UserAccount | null>(null);
+  const [forgotOtp, setForgotOtp] = useState<string>('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [forgotError, setForgotError] = useState('');
@@ -251,12 +262,56 @@ export default function AuthModal({
     }
   };
 
-  // 2. Adult Sign-In (Unified Email or Username)
+  // 2. Adult Sign-In (Unified Email or Username + Password or OTP)
   const handleAdultLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAdultError('');
 
     const cleanIdentifier = adultIdentifier.trim().toLowerCase();
+
+    // If adult OTP mode is chosen, send OTP and switch to signin_otp screen
+    if (adultAuthType === 'otp') {
+      let targetUser = allUsers.find(
+        (u) => u.role !== 'student' && (
+          (u.email && u.email.toLowerCase() === cleanIdentifier) ||
+          (u.username && u.username.toLowerCase() === cleanIdentifier)
+        )
+      );
+
+      if (!targetUser && isSupabaseConfigured()) {
+        setIsVerifying(true);
+        try {
+          const result = await fetchUsersFromSupabase();
+          if (result.success && Array.isArray(result.users)) {
+            targetUser = result.users.find(
+              (u) => u.role !== 'student' && (
+                (u.email && u.email.toLowerCase() === cleanIdentifier) ||
+                (u.username && u.username.toLowerCase() === cleanIdentifier)
+              )
+            );
+          }
+        } catch (err) {
+          console.warn('Live adult auth verification error:', err);
+        } finally {
+          setIsVerifying(false);
+        }
+      }
+
+      if (!targetUser) {
+        sounds.playWrong();
+        setAdultError('No registered account found matching that Email or Username. Please register or check spelling.');
+        return;
+      }
+
+      const newOtp = generateOtpCode();
+      setLoginOtp(newOtp);
+      setMatchedUser(targetUser);
+      setActiveScreen('signin_otp');
+      sounds.playLevelUp();
+      return;
+    }
+
+    // Otherwise standard password verification
     const inputPassword = adultPassword.trim();
 
     let targetUser = allUsers.find(
@@ -298,7 +353,7 @@ export default function AuthModal({
     // Check password if set
     if (targetUser.password && targetUser.password !== inputPassword && inputPassword !== 'Password@123' && inputPassword !== 'admin123') {
       sounds.playWrong();
-      setAdultError('Incorrect password. Click "Forgot password?" below if you need to reset it.');
+      setAdultError('Incorrect password. Click "Forgot password?" below or use "Login with OTP".');
       return;
     }
 
@@ -307,7 +362,14 @@ export default function AuthModal({
     onClose();
   };
 
-  // 3. User Registration
+  const handleCompleteLoginAfterOtp = () => {
+    if (!matchedUser) return;
+    sounds.playHappyCelebration();
+    onLoginSuccess(matchedUser);
+    onClose();
+  };
+
+  // 3. User Registration (Triggers 6-Digit Email OTP Verification)
   const handleRegisterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setRegError('');
@@ -362,22 +424,33 @@ export default function AuthModal({
       status: 'active'
     };
 
+    // Generate 6-digit OTP and move to verification screen
+    const newOtp = generateOtpCode();
+    setRegistrationOtp(newOtp);
+    setPendingRegistrationUser(newUser);
+    setActiveScreen('register_otp');
+    sounds.playLevelUp();
+  };
+
+  const handleCompleteRegistrationAfterOtp = () => {
+    if (!pendingRegistrationUser) return;
+
     sounds.playHappyCelebration();
-    setRegSuccess(`Account @${cleanUsername} created successfully! Opening your dashboard...`);
+    setRegSuccess(`Account @${pendingRegistrationUser.username} verified & created successfully! Opening your dashboard...`);
     
     // Save to master lists & sync with Supabase
     if (onRegisterUser) {
-      onRegisterUser(newUser);
+      onRegisterUser(pendingRegistrationUser);
     }
-    syncUserToSupabase(newUser);
+    syncUserToSupabase(pendingRegistrationUser);
 
     setTimeout(() => {
-      onLoginSuccess(newUser);
+      onLoginSuccess(pendingRegistrationUser);
       onClose();
     }, 900);
   };
 
-  // 4. Forgot Password Flow
+  // 4. Forgot Password Flow with OTP Verification
   const handleFindAccountToReset = (e: React.FormEvent) => {
     e.preventDefault();
     setForgotError('');
@@ -397,8 +470,11 @@ export default function AuthModal({
       return;
     }
 
+    const newOtp = generateOtpCode();
+    setForgotOtp(newOtp);
     setMatchedUser(found);
-    setForgotStep('reset');
+    setForgotStep('otp');
+    sounds.playLevelUp();
   };
 
   const handleResetPasswordSubmit = (e: React.FormEvent) => {
@@ -469,7 +545,9 @@ export default function AuthModal({
               <h2 className="text-lg font-black text-[#10246f]">
                 {activeScreen === 'signin' && 'Sign In to Your Account'}
                 {activeScreen === 'register' && 'Create Your P for Pencil Account'}
-                {activeScreen === 'forgot_password' && 'Password Recovery'}
+                {activeScreen === 'forgot_password' && 'Password Recovery & Verification'}
+                {activeScreen === 'register_otp' && 'Verify Email Address (OTP)'}
+                {activeScreen === 'signin_otp' && 'One-Time Passcode Sign-In'}
               </h2>
             </div>
           </div>
@@ -483,7 +561,7 @@ export default function AuthModal({
         </div>
 
         {/* Primary Screen Tabs (Sign In vs Register) */}
-        {activeScreen !== 'forgot_password' && (
+        {activeScreen !== 'forgot_password' && activeScreen !== 'register_otp' && activeScreen !== 'signin_otp' && (
           <div className="px-6 pt-3.5 shrink-0 flex gap-2 border-b border-[#e1e6f1] pb-3 bg-white">
             <button
               id="auth-tab-signin"
@@ -816,10 +894,34 @@ export default function AuthModal({
                 type="submit"
                 className="w-full py-3.5 px-4 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-600/25 flex items-center justify-center gap-2 transition-all cursor-pointer mt-2 hover:scale-101 active:scale-99"
               >
-                <span>Create Free Account & Access Portal</span>
+                <span>Continue to Verification Code (OTP)</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
+          )}
+
+          {/* ========================================================================= */}
+          {/* SCREEN 1B: REGISTRATION EMAIL OTP VERIFICATION */}
+          {/* ========================================================================= */}
+          {activeScreen === 'register_otp' && pendingRegistrationUser && (
+            <OtpVerificationView
+              emailOrPhone={pendingRegistrationUser.email || regEmail}
+              expectedOtp={registrationOtp}
+              title="Verify Registration Email"
+              subtitle={
+                <>
+                  We sent a 6-digit verification code to <strong className="text-stone-900 font-bold">{pendingRegistrationUser.email || regEmail}</strong> for account <strong className="text-blue-900 font-mono">@{pendingRegistrationUser.username}</strong>.
+                </>
+              }
+              submitButtonText="Verify & Launch Account"
+              onVerifySuccess={handleCompleteRegistrationAfterOtp}
+              onResendOtp={() => {
+                const newCode = generateOtpCode();
+                setRegistrationOtp(newCode);
+                return newCode;
+              }}
+              onBack={() => setActiveScreen('register')}
+            />
           )}
 
           {/* ========================================================================= */}
@@ -936,13 +1038,49 @@ export default function AuthModal({
                   </button>
                 </form>
               ) : (
-                /* Adult Mode (Unified Email or Username) */
+                /* Adult Mode (Unified Email or Username + Password vs OTP) */
                 <form onSubmit={handleAdultLogin} className="space-y-4">
                   <div className="bg-[#f8faff] border border-[#e1e6f1] rounded-2xl p-3 text-xs text-[#10246f] flex items-center gap-2.5">
                     <span className="text-xl">🔐</span>
                     <span>
                       Log in using your <strong>Registered Email</strong> or your <strong>@username</strong>.
                     </span>
+                  </div>
+
+                  {/* Auth Type Switcher: Password vs OTP Code */}
+                  <div className="flex items-center justify-between p-1 bg-slate-100 rounded-xl">
+                    <button
+                      id="auth-method-password-btn"
+                      type="button"
+                      onClick={() => {
+                        sounds.click();
+                        setAdultAuthType('password');
+                      }}
+                      className={`flex-1 py-1.5 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        adultAuthType === 'password'
+                          ? 'bg-white text-[#10246f] shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>Password Login</span>
+                    </button>
+                    <button
+                      id="auth-method-otp-btn"
+                      type="button"
+                      onClick={() => {
+                        sounds.click();
+                        setAdultAuthType('otp');
+                      }}
+                      className={`flex-1 py-1.5 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        adultAuthType === 'otp'
+                          ? 'bg-white text-blue-600 shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Smartphone className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Verification Code (OTP)</span>
+                    </button>
                   </div>
 
                   {adultError && (
@@ -970,50 +1108,58 @@ export default function AuthModal({
                     </div>
                   </div>
 
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                        Password
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setForgotIdentifier(adultIdentifier);
-                          setActiveScreen('forgot_password');
-                        }}
-                        className="text-xs font-bold text-blue-600 hover:underline cursor-pointer"
-                      >
-                        Forgot password?
-                      </button>
+                  {adultAuthType === 'password' && (
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                          Password
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForgotIdentifier(adultIdentifier);
+                            setActiveScreen('forgot_password');
+                          }}
+                          className="text-xs font-bold text-blue-600 hover:underline cursor-pointer"
+                        >
+                          Forgot password?
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          id="adult-password-input"
+                          type={showAdultPassword ? 'text' : 'password'}
+                          required
+                          value={adultPassword}
+                          onChange={(e) => setAdultPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 focus:border-[#10246f] focus:ring-2 focus:ring-[#10246f]/20 text-sm transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowAdultPassword(!showAdultPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          {showAdultPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
                     </div>
-                    <div className="relative">
-                      <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        id="adult-password-input"
-                        type={showAdultPassword ? 'text' : 'password'}
-                        required
-                        value={adultPassword}
-                        onChange={(e) => setAdultPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 focus:border-[#10246f] focus:ring-2 focus:ring-[#10246f]/20 text-sm transition-all"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowAdultPassword(!showAdultPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                      >
-                        {showAdultPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
+                  )}
 
                   <button
                     id="submit-adult-login"
                     type="submit"
                     disabled={isVerifying}
-                    className="w-full py-3 px-4 rounded-full bg-[#10246f] hover:bg-[#0c1a52] text-white font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    className="w-full py-3.5 px-4 rounded-full bg-[#10246f] hover:bg-[#0c1a52] text-white font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-101 active:scale-99"
                   >
-                    <span>{isVerifying ? 'Checking database...' : 'Sign In to Portal'}</span>
+                    <span>
+                      {isVerifying
+                        ? 'Checking database...'
+                        : adultAuthType === 'otp'
+                        ? 'Send 6-Digit Login Code (OTP)'
+                        : 'Sign In to Portal'}
+                    </span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </form>
@@ -1120,7 +1266,31 @@ export default function AuthModal({
           )}
 
           {/* ========================================================================= */}
-          {/* SCREEN 3: FORGOT PASSWORD / ACCOUNT RECOVERY */}
+          {/* SCREEN 2B: SIGN-IN OTP CODE VERIFICATION */}
+          {/* ========================================================================= */}
+          {activeScreen === 'signin_otp' && matchedUser && (
+            <OtpVerificationView
+              emailOrPhone={matchedUser.email || adultIdentifier}
+              expectedOtp={loginOtp}
+              title="Sign In with Verification Code"
+              subtitle={
+                <>
+                  Enter the 6-digit OTP code sent to <strong className="text-stone-900 font-bold">{matchedUser.email || adultIdentifier}</strong> to log in as <strong>{matchedUser.name}</strong>.
+                </>
+              }
+              submitButtonText="Verify & Enter Dashboard"
+              onVerifySuccess={handleCompleteLoginAfterOtp}
+              onResendOtp={() => {
+                const newCode = generateOtpCode();
+                setLoginOtp(newCode);
+                return newCode;
+              }}
+              onBack={() => setActiveScreen('signin')}
+            />
+          )}
+
+          {/* ========================================================================= */}
+          {/* SCREEN 3: FORGOT PASSWORD / ACCOUNT RECOVERY (3-STEP WITH OTP) */}
           {/* ========================================================================= */}
           {activeScreen === 'forgot_password' && (
             <div className="space-y-4 text-xs">
@@ -1129,9 +1299,9 @@ export default function AuthModal({
                   <KeyRound className="w-5 h-5 text-blue-700" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-sm text-[#10246f]">Account Recovery</h3>
+                  <h3 className="font-extrabold text-sm text-[#10246f]">Account Recovery & OTP</h3>
                   <p className="text-[#59627a] mt-0.5 leading-relaxed">
-                    Enter your registered email address or username to verify your account and set a new password.
+                    Verify your identity via a 6-digit one-time passcode before creating a new password.
                   </p>
                 </div>
               </div>
@@ -1150,11 +1320,12 @@ export default function AuthModal({
                 </div>
               )}
 
-              {forgotStep === 'identify' ? (
+              {/* Step 1: Identify account */}
+              {forgotStep === 'identify' && (
                 <form onSubmit={handleFindAccountToReset} className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Your Email or Username
+                      Your Registered Email or Username
                     </label>
                     <div className="relative">
                       <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -1171,13 +1342,38 @@ export default function AuthModal({
 
                   <button
                     type="submit"
-                    className="w-full py-3 px-4 rounded-full bg-[#10246f] hover:bg-[#0c1a52] text-white font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    className="w-full py-3.5 px-4 rounded-full bg-[#10246f] hover:bg-[#0c1a52] text-white font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-101 active:scale-99"
                   >
-                    <span>Verify Account</span>
+                    <span>Send Verification Code (OTP)</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </form>
-              ) : (
+              )}
+
+              {/* Step 2: Verify 6-digit OTP */}
+              {forgotStep === 'otp' && matchedUser && (
+                <OtpVerificationView
+                  emailOrPhone={matchedUser.email || forgotIdentifier}
+                  expectedOtp={forgotOtp}
+                  title="Verify Password Reset OTP"
+                  subtitle={
+                    <>
+                      Enter the 6-digit OTP sent to <strong className="text-stone-900 font-bold">{matchedUser.email}</strong> to verify ownership of <strong className="text-blue-900 font-mono">@{matchedUser.username || matchedUser.id}</strong>.
+                    </>
+                  }
+                  submitButtonText="Verify Code & Continue"
+                  onVerifySuccess={() => setForgotStep('reset')}
+                  onResendOtp={() => {
+                    const newCode = generateOtpCode();
+                    setForgotOtp(newCode);
+                    return newCode;
+                  }}
+                  onBack={() => setForgotStep('identify')}
+                />
+              )}
+
+              {/* Step 3: Create New Password */}
+              {forgotStep === 'reset' && (
                 <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
                   {matchedUser && (
                     <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2.5">
@@ -1225,7 +1421,7 @@ export default function AuthModal({
 
                   <button
                     type="submit"
-                    className="w-full py-3 px-4 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-600/25 flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-101 active:scale-99"
+                    className="w-full py-3.5 px-4 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-600/25 flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-101 active:scale-99"
                   >
                     <span>Save New Password & Sign In</span>
                     <ArrowRight className="w-4 h-4" />

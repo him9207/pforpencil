@@ -229,6 +229,42 @@ export const INITIAL_USERS: UserAccount[] = [
     grade: 'Grade 2',
     enrolledAt: '2025-04-12',
     status: 'active'
+  },
+  // Student 5 (Oakwood Elementary Academy): LUC0001
+  {
+    id: 'STU00005',
+    role: 'student',
+    name: 'Lucas Chen',
+    username: 'LUC0001',
+    pin: '3333',
+    avatar: '🐼',
+    organizationId: 'SCH000001',
+    schoolName: 'Oakwood Elementary Academy',
+    schoolCode: 'OAK',
+    country: 'United States',
+    state: 'California',
+    curriculum: 'US Common Core State Standards (CCSS)',
+    grade: 'Grade 3',
+    enrolledAt: '2025-04-14',
+    status: 'active'
+  },
+  // Student 6 (DPS International): SOP0001
+  {
+    id: 'STU00006',
+    role: 'student',
+    name: 'Sophia Garcia',
+    username: 'SOP0001',
+    pin: '4444',
+    avatar: '🦄',
+    organizationId: 'SCH000001',
+    schoolName: 'Oakwood Elementary Academy',
+    schoolCode: 'OAK',
+    country: 'United States',
+    state: 'California',
+    curriculum: 'US Common Core State Standards (CCSS)',
+    grade: 'Grade 2',
+    enrolledAt: '2025-04-15',
+    status: 'active'
   }
 ];
 
@@ -497,6 +533,67 @@ export const INITIAL_STUDENT_PROGRESS: Record<string, StudentProgress> = {
     badges: [
       { id: 'B1', name: '5-Day Streak', icon: '⚡', description: 'Active student streak at DAV Public School!', unlockedAt: '2025-04-12' },
       { id: 'B2', name: 'Place Value Whiz', icon: '🔢', description: 'Mastered 3-digit place values.', unlockedAt: '2025-04-13' }
+    ]
+  },
+  STU00005: {
+    studentId: 'STU00005',
+    studentUsername: 'LUC0001',
+    studentName: 'Lucas Chen',
+    avatar: '🐼',
+    grade: 'Grade 3',
+    country: 'United States',
+    state: 'California',
+    curriculum: 'US Common Core State Standards (CCSS)',
+    schoolOrParent: 'school',
+    schoolName: 'Oakwood Elementary Academy',
+    level: 7,
+    xp: 2640,
+    coins: 290,
+    streakDays: 11,
+    dailyQuizCompletedToday: true,
+    totalQuizzesTaken: 42,
+    averageScore: 94,
+    averageResponseTimeSeconds: 7.1,
+    totalQuestionsAttempted: 58,
+    subjectMastery: {
+      'Mathematics': 95
+    },
+    recentActivities: [
+      { id: 'ACT001', title: 'Daily Sunrise Quiz', type: 'daily_quiz', score: 100, maxScore: 100, timestamp: 'Today, 8:15 AM', averageTimeSeconds: 6.9 }
+    ],
+    badges: [
+      { id: 'B1', name: '10-Day Streak Titan', icon: '🔥', description: '10-day daily quiz master!', unlockedAt: '2025-04-14' },
+      { id: 'B2', name: 'Math Prodigy', icon: '➗', description: 'Exceptional math solver.', unlockedAt: '2025-04-10' }
+    ]
+  },
+  STU00006: {
+    studentId: 'STU00006',
+    studentUsername: 'SOP0001',
+    studentName: 'Sophia Garcia',
+    avatar: '🦄',
+    grade: 'Grade 2',
+    country: 'United States',
+    state: 'California',
+    curriculum: 'US Common Core State Standards (CCSS)',
+    schoolOrParent: 'school',
+    schoolName: 'Oakwood Elementary Academy',
+    level: 5,
+    xp: 1820,
+    coins: 230,
+    streakDays: 9,
+    dailyQuizCompletedToday: false,
+    totalQuizzesTaken: 29,
+    averageScore: 89,
+    averageResponseTimeSeconds: 8.0,
+    totalQuestionsAttempted: 44,
+    subjectMastery: {
+      'Mathematics': 90
+    },
+    recentActivities: [
+      { id: 'ACT_G2_DAILY', title: 'Grade 2 Morning Brain Quest', type: 'daily_quiz', score: 90, maxScore: 100, timestamp: 'Yesterday, 3:20 PM', averageTimeSeconds: 8.1 }
+    ],
+    badges: [
+      { id: 'B1', name: '5-Day Streak Star', icon: '🌟', description: 'Dedicated learning streak.', unlockedAt: '2025-04-12' }
     ]
   }
 };

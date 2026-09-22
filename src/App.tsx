@@ -1601,6 +1601,7 @@ export default function App() {
               <StudentPortal
                 currentUser={currentUser}
                 studentProgress={currentStudentProgress}
+                studentProgressMap={studentProgressMap}
                 questions={questions}
                 activities={activities}
                 onUpdateProgress={handleUpdateStudentProgress}

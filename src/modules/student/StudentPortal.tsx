@@ -39,11 +39,18 @@ import {
   FolderOpen,
   ChevronDown,
   GraduationCap,
-  Gamepad2
+  Gamepad2,
+  X,
+  Medal
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { sounds } from '../../utils/audio';
+import { useBodyScrollLock } from '../../utils/useBodyScrollLock';
 import StudentIDCard from './StudentIDCard';
+import StudentReportCardModal from './StudentReportCardModal';
+import Leaderboard from './components/Leaderboard';
+import DailyGoalCard from './components/DailyGoalCard';
+import StudentAnalyticsDashboard from './components/StudentAnalyticsDashboard';
 import ActivityPlayerModal from '../activities/ActivityPlayerModal';
 import InteractiveQuestionCard from '../activities/InteractiveQuestionCard';
 import { syncActivityAttemptToSupabase, syncProgressToSupabase, isSupabaseConfigured } from '../../database';
@@ -90,9 +97,216 @@ function normalizeGrade(g?: string): string {
   return g.trim().toLowerCase();
 }
 
+export interface PerformanceMilestone {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  category: 'streak' | 'quizzes' | 'score' | 'xp' | 'coins';
+  criterion: string;
+  check: (progress: StudentProgress, lastAttempt?: { type: string; score: number; maxScore: number; speedBonus?: number }) => boolean;
+  getProgress: (progress: StudentProgress) => { current: number; target: number; label: string };
+}
+
+export const PERFORMANCE_MILESTONES: PerformanceMilestone[] = [
+  {
+    id: 'badge_streak_10',
+    name: '10-Day Streak Titan',
+    icon: '🔥',
+    description: 'Completed 10 consecutive daily quizzes! Outstanding dedication and consistency!',
+    category: 'streak',
+    criterion: 'Complete 10 consecutive daily quizzes',
+    check: (p) => (p.streakDays || 0) >= 10,
+    getProgress: (p) => ({
+      current: Math.min(p.streakDays || 0, 10),
+      target: 10,
+      label: `${Math.min(p.streakDays || 0, 10)}/10 daily quizzes`
+    })
+  },
+  {
+    id: 'badge_streak_3',
+    name: '3-Day Quiz Spark',
+    icon: '⚡',
+    description: 'Completed 3 consecutive daily quizzes!',
+    category: 'streak',
+    criterion: 'Complete 3 consecutive daily quizzes',
+    check: (p) => (p.streakDays || 0) >= 3,
+    getProgress: (p) => ({
+      current: Math.min(p.streakDays || 0, 3),
+      target: 3,
+      label: `${Math.min(p.streakDays || 0, 3)}/3 daily quizzes`
+    })
+  },
+  {
+    id: 'badge_streak_5',
+    name: '5-Day Streak Star',
+    icon: '🌟',
+    description: 'Achieved a 5-day daily learning streak without missing a day!',
+    category: 'streak',
+    criterion: 'Complete 5 consecutive daily quizzes',
+    check: (p) => (p.streakDays || 0) >= 5,
+    getProgress: (p) => ({
+      current: Math.min(p.streakDays || 0, 5),
+      target: 5,
+      label: `${Math.min(p.streakDays || 0, 5)}/5 daily quizzes`
+    })
+  },
+  {
+    id: 'badge_perfect_score',
+    name: 'Flawless Scholar',
+    icon: '🎯',
+    description: 'Scored a perfect 100% on a quiz or activity challenge!',
+    category: 'score',
+    criterion: 'Score 100% on any quiz challenge',
+    check: (p, last) => Boolean(last && last.maxScore > 0 && last.score === last.maxScore),
+    getProgress: (p) => ({
+      current: (p.averageScore || 0) >= 100 ? 1 : 0,
+      target: 1,
+      label: (p.averageScore || 0) >= 100 ? 'Achieved 100%' : 'Pending 100% quiz'
+    })
+  },
+  {
+    id: 'badge_quizzes_10',
+    name: 'Quiz Explorer 10',
+    icon: '📚',
+    description: 'Completed 10 educational quizzes and learning quests!',
+    category: 'quizzes',
+    criterion: 'Complete 10 total quizzes',
+    check: (p) => (p.totalQuizzesTaken || 0) >= 10,
+    getProgress: (p) => ({
+      current: Math.min(p.totalQuizzesTaken || 0, 10),
+      target: 10,
+      label: `${Math.min(p.totalQuizzesTaken || 0, 10)}/10 quizzes`
+    })
+  },
+  {
+    id: 'badge_quizzes_25',
+    name: 'Grand Quest Master',
+    icon: '🏆',
+    description: 'Conquered 25 educational quizzes and quests across your grade curriculum!',
+    category: 'quizzes',
+    criterion: 'Complete 25 total quizzes',
+    check: (p) => (p.totalQuizzesTaken || 0) >= 25,
+    getProgress: (p) => ({
+      current: Math.min(p.totalQuizzesTaken || 0, 25),
+      target: 25,
+      label: `${Math.min(p.totalQuizzesTaken || 0, 25)}/25 quizzes`
+    })
+  },
+  {
+    id: 'badge_speed_demon',
+    name: 'Speed Demon',
+    icon: '⏱️',
+    description: 'Aced quiz questions with lightning fast speed bonus points!',
+    category: 'score',
+    criterion: 'Earn speed bonus in a quiz',
+    check: (p, last) => Boolean((last?.speedBonus || 0) > 0),
+    getProgress: (p) => ({
+      current: 1,
+      target: 1,
+      label: 'Speed bonus challenge'
+    })
+  },
+  {
+    id: 'badge_xp_1000',
+    name: 'Century Scholar',
+    icon: '👑',
+    description: 'Accumulated 1,000 XP through persistent learning and drills!',
+    category: 'xp',
+    criterion: 'Earn 1,000 total XP',
+    check: (p) => (p.xp || 0) >= 1000,
+    getProgress: (p) => ({
+      current: Math.min(p.xp || 0, 1000),
+      target: 1000,
+      label: `${Math.min(p.xp || 0, 1000)}/1000 XP`
+    })
+  },
+  {
+    id: 'badge_coins_100',
+    name: 'Gold Vault Collector',
+    icon: '🪙',
+    description: 'Gathered 100 or more reward coins from quiz achievements!',
+    category: 'coins',
+    criterion: 'Collect 100 learning coins',
+    check: (p) => (p.coins || 0) >= 100,
+    getProgress: (p) => ({
+      current: Math.min(p.coins || 0, 100),
+      target: 100,
+      label: `${Math.min(p.coins || 0, 100)}/100 Coins`
+    })
+  },
+  {
+    id: 'badge_first_quiz',
+    name: 'First Discovery',
+    icon: '🚀',
+    description: 'Successfully completed your first learning quest challenge!',
+    category: 'quizzes',
+    criterion: 'Complete 1 quiz challenge',
+    check: (p) => (p.totalQuizzesTaken || 0) >= 1,
+    getProgress: (p) => ({
+      current: Math.min(p.totalQuizzesTaken || 0, 1),
+      target: 1,
+      label: `${Math.min(p.totalQuizzesTaken || 0, 1)}/1 completed`
+    })
+  }
+];
+
+/**
+ * Evaluates performance milestones and issues achievement badges to the student.
+ * Handles milestones including 10 consecutive daily quizzes, scoring 100%,
+ * accumulating XP/coins, or reaching total quiz milestones.
+ *
+ * @param progress Current student progress state
+ * @param lastAttempt Optional details of the quiz/activity just completed
+ * @param onBadgeAwarded Optional callback invoked with newly minted badge objects
+ * @returns Object containing updated student progress and array of newly issued badges
+ */
+export function issueAchievementBadges(
+  progress: StudentProgress,
+  lastAttempt?: { type: string; score: number; maxScore: number; speedBonus?: number },
+  onBadgeAwarded?: (newlyIssued: { id: string; name: string; icon: string; description: string; unlockedAt: string }[]) => void
+): { updatedProgress: StudentProgress; newBadges: { id: string; name: string; icon: string; description: string; unlockedAt: string }[] } {
+  const existingBadges = progress.badges || [];
+  const existingBadgeIds = new Set(existingBadges.map((b) => b.id));
+  const existingBadgeNames = new Set(existingBadges.map((b) => b.name.toLowerCase().trim()));
+  const newBadges: { id: string; name: string; icon: string; description: string; unlockedAt: string }[] = [];
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  for (const milestone of PERFORMANCE_MILESTONES) {
+    if (!existingBadgeIds.has(milestone.id) && !existingBadgeNames.has(milestone.name.toLowerCase().trim())) {
+      const qualified = milestone.check(progress, lastAttempt);
+      if (qualified) {
+        newBadges.push({
+          id: milestone.id,
+          name: milestone.name,
+          icon: milestone.icon,
+          description: milestone.description,
+          unlockedAt: todayStr
+        });
+        existingBadgeIds.add(milestone.id);
+        existingBadgeNames.add(milestone.name.toLowerCase().trim());
+      }
+    }
+  }
+
+  if (newBadges.length > 0) {
+    const updatedProgress: StudentProgress = {
+      ...progress,
+      badges: [...existingBadges, ...newBadges]
+    };
+    if (onBadgeAwarded) {
+      onBadgeAwarded(newBadges);
+    }
+    return { updatedProgress, newBadges };
+  }
+
+  return { updatedProgress: progress, newBadges: [] };
+}
+
 interface StudentPortalProps {
   currentUser: UserAccount;
   studentProgress: StudentProgress;
+  studentProgressMap?: Record<string, StudentProgress>;
   questions: Question[];
   activities: Activity[];
   onUpdateProgress: (updated: StudentProgress) => void;
@@ -101,12 +315,13 @@ interface StudentPortalProps {
 export default function StudentPortal({
   currentUser,
   studentProgress,
+  studentProgressMap,
   questions,
   activities,
   onUpdateProgress
 }: StudentPortalProps) {
   // Navigation Tabs
-  const [activeTab, setActiveTab] = useState<'adventures' | 'skills' | 'analytics'>('adventures');
+  const [activeTab, setActiveTab] = useState<'adventures' | 'skills' | 'leaderboard' | 'analytics'>('adventures');
 
   // Master data version tracking to react instantly when admin activates/deactivates categories or skills
   const [masterDataVersion, setMasterDataVersion] = useState(0);
@@ -195,6 +410,14 @@ export default function StudentPortal({
     });
   }, [activities, studentGrade, activityCategoryFilter, activitySubjectFilter, activitySearchQuery]);
 
+  // Daily Quiz Activity for student's enrolled grade
+  const dailyQuizActivity = useMemo(() => {
+    return gradeLockedActivities.find(act => act.type === 'daily_quiz') ||
+           activities.find(act => act.type === 'daily_quiz' && (act.grades?.includes(studentGrade) || act.grade === studentGrade)) ||
+           activities.find(act => act.type === 'daily_quiz') ||
+           null;
+  }, [gradeLockedActivities, activities, studentGrade]);
+
   // Skill Browser states
   const [selectedSkillSubject, setSelectedSkillSubject] = useState<string>('All');
   const [skillSearchQuery, setSkillSearchQuery] = useState('');
@@ -225,6 +448,7 @@ export default function StudentPortal({
   const [score, setScore] = useState(0);
   const [quizFinished, setQuizFinished] = useState(false);
   const [isIdCardOpen, setIsIdCardOpen] = useState(false);
+  const [isReportCardOpen, setIsReportCardOpen] = useState(false);
   const [answerFeedback, setAnswerFeedback] = useState<{ status: 'correct' | 'wrong'; title: string; message: string; isSpeedBonus?: boolean } | null>(null);
 
   // Live Question Timer states
@@ -254,6 +478,62 @@ export default function StudentPortal({
     status: 'idle' | 'syncing' | 'success' | 'error';
     message?: string;
   }>({ status: 'idle' });
+
+  // Achievement Badge Milestone States
+  const [newlyUnlockedBadges, setNewlyUnlockedBadges] = useState<{ id: string; name: string; icon: string; description: string; unlockedAt: string }[] | null>(null);
+  const [showAllMilestonesModal, setShowAllMilestonesModal] = useState(false);
+  const [selectedBadgeDetail, setSelectedBadgeDetail] = useState<{ id: string; name: string; icon: string; description: string; unlockedAt?: string; criterion?: string } | null>(null);
+
+  // Lock body scroll whenever badge modals or achievement celebrations are open
+  useBodyScrollLock(Boolean(newlyUnlockedBadges || showAllMilestonesModal || selectedBadgeDetail));
+
+  /**
+   * Helper function to evaluate and issue achievement badges to the student
+   * based on specific performance milestones (such as 10 consecutive daily quizzes, 100% scores, etc.)
+   */
+  const handleIssueMilestoneBadges = (
+    baseProgress: StudentProgress,
+    lastAttempt?: { type: string; score: number; maxScore: number; speedBonus?: number },
+    showCelebrationModal: boolean = true
+  ): StudentProgress => {
+    const { updatedProgress, newBadges } = issueAchievementBadges(
+      baseProgress,
+      lastAttempt,
+      (issued) => {
+        if (showCelebrationModal && issued.length > 0) {
+          sounds.playVictory();
+          confetti({
+            particleCount: 110,
+            spread: 80,
+            origin: { y: 0.5 }
+          });
+          setNewlyUnlockedBadges(issued);
+        }
+      }
+    );
+
+    if (newBadges.length > 0) {
+      onUpdateProgress(updatedProgress);
+      if (isSupabaseConfigured()) {
+        syncProgressToSupabase(updatedProgress);
+      }
+    }
+
+    return updatedProgress;
+  };
+
+  // Check on mount or progress update if student already qualifies for milestone badges that are not yet awarded
+  useEffect(() => {
+    if (studentProgress) {
+      const { updatedProgress, newBadges } = issueAchievementBadges(studentProgress);
+      if (newBadges.length > 0) {
+        onUpdateProgress(updatedProgress);
+        if (isSupabaseConfigured()) {
+          syncProgressToSupabase(updatedProgress);
+        }
+      }
+    }
+  }, [studentProgress?.streakDays, studentProgress?.totalQuizzesTaken, studentProgress?.xp, studentProgress?.coins]);
 
   // Game specific (Math Bubble Pop)
   const [gameTimer, setGameTimer] = useState(30);
@@ -303,14 +583,32 @@ export default function StudentPortal({
       title: activity.title, type: activity.type, score: finalScore, maxScore, timestamp: 'Just now'
     };
     const updatedProgress = {
-      ...studentProgress, xp: updatedXp, level: updatedLevel, coins: studentProgress.coins + addedCoins,
+      ...studentProgress, 
+      xp: updatedXp, 
+      level: updatedLevel, 
+      coins: studentProgress.coins + addedCoins,
+      streakDays: studentProgress.streakDays + (activity.type === 'daily_quiz' && !studentProgress.dailyQuizCompletedToday ? 1 : 0),
+      dailyQuizCompletedToday: activity.type === 'daily_quiz' ? true : studentProgress.dailyQuizCompletedToday,
       totalQuizzesTaken: studentProgress.totalQuizzesTaken + 1,
       recentActivities: [log, ...studentProgress.recentActivities.slice(0, 5)]
     };
-    onUpdateProgress(updatedProgress);
+
+    // Evaluate performance milestones and issue achievement badges
+    const finalProgressWithBadges = handleIssueMilestoneBadges(
+      updatedProgress,
+      {
+        type: activity.type,
+        score: finalScore,
+        maxScore,
+        speedBonus: 0
+      },
+      true
+    );
+
+    onUpdateProgress(finalProgressWithBadges);
     if (isSupabaseConfigured()) {
       syncActivityAttemptToSupabase(currentUser.id, activity.id, finalScore, Math.max(1, activity.questionIds.length), addedXp, addedCoins, false);
-      syncProgressToSupabase(updatedProgress);
+      syncProgressToSupabase(finalProgressWithBadges);
     }
   };
 
@@ -353,6 +651,49 @@ export default function StudentPortal({
       setGameTimer(30);
       setGameRunning(true);
     }
+  };
+
+  // Launch daily quiz directly from Daily Goal Card
+  const handleStartDailyQuiz = () => {
+    if (dailyQuizActivity) {
+      handleStartActivity(dailyQuizActivity);
+    } else {
+      const qIds = gradeLockedQuestions.slice(0, 5).map(q => q.id);
+      const fallbackDaily: Activity = {
+        id: `DAILY-QUEST-${studentGrade}`,
+        type: 'daily_quiz',
+        title: `${studentGrade} Daily Sunrise Quest`,
+        description: 'Answer today’s daily challenge questions to secure your streak bonus!',
+        subject: (gradeLockedQuestions[0]?.subject || 'Mathematics') as Subject,
+        grade: studentGrade,
+        questionIds: qIds.length > 0 ? qIds : questions.slice(0, 5).map(q => q.id),
+        rewardXP: 100,
+        rewardCoins: 25,
+        durationMinutes: 5,
+        unlocked: true
+      };
+      handleStartActivity(fallbackDaily);
+    }
+  };
+
+  // Launch skill targeted practice from analytics dashboard
+  const handleStartPracticeSkill = (skillName: string, subjectName: string) => {
+    const matchedQs = gradeLockedQuestions.filter(q => q.skill === skillName || q.subject === subjectName);
+    const qIds = (matchedQs.length > 0 ? matchedQs : gradeLockedQuestions).slice(0, 5).map(q => q.id);
+    const practiceActivity: Activity = {
+      id: `PRACTICE-${Date.now()}`,
+      type: 'challenge',
+      title: `${skillName || subjectName} Targeted Practice`,
+      description: `Targeted practice quest designed to elevate your mastery in ${skillName || subjectName}.`,
+      subject: (subjectName as Subject) || 'Mathematics',
+      grade: studentGrade,
+      questionIds: qIds.length > 0 ? qIds : questions.slice(0, 5).map(q => q.id),
+      rewardXP: 75,
+      rewardCoins: 20,
+      durationMinutes: 5,
+      unlocked: true
+    };
+    handleStartActivity(practiceActivity);
   };
 
   // Live Timer for Individual Question
@@ -531,7 +872,19 @@ export default function StudentPortal({
         recentActivities: [newActivityLog, ...studentProgress.recentActivities.slice(0, 5)]
       };
 
-      onUpdateProgress(updatedProgress);
+      // Evaluate performance milestones and issue achievement badges (e.g. 10 consecutive daily quizzes, 100% score, etc.)
+      const finalProgressWithBadges = handleIssueMilestoneBadges(
+        updatedProgress,
+        {
+          type: activePlayActivity.type,
+          score: finalScore,
+          maxScore: activeQuestions.reduce((acc, q) => acc + q.points, 0) || 100,
+          speedBonus: speedBonusesEarned
+        },
+        true
+      );
+
+      onUpdateProgress(finalProgressWithBadges);
 
       // Real-time Cloud Persistence to Supabase
       if (isSupabaseConfigured()) {
@@ -561,7 +914,7 @@ export default function StudentPortal({
           }
         });
 
-        syncProgressToSupabase(updatedProgress);
+        syncProgressToSupabase(finalProgressWithBadges);
       }
     }
   };
@@ -855,11 +1208,20 @@ export default function StudentPortal({
         </div>
       </div>
 
+      {/* DAILY GOAL NOTIFICATION CARD (STREAK BONUS REQUIREMENTS) */}
+      <DailyGoalCard
+        studentProgress={studentProgress}
+        dailyQuizActivity={dailyQuizActivity}
+        onStartDailyQuiz={handleStartDailyQuiz}
+        className="mb-1"
+      />
+
       {/* PORTAL NAVIGATION TABS */}
-      <div className="flex items-center gap-2 border-b border-[#e1e6f1] pb-3">
+      <div className="flex items-center gap-2 border-b border-[#e1e6f1] pb-3 overflow-x-auto scrollbar-none">
         <button
+          id="student-tab-adventures-btn"
           onClick={() => setActiveTab('adventures')}
-          className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition cursor-pointer whitespace-nowrap ${
             activeTab === 'adventures'
               ? 'bg-[#f20b86] text-white shadow-xs'
               : 'text-[#59627a] hover:text-[#10246f] hover:bg-[#eef4ff]'
@@ -870,8 +1232,22 @@ export default function StudentPortal({
         </button>
 
         <button
+          id="student-tab-leaderboard-btn"
+          onClick={() => setActiveTab('leaderboard')}
+          className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition cursor-pointer whitespace-nowrap ${
+            activeTab === 'leaderboard'
+              ? 'bg-[#f20b86] text-white shadow-xs'
+              : 'text-[#59627a] hover:text-[#10246f] hover:bg-[#eef4ff]'
+          }`}
+        >
+          <Trophy className="w-4 h-4 text-amber-400" />
+          <span>Leaderboard</span>
+        </button>
+
+        <button
+          id="student-tab-skills-btn"
           onClick={() => setActiveTab('skills')}
-          className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition cursor-pointer whitespace-nowrap ${
             activeTab === 'skills'
               ? 'bg-[#f20b86] text-white shadow-xs'
               : 'text-[#59627a] hover:text-[#10246f] hover:bg-[#eef4ff]'
@@ -882,8 +1258,9 @@ export default function StudentPortal({
         </button>
 
         <button
+          id="student-tab-analytics-btn"
           onClick={() => setActiveTab('analytics')}
-          className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition cursor-pointer whitespace-nowrap ${
             activeTab === 'analytics'
               ? 'bg-[#f20b86] text-white shadow-xs'
               : 'text-[#59627a] hover:text-[#10246f] hover:bg-[#eef4ff]'
@@ -922,7 +1299,7 @@ export default function StudentPortal({
               />
               <div className="hidden sm:block border-l border-[#e1e6f1] pl-3 min-w-0">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#59627a] block">
-                  {studentGrade} • {activePlayActivity.type === 'boss_battle' ? 'Boss Battle' : 'Practice Drill'}
+                  {studentGrade} • {activePlayActivity.type === 'boss_battle' ? 'Boss Battle' : activePlayActivity.type === 'daily_quiz' ? 'Sunrise Daily Quest' : 'Interactive Practice Drill'}
                 </span>
                 <h3 className="text-xs sm:text-sm font-black text-[#10246f] truncate max-w-xs md:max-w-md">
                   {activePlayActivity.title}
@@ -934,13 +1311,13 @@ export default function StudentPortal({
             {!quizFinished && activeQuestions.length > 0 && (
               <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#fdf2f8] text-[#f20b86] border border-[#fbcfe8] text-xs sm:text-sm font-bold shadow-2xs">
                 <span>Question</span>
-                <span className="font-black">{currentQuestionIndex + 1}</span>
+                <span className="font-black text-[#f20b86]">{currentQuestionIndex + 1}</span>
                 <span className="text-[#f20b86]/70">of</span>
                 <span className="font-black">{activeQuestions.length}</span>
               </div>
             )}
 
-            {/* Right: Timer / XP / Exit Button */}
+            {/* Right: Timer / XP / Mini Game Mode Toggle / Exit Button */}
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               {/* Live Question Countdown Timer */}
               {!quizFinished && (
@@ -961,6 +1338,23 @@ export default function StudentPortal({
                 <span>🪙</span>
                 <span>{score} Pts</span>
               </div>
+
+              {/* Play in Arcade Mini Game Mode Button */}
+              {!quizFinished && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = activePlayActivity;
+                    setActivePlayActivity(null);
+                    setModernActivity(target);
+                  }}
+                  className="hidden lg:inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#fdf2f8] hover:bg-[#fce7f3] border border-[#fbcfe8] text-[#f20b86] text-xs font-bold transition-all cursor-pointer hover:scale-105"
+                  title="Switch to Arcade Mini-Game Canvas"
+                >
+                  <Gamepad2 className="w-3.5 h-3.5 text-[#f20b86]" />
+                  <span>Arcade Mode</span>
+                </button>
+              )}
 
               {/* Exit Button */}
               <button
@@ -1197,6 +1591,34 @@ export default function StudentPortal({
                     <strong className="text-base sm:text-lg font-black text-[#16c47f]">+{speedBonusesEarned * 10} XP ⚡</strong>
                   </div>
                 </div>
+
+                {/* Milestone Achievement Badges Unlocked in this Session */}
+                {newlyUnlockedBadges && newlyUnlockedBadges.length > 0 && (
+                  <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 w-full animate-in zoom-in-95 duration-200 text-left">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Trophy className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span className="font-black text-xs uppercase tracking-wider text-amber-800">
+                          Milestone Achievement Badges Earned!
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-900">
+                        {newlyUnlockedBadges.length} New
+                      </span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {newlyUnlockedBadges.map((b) => (
+                        <div key={b.id} className="flex items-center gap-2.5 p-2 rounded-xl bg-white border border-amber-200 text-xs shadow-2xs">
+                          <span className="text-2xl">{b.icon}</span>
+                          <div className="min-w-0 flex-1">
+                            <strong className="block text-stone-900 font-bold truncate">{b.name}</strong>
+                            <p className="text-[11px] text-stone-600 truncate">{b.description}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Supabase Cloud Persistence Status */}
                 {isSupabaseConfigured() ? (
@@ -1606,38 +2028,101 @@ export default function StudentPortal({
                     <Trophy className="w-4 h-4 text-amber-500" />
                     <span>My Badges ({studentProgress.badges.length})</span>
                   </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowAllMilestonesModal(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 text-[11px] font-bold transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                  >
+                    <Medal className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Milestone Roadmaps</span>
+                  </button>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2.5">
                   {studentProgress.badges.map((badge) => (
                     <div 
                       key={badge.id}
-                      className="p-3 rounded-2xl bg-stone-50 border border-stone-200/80 flex items-center gap-2.5"
+                      onClick={() => setSelectedBadgeDetail(badge)}
+                      className="p-3 rounded-2xl bg-stone-50 hover:bg-amber-50/60 border border-stone-200/80 hover:border-amber-300 flex items-center gap-2.5 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] group"
+                      title="Click to view badge details"
                     >
-                      <span className="text-2xl">{badge.icon}</span>
+                      <span className="text-2xl group-hover:scale-110 transition-transform">{badge.icon}</span>
                       <div className="truncate">
-                        <strong className="block text-xs font-bold text-stone-900 truncate">
+                        <strong className="block text-xs font-bold text-stone-900 group-hover:text-amber-950 truncate">
                           {badge.name}
                         </strong>
-                        <span className="text-[10px] text-stone-500">Unlocked</span>
+                        <span className="text-[10px] text-stone-500 group-hover:text-amber-800">
+                          {badge.unlockedAt ? `Earned ${badge.unlockedAt}` : 'Unlocked'}
+                        </span>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-stone-100 text-center">
-                <span className="text-[11px] text-stone-400">
-                  Complete daily quizzes and speed challenges to unlock more badges! 🎓
+              <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between gap-2">
+                <span className="text-[11px] text-stone-500">
+                  {PERFORMANCE_MILESTONES.filter(m => studentProgress.badges?.some(b => b.id === m.id || b.name.toLowerCase().trim() === m.name.toLowerCase().trim())).length} of {PERFORMANCE_MILESTONES.length} Milestones Reached
                 </span>
+                <button
+                  type="button"
+                  onClick={() => setShowAllMilestonesModal(true)}
+                  className="text-[11px] font-bold text-amber-700 hover:text-amber-800 hover:underline cursor-pointer"
+                >
+                  View Roadmaps →
+                </button>
               </div>
             </div>
           </section>
+
+          {/* Friendly Competition Leaderboard Quick Banner */}
+          <div className="p-5 rounded-3xl bg-gradient-to-r from-amber-500/10 via-amber-100/50 to-stone-50 border border-amber-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-2xl shadow-md shadow-amber-500/25 shrink-0">
+                🏆
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">
+                    Friendly Competition
+                  </span>
+                  <span className="text-xs text-stone-500 font-semibold">Live XP League</span>
+                </div>
+                <h4 className="text-sm sm:text-base font-black text-stone-900 mt-0.5">
+                  See where you stand among top star scholars!
+                </h4>
+                <p className="text-xs text-stone-600">
+                  Earn XP from daily quizzes, speed challenges, and curriculum activities to climb the ranks.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              id="view-full-leaderboard-cta-btn"
+              onClick={() => setActiveTab('leaderboard')}
+              className="px-5 py-2.5 rounded-2xl bg-stone-900 hover:bg-stone-800 text-white font-black text-xs transition shadow-xs flex items-center justify-center gap-2 shrink-0 cursor-pointer hover:scale-105 active:scale-95"
+            >
+              <Trophy className="w-4 h-4 text-amber-400" />
+              <span>Open Leaderboard 🚀</span>
+            </button>
+          </div>
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 2: SKILL STANDARDS BROWSER (CATEGORY & SKILL HIERARCHY) */}
+      {/* TAB 2: LEADERBOARD (STAR SCHOLARS XP RANKINGS & FRIENDLY COMPETITION) */}
+      {/* ========================================================================= */}
+      {activeTab === 'leaderboard' && (
+        <Leaderboard
+          studentProgressMap={studentProgressMap}
+          currentStudentId={studentProgress.studentId}
+          gradeFilter="all"
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 3: SKILL STANDARDS BROWSER (CATEGORY & SKILL HIERARCHY) */}
       {/* ========================================================================= */}
       {activeTab === 'skills' && (
         <div className="space-y-6">
@@ -1805,132 +2290,18 @@ export default function StudentPortal({
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 3: LEARNING ANALYTICS DASHBOARD */}
+      {/* TAB 3: LEARNING ANALYTICS DASHBOARDS */}
       {/* ========================================================================= */}
       {activeTab === 'analytics' && (
-        <div className="space-y-6">
-          {/* Top Metric Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white rounded-3xl border border-stone-200 p-5 shadow-xs">
-              <div className="flex items-center justify-between text-stone-500 text-xs font-bold mb-2">
-                <span>Accuracy Rate</span>
-                <Target className="w-4 h-4 text-emerald-600" />
-              </div>
-              <div className="text-3xl font-black text-stone-900">
-                {studentProgress.averageScore}%
-              </div>
-              <span className="text-[11px] text-emerald-700 font-medium flex items-center gap-1 mt-1">
-                <TrendingUp className="w-3 h-3" />
-                <span>+4% this week</span>
-              </span>
-            </div>
-
-            <div className="bg-white rounded-3xl border border-stone-200 p-5 shadow-xs">
-              <div className="flex items-center justify-between text-stone-500 text-xs font-bold mb-2">
-                <span>Avg Speed per Item</span>
-                <Clock className="w-4 h-4 text-amber-600" />
-              </div>
-              <div className="text-3xl font-black text-stone-900">
-                7.4s
-              </div>
-              <span className="text-[11px] text-amber-700 font-medium flex items-center gap-1 mt-1">
-                <Zap className="w-3 h-3" />
-                <span>Fast Thinker Level</span>
-              </span>
-            </div>
-
-            <div className="bg-white rounded-3xl border border-stone-200 p-5 shadow-xs">
-              <div className="flex items-center justify-between text-stone-500 text-xs font-bold mb-2">
-                <span>Quizzes Completed</span>
-                <BookOpen className="w-4 h-4 text-blue-600" />
-              </div>
-              <div className="text-3xl font-black text-stone-900">
-                {studentProgress.totalQuizzesTaken}
-              </div>
-              <span className="text-[11px] text-blue-700 font-medium flex items-center gap-1 mt-1">
-                <Check className="w-3 h-3" />
-                <span>Daily Quiz: {studentProgress.dailyQuizCompletedToday ? 'Done ☀️' : 'Pending ⏳'}</span>
-              </span>
-            </div>
-
-            <div className="bg-white rounded-3xl border border-stone-200 p-5 shadow-xs">
-              <div className="flex items-center justify-between text-stone-500 text-xs font-bold mb-2">
-                <span>Total XP Earned</span>
-                <Trophy className="w-4 h-4 text-yellow-600" />
-              </div>
-              <div className="text-3xl font-black text-amber-900">
-                {studentProgress.xp} XP
-              </div>
-              <span className="text-[11px] text-stone-500 font-medium mt-1 block">
-                Level {studentProgress.level} Scholar
-              </span>
-            </div>
-          </div>
-
-          {/* Subject Mastery Detailed Breakdown */}
-          <div className="bg-white rounded-3xl border border-stone-200 p-6 shadow-xs space-y-4">
-            <h3 className="text-base font-black text-stone-900 flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-amber-600" />
-              <span>Domain & Subject Proficiency</span>
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Object.entries(studentProgress.subjectMastery).map(([subj, score]) => (
-                <div key={subj} className="p-4 rounded-2xl bg-stone-50 border border-stone-200/80 space-y-2">
-                  <div className="flex items-center justify-between text-xs font-black text-stone-900">
-                    <span>{subj}</span>
-                    <span>{score}% Mastery</span>
-                  </div>
-                  <div className="w-full bg-stone-200 h-3 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full transition-all ${
-                        score >= 85 ? 'bg-emerald-500' : score >= 70 ? 'bg-blue-500' : 'bg-amber-500'
-                      }`}
-                      style={{ width: `${score}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between text-[10px] text-stone-400">
-                    <span>Target: 80% Mastery</span>
-                    <span className="text-emerald-700 font-bold">{score >= 80 ? 'Mastered ✨' : 'In Progress 🚀'}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Activity History Log */}
-          <div className="bg-white rounded-3xl border border-stone-200 p-6 shadow-xs space-y-4">
-            <h3 className="text-base font-black text-stone-900 flex items-center gap-2">
-              <ActivityIcon className="w-4 h-4 text-blue-600" />
-              <span>Recent Activity History</span>
-            </h3>
-
-            <div className="divide-y divide-stone-100 text-xs">
-              {studentProgress.recentActivities.map((act) => (
-                <div key={act.id} className="py-3 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-sm font-bold text-amber-800">
-                      {act.type === 'boss_battle' ? '⚔️' : act.type === 'game' ? '🎮' : '📝'}
-                    </div>
-                    <div>
-                      <strong className="block text-stone-900 font-bold">{act.title}</strong>
-                      <span className="text-[10px] text-stone-400">{act.timestamp}</span>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <span className="font-mono font-bold text-amber-900 block">
-                      {act.score} / {act.maxScore} pts
-                    </span>
-                    <span className="text-[10px] text-emerald-700 font-bold">
-                      {Math.round((act.score / act.maxScore) * 100)}% Accuracy
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <StudentAnalyticsDashboard
+          studentProgress={studentProgress}
+          activities={gradeLockedActivities}
+          questions={gradeLockedQuestions}
+          currentUser={currentUser}
+          onOpenReportCard={() => setIsReportCardOpen(true)}
+          onStartPracticeSkill={handleStartPracticeSkill}
+          onStartActivity={handleStartActivity}
+        />
       )}
 
       {/* Student ID Card Modal */}
@@ -1941,6 +2312,267 @@ export default function StudentPortal({
         schoolName={studentProgress.schoolName || currentUser.schoolName}
         parentName={studentProgress.parentName || currentUser.parentName}
       />
+
+      {/* Official Student Report Card Modal */}
+      {isReportCardOpen && (
+        <StudentReportCardModal
+          student={studentProgress}
+          userAccount={currentUser}
+          onClose={() => setIsReportCardOpen(false)}
+          viewerRole="student"
+          schoolName={studentProgress.schoolName || currentUser.schoolName}
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: ACHIEVEMENT MILESTONES UNLOCKED CELEBRATION */}
+      {/* ========================================================================= */}
+      {newlyUnlockedBadges && newlyUnlockedBadges.length > 0 && (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-stone-950/75 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto overscroll-contain modal-scroll-container"
+          onClick={() => setNewlyUnlockedBadges(null)}
+        >
+          <div
+            className="bg-white rounded-3xl border border-amber-200 shadow-2xl max-w-md w-full p-6 sm:p-8 text-center space-y-5 my-auto max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain modal-scroll-container"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="inline-flex p-4 rounded-3xl bg-amber-50 border-2 border-amber-300 shadow-md animate-bounce">
+              <span className="text-5xl">{newlyUnlockedBadges[0]?.icon || '🏆'}</span>
+            </div>
+
+            <div className="space-y-2">
+              <span className="inline-block px-3 py-1 rounded-full bg-amber-100 text-amber-900 font-black text-[11px] uppercase tracking-wider">
+                🎉 Performance Milestone Achieved!
+              </span>
+              <h3 className="text-xl sm:text-2xl font-black text-stone-900">
+                {newlyUnlockedBadges.length === 1
+                  ? newlyUnlockedBadges[0].name
+                  : `${newlyUnlockedBadges.length} New Badges Unlocked!`}
+              </h3>
+              <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                {newlyUnlockedBadges[0]?.description}
+              </p>
+            </div>
+
+            {newlyUnlockedBadges.length > 1 && (
+              <div className="grid grid-cols-2 gap-2 text-left pt-1">
+                {newlyUnlockedBadges.map((b) => (
+                  <div key={b.id} className="p-2.5 rounded-2xl bg-amber-50/60 border border-amber-200/80 flex items-center gap-2">
+                    <span className="text-2xl">{b.icon}</span>
+                    <div className="min-w-0">
+                      <span className="block font-bold text-xs text-stone-900 truncate">{b.name}</span>
+                      <span className="block text-[10px] text-amber-700 truncate">Unlocked today</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="p-3 rounded-2xl bg-stone-50 border border-stone-200/80 text-[11px] text-stone-600 flex items-center justify-center gap-2">
+              <Award className="w-4 h-4 text-amber-500 shrink-0" />
+              <span>Badge recorded in your student profile and report card!</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setNewlyUnlockedBadges(null)}
+              className="w-full py-3 px-6 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-black text-sm shadow-lg shadow-amber-500/25 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+            >
+              Claim & Continue Learning! 🚀
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: BADGE DETAIL INSPECTOR */}
+      {/* ========================================================================= */}
+      {selectedBadgeDetail && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto overscroll-contain modal-scroll-container"
+          onClick={() => setSelectedBadgeDetail(null)}
+        >
+          <div
+            className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-sm w-full p-6 text-center space-y-4 my-auto max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain modal-scroll-container relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setSelectedBadgeDetail(null)}
+              className="absolute top-4 right-4 p-1.5 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="w-16 h-16 rounded-3xl bg-amber-50 border-2 border-amber-200 flex items-center justify-center text-3xl mx-auto shadow-xs">
+              {selectedBadgeDetail.icon}
+            </div>
+
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full">
+                Achievement Badge
+              </span>
+              <h3 className="text-lg font-black text-stone-900 mt-2">
+                {selectedBadgeDetail.name}
+              </h3>
+              <p className="text-xs text-stone-600 mt-1.5 leading-relaxed">
+                {selectedBadgeDetail.description}
+              </p>
+            </div>
+
+            {selectedBadgeDetail.unlockedAt && (
+              <div className="p-2.5 rounded-2xl bg-stone-50 border border-stone-200/80 text-[11px] text-stone-600 flex items-center justify-center gap-1.5">
+                <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>Unlocked on <strong>{selectedBadgeDetail.unlockedAt}</strong></span>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setSelectedBadgeDetail(null)}
+              className="w-full py-2.5 px-4 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs transition cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: ALL PERFORMANCE MILESTONES & BADGE ROADMAP */}
+      {/* ========================================================================= */}
+      {showAllMilestonesModal && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto overscroll-contain modal-scroll-container"
+          onClick={() => setShowAllMilestonesModal(false)}
+        >
+          <div
+            className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-2xl w-full p-6 sm:p-7 space-y-5 my-auto max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain modal-scroll-container"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-stone-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 font-bold">
+                  <Trophy className="w-5 h-5 text-amber-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-stone-900">Achievement Milestones Roadmap</h3>
+                  <p className="text-xs text-stone-500">Track and unlock badges for performance milestones</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAllMilestonesModal(false)}
+                className="p-2 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Summary Progress Card */}
+            <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block">Student Quest Progress</span>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xl font-black text-stone-900">
+                    {PERFORMANCE_MILESTONES.filter(m => studentProgress.badges?.some(b => b.id === m.id || b.name.toLowerCase().trim() === m.name.toLowerCase().trim())).length} of {PERFORMANCE_MILESTONES.length}
+                  </span>
+                  <span className="text-xs text-stone-600 font-medium">Milestones Unlocked</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  handleIssueMilestoneBadges(studentProgress, undefined, true);
+                }}
+                className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs transition shadow-xs cursor-pointer self-start sm:self-auto"
+              >
+                Check & Claim Milestones 🎯
+              </button>
+            </div>
+
+            {/* Milestone List */}
+            <div className="space-y-3">
+              {PERFORMANCE_MILESTONES.map((milestone) => {
+                const unlockedBadge = (studentProgress.badges || []).find(
+                  b => b.id === milestone.id || b.name.toLowerCase().trim() === milestone.name.toLowerCase().trim()
+                );
+                const isUnlocked = Boolean(unlockedBadge);
+                const progressInfo = milestone.getProgress(studentProgress);
+                const percent = Math.min(100, Math.round((progressInfo.current / Math.max(1, progressInfo.target)) * 100));
+
+                return (
+                  <div
+                    key={milestone.id}
+                    className={`p-4 rounded-2xl border transition-all ${
+                      isUnlocked
+                        ? 'bg-amber-50/40 border-amber-200/80 shadow-2xs'
+                        : 'bg-white border-stone-200 opacity-90'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <span className="text-3xl shrink-0 p-1.5 rounded-xl bg-white border border-stone-200/60 shadow-2xs">
+                          {milestone.icon}
+                        </span>
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-bold text-sm text-stone-900">
+                              {milestone.name}
+                            </h4>
+                            {isUnlocked ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                                <Check className="w-3 h-3" />
+                                Unlocked {unlockedBadge?.unlockedAt ? `(${unlockedBadge.unlockedAt})` : ''}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-100 text-stone-600">
+                                In Progress
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-stone-600 leading-relaxed">
+                            {milestone.description}
+                          </p>
+                          <div className="text-[11px] text-stone-500 font-medium pt-0.5">
+                            Target: <span className="text-stone-700 font-semibold">{milestone.criterion}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar for Locked or Ongoing Milestones */}
+                    {!isUnlocked && (
+                      <div className="mt-3 pt-3 border-t border-stone-100 space-y-1.5">
+                        <div className="flex justify-between text-[11px] text-stone-500">
+                          <span>Current: {progressInfo.label}</span>
+                          <span className="font-bold text-amber-700">{percent}%</span>
+                        </div>
+                        <div className="w-full h-2 rounded-full bg-stone-100 overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all duration-300"
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowAllMilestonesModal(false)}
+                className="py-2.5 px-6 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs transition cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

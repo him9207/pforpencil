@@ -37,6 +37,7 @@ import {
 import { fetchUsersFromSupabase, isSupabaseConfigured, syncUserToSupabase } from '../../database';
 import { useBodyScrollLock } from '../../utils/useBodyScrollLock';
 import OtpVerificationView from './OtpVerificationView';
+import { dispatchOtpEmail, checkEmailServiceStatus } from '../../utils/emailService';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -137,6 +138,16 @@ export default function AuthModal({
   const [adultError, setAdultError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [loginOtp, setLoginOtp] = useState<string>('');
+  const [isLiveEmailDispatched, setIsLiveEmailDispatched] = useState<boolean>(false);
+
+  // Check email dispatch service status on mount / open
+  React.useEffect(() => {
+    if (isOpen) {
+      checkEmailServiceStatus().then((status) => {
+        setIsLiveEmailDispatched(status.liveEmailEnabled);
+      });
+    }
+  }, [isOpen]);
 
   // ---------------------------------------------------------------------------
   // 2. REGISTRATION STATE (Mandatory Unique Username + Email + Password + OTP)
@@ -308,6 +319,16 @@ export default function AuthModal({
       setMatchedUser(targetUser);
       setActiveScreen('signin_otp');
       sounds.playLevelUp();
+
+      // Dispatch OTP email (Live inbox delivery if API key configured, otherwise instant simulation)
+      dispatchOtpEmail({
+        to: targetUser.email || cleanIdentifier,
+        otpCode: newOtp,
+        purpose: 'login',
+        recipientName: targetUser.name
+      }).then((res) => {
+        setIsLiveEmailDispatched(Boolean(res.dispatchedToInbox));
+      });
       return;
     }
 
@@ -430,6 +451,16 @@ export default function AuthModal({
     setPendingRegistrationUser(newUser);
     setActiveScreen('register_otp');
     sounds.playLevelUp();
+
+    // Dispatch OTP email (Live inbox delivery if API key configured, otherwise instant simulation)
+    dispatchOtpEmail({
+      to: cleanEmail,
+      otpCode: newOtp,
+      purpose: 'register',
+      recipientName: regName.trim()
+    }).then((res) => {
+      setIsLiveEmailDispatched(Boolean(res.dispatchedToInbox));
+    });
   };
 
   const handleCompleteRegistrationAfterOtp = () => {
@@ -475,6 +506,16 @@ export default function AuthModal({
     setMatchedUser(found);
     setForgotStep('otp');
     sounds.playLevelUp();
+
+    // Dispatch OTP email (Live inbox delivery if API key configured, otherwise instant simulation)
+    dispatchOtpEmail({
+      to: found.email || cleanId,
+      otpCode: newOtp,
+      purpose: 'forgot_password',
+      recipientName: found.name
+    }).then((res) => {
+      setIsLiveEmailDispatched(Boolean(res.dispatchedToInbox));
+    });
   };
 
   const handleResetPasswordSubmit = (e: React.FormEvent) => {
@@ -913,11 +954,18 @@ export default function AuthModal({
                   We sent a 6-digit verification code to <strong className="text-stone-900 font-bold">{pendingRegistrationUser.email || regEmail}</strong> for account <strong className="text-blue-900 font-mono">@{pendingRegistrationUser.username}</strong>.
                 </>
               }
+              isLiveEmail={isLiveEmailDispatched}
               submitButtonText="Verify & Launch Account"
               onVerifySuccess={handleCompleteRegistrationAfterOtp}
               onResendOtp={() => {
                 const newCode = generateOtpCode();
                 setRegistrationOtp(newCode);
+                dispatchOtpEmail({
+                  to: pendingRegistrationUser.email || regEmail,
+                  otpCode: newCode,
+                  purpose: 'register',
+                  recipientName: pendingRegistrationUser.name
+                }).then((res) => setIsLiveEmailDispatched(Boolean(res.dispatchedToInbox)));
                 return newCode;
               }}
               onBack={() => setActiveScreen('register')}
@@ -1278,11 +1326,18 @@ export default function AuthModal({
                   Enter the 6-digit OTP code sent to <strong className="text-stone-900 font-bold">{matchedUser.email || adultIdentifier}</strong> to log in as <strong>{matchedUser.name}</strong>.
                 </>
               }
+              isLiveEmail={isLiveEmailDispatched}
               submitButtonText="Verify & Enter Dashboard"
               onVerifySuccess={handleCompleteLoginAfterOtp}
               onResendOtp={() => {
                 const newCode = generateOtpCode();
                 setLoginOtp(newCode);
+                dispatchOtpEmail({
+                  to: matchedUser.email || adultIdentifier,
+                  otpCode: newCode,
+                  purpose: 'login',
+                  recipientName: matchedUser.name
+                }).then((res) => setIsLiveEmailDispatched(Boolean(res.dispatchedToInbox)));
                 return newCode;
               }}
               onBack={() => setActiveScreen('signin')}
@@ -1361,11 +1416,18 @@ export default function AuthModal({
                       Enter the 6-digit OTP sent to <strong className="text-stone-900 font-bold">{matchedUser.email}</strong> to verify ownership of <strong className="text-blue-900 font-mono">@{matchedUser.username || matchedUser.id}</strong>.
                     </>
                   }
+                  isLiveEmail={isLiveEmailDispatched}
                   submitButtonText="Verify Code & Continue"
                   onVerifySuccess={() => setForgotStep('reset')}
                   onResendOtp={() => {
                     const newCode = generateOtpCode();
                     setForgotOtp(newCode);
+                    dispatchOtpEmail({
+                      to: matchedUser.email || forgotIdentifier,
+                      otpCode: newCode,
+                      purpose: 'forgot_password',
+                      recipientName: matchedUser.name
+                    }).then((res) => setIsLiveEmailDispatched(Boolean(res.dispatchedToInbox)));
                     return newCode;
                   }}
                   onBack={() => setForgotStep('identify')}

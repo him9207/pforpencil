@@ -11,6 +11,7 @@ interface OtpVerificationViewProps {
   onResendOtp: () => string; // returns new expected OTP
   onBack?: () => void;
   submitButtonText?: string;
+  isLiveEmail?: boolean;
 }
 
 export default function OtpVerificationView({
@@ -21,7 +22,8 @@ export default function OtpVerificationView({
   onVerifySuccess,
   onResendOtp,
   onBack,
-  submitButtonText = 'Verify & Proceed'
+  submitButtonText = 'Verify & Proceed',
+  isLiveEmail = false
 }: OtpVerificationViewProps) {
   const [digits, setDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [currentOtp, setCurrentOtp] = useState<string>(initialExpectedOtp);
@@ -161,29 +163,44 @@ export default function OtpVerificationView({
 
   return (
     <div className="space-y-4 text-xs animate-in fade-in duration-200">
-      {/* Top simulated delivery notification banner */}
+      {/* Top simulated/live delivery notification banner */}
       {showToast && (
-        <div className="p-3 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-between gap-2.5 shadow-2xs animate-in slide-in-from-top-2">
+        <div className={`p-3 rounded-2xl flex items-center justify-between gap-2.5 shadow-2xs animate-in slide-in-from-top-2 border ${
+          isLiveEmail ? 'bg-emerald-50/90 border-emerald-200' : 'bg-blue-50 border-blue-200'
+        }`}>
           <div className="flex items-center gap-2.5 min-w-0">
-            <span className="text-xl shrink-0">📬</span>
+            <span className="text-xl shrink-0">{isLiveEmail ? '🚀' : '📬'}</span>
             <div className="truncate">
-              <div className="text-[10px] font-extrabold uppercase tracking-wider text-blue-900 flex items-center gap-1">
-                <span>OTP Verification Code Sent</span>
-                <span className="px-1.5 py-0.2 rounded-full bg-blue-200/70 text-blue-950 text-[9px] font-mono">
-                  Inbox Demo
+              <div className="text-[10px] font-extrabold uppercase tracking-wider flex items-center gap-1.5">
+                <span className={isLiveEmail ? 'text-emerald-900' : 'text-blue-900'}>
+                  {isLiveEmail ? 'Live Email Dispatched' : 'OTP Code Dispatched'}
+                </span>
+                <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold ${
+                  isLiveEmail ? 'bg-emerald-200 text-emerald-950' : 'bg-blue-200/70 text-blue-950'
+                }`}>
+                  {isLiveEmail ? 'Inbox Delivery' : 'Instant Simulation'}
                 </span>
               </div>
-              <div className="text-xs text-blue-950 font-bold truncate">
-                Code for <span className="underline">{emailOrPhone}</span>: <strong className="text-blue-700 tracking-wider font-mono text-sm">{currentOtp}</strong>
+              <div className="text-xs font-bold truncate mt-0.5">
+                <span className={isLiveEmail ? 'text-emerald-950' : 'text-blue-950'}>
+                  Code for <span className="underline">{emailOrPhone}</span>:
+                </span>{' '}
+                <strong className={`tracking-wider font-mono text-sm ${
+                  isLiveEmail ? 'text-emerald-700' : 'text-blue-700'
+                }`}>
+                  {currentOtp}
+                </strong>
               </div>
             </div>
           </div>
           <button
             type="button"
             onClick={handleAutoFill}
-            className="px-2.5 py-1 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] shrink-0 transition-all cursor-pointer shadow-xs hover:scale-102 active:scale-98"
+            className={`px-3 py-1.5 rounded-full font-bold text-[10px] shrink-0 transition-all cursor-pointer shadow-xs hover:scale-102 active:scale-98 text-white ${
+              isLiveEmail ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'
+            }`}
           >
-            Auto-Fill
+            1-Click Fill
           </button>
         </div>
       )}

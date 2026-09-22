@@ -1,4 +1,4 @@
-import React, { useState, FormEvent } from 'react';
+import React, { useState, useMemo, FormEvent } from 'react';
 import { 
   UserAccount, 
   StudentProgress, 
@@ -30,7 +30,8 @@ import {
   MapPin,
   BookOpen,
   Lock,
-  Edit3
+  Edit3,
+  RotateCcw
 } from 'lucide-react';
 import { sounds } from '../../utils/audio';
 import { generateStudentUsername, getNextRoleId } from '../../utils/idAndUsernameGenerator';
@@ -105,9 +106,29 @@ export default function ParentPortal({
   const [newChildAvatar, setNewChildAvatar] = useState('🦊');
   const [newChildPin, setNewChildPin] = useState(() => String(Math.floor(1000 + Math.random() * 9000)));
   const [newChildUsername, setNewChildUsername] = useState('');
+  const [isCustomUsername, setIsCustomUsername] = useState(false);
+  const [customUsername, setCustomUsername] = useState('');
   const [newChildCountry, setNewChildCountry] = useState<string>(currentUser.country || 'United States');
   const [newChildState, setNewChildState] = useState<string>(currentUser.state || 'California');
   const [newChildCurriculum, setNewChildCurriculum] = useState<string>(currentUser.curriculum || 'Common Core (US)');
+
+  // Real-time validation for 6 to 13 character custom child username
+  const customUsernameValidation = useMemo(() => {
+    if (!isCustomUsername) return { status: 'idle', message: '' };
+    const clean = customUsername.trim();
+    if (!clean) return { status: 'empty', message: 'Enter 6 to 13 letters, numbers, or underscore' };
+    if (clean.length < 6) return { status: 'invalid', message: `Too short (${clean.length}/6 characters minimum)` };
+    if (clean.length > 13) return { status: 'invalid', message: `Too long (${clean.length}/13 characters maximum)` };
+    if (!/^[a-zA-Z0-9_]+$/.test(clean)) return { status: 'invalid', message: 'Only letters, numbers, and underscores (_) allowed' };
+
+    const taken = allUsers.some(
+      (u) => u.username && u.username.toLowerCase() === clean.toLowerCase()
+    );
+    if (taken) {
+      return { status: 'taken', message: `Username "${clean}" is already in use. Try adding numbers!` };
+    }
+    return { status: 'available', message: `✓ "${clean}" is available!` };
+  }, [isCustomUsername, customUsername, allUsers]);
 
   const activeChild = myChildren.find((c) => c.studentId === selectedChildId) || myChildren[0];
   const activeChildUser = allUsers.find(u => u.id === activeChild?.studentId);
@@ -144,6 +165,8 @@ export default function ParentPortal({
     setNewChildPin(randomPin);
     const autoUsername = generateStudentUsername(defaultName, allUsers, undefined, false, currentUser.name);
     setNewChildUsername(autoUsername);
+    setIsCustomUsername(false);
+    setCustomUsername('');
     setShowAddChildModal(true);
   };
 
@@ -162,19 +185,22 @@ export default function ParentPortal({
     }
 
     const nextStudentId = getNextRoleId('student', allUsers || []);
-    const generatedUsername = generateStudentUsername(
-      newChildName.trim(),
-      allUsers || [],
-      undefined,
-      false,
-      currentUser.name
-    );
+    
+    // Determine username: Custom (6-13 chars) if toggled, or smart auto-suggested
+    let finalUsername = newChildUsername;
+    if (isCustomUsername) {
+      if (customUsernameValidation.status !== 'available') {
+        alert(customUsernameValidation.message || 'Please enter a valid unique username between 6 and 13 characters.');
+        return;
+      }
+      finalUsername = customUsername.trim();
+    }
 
     const newStudentUser: UserAccount = {
       id: nextStudentId,
       role: 'student',
       name: newChildName.trim(),
-      username: generatedUsername,
+      username: finalUsername,
       pin: newChildPin.trim() || '7392',
       avatar: newChildAvatar,
       grade: newChildGrade,
@@ -189,7 +215,7 @@ export default function ParentPortal({
 
     const newStudentProgress: StudentProgress = {
       studentId: nextStudentId,
-      studentUsername: generatedUsername,
+      studentUsername: finalUsername,
       studentName: newChildName.trim(),
       avatar: newChildAvatar,
       grade: newChildGrade,
@@ -667,44 +693,102 @@ export default function ParentPortal({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1">
-                    Grade Level
+              <div>
+                <label className="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1">
+                  Grade Level
+                </label>
+                <select
+                  value={newChildGrade}
+                  onChange={(e) => setNewChildGrade(e.target.value as GradeLevel)}
+                  className="w-full p-2.5 rounded-xl border border-stone-200 font-bold text-xs"
+                >
+                  {activeGrades.map((g) => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Student Username Field: Hybrid Smart Auto-Suggest + Optional 6-13 Character Customization */}
+              <div className="bg-stone-50/70 p-3 rounded-2xl border border-stone-200/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-stone-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>Student Username (6 to 13 chars)</span>
                   </label>
-                  <select
-                    value={newChildGrade}
-                    onChange={(e) => setNewChildGrade(e.target.value as GradeLevel)}
-                    className="w-full p-2.5 rounded-xl border border-stone-200 font-bold text-xs"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomUsername(!isCustomUsername);
+                      if (!isCustomUsername && !customUsername) {
+                        setCustomUsername(newChildUsername);
+                      }
+                    }}
+                    className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer transition-colors"
                   >
-                    {activeGrades.map((g) => (
-                      <option key={g} value={g}>{g}</option>
-                    ))}
-                  </select>
+                    {isCustomUsername ? (
+                      <>
+                        <RotateCcw className="w-3 h-3 text-amber-600" />
+                        <span>Use Auto-Generated</span>
+                      </>
+                    ) : (
+                      <>
+                        <Edit3 className="w-3 h-3 text-blue-600" />
+                        <span>Customize Username</span>
+                      </>
+                    )}
+                  </button>
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1 flex items-center justify-between">
-                    <span>Student Username</span>
-                    <span className="text-[10px] text-amber-700 font-bold flex items-center gap-0.5">
-                      <Lock className="w-2.5 h-2.5" /> Immutable
+                {!isCustomUsername ? (
+                  <div>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={newChildUsername}
+                        readOnly
+                        title="Auto-generated unique username"
+                        className="w-full p-2.5 pr-8 rounded-xl border border-amber-200 bg-amber-50/80 font-mono font-bold text-xs text-amber-900 select-all"
+                      />
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600 absolute right-3 top-1/2 -translate-y-1/2" />
+                    </div>
+                    <span className="text-[10px] text-stone-500 mt-1 block">
+                      ⚡ <strong>Auto-suggested</strong> unique handle ({newChildUsername.length} chars). Click <strong>"Customize Username"</strong> to choose your own.
                     </span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={newChildUsername}
-                      readOnly
-                      title="Username is auto-generated and immutable (e.g. LARSMI1, LARSMI2)"
-                      className="w-full p-2.5 rounded-xl border border-amber-200 bg-amber-50/70 font-mono font-bold text-xs text-amber-900 cursor-not-allowed select-all"
-                      required
-                    />
-                    <Lock className="w-3.5 h-3.5 text-amber-600 absolute right-3 top-2.5" />
                   </div>
-                  <span className="text-[9px] text-stone-400 mt-0.5 block">
-                    Formula: First 3 letters + Last 3 letters + sequence (e.g. LARSMI1, LARSMI2)
-                  </span>
-                </div>
+                ) : (
+                  <div>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        maxLength={13}
+                        value={customUsername}
+                        onChange={(e) => setCustomUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 13))}
+                        placeholder="e.g. emma_star99, leo_cub1"
+                        className={`w-full p-2.5 pr-14 rounded-xl border font-mono font-bold text-xs focus:outline-none transition-all ${
+                          customUsernameValidation.status === 'available'
+                            ? 'border-emerald-400 bg-emerald-50/40 text-emerald-950 focus:ring-2 focus:ring-emerald-200'
+                            : customUsernameValidation.status === 'taken' || customUsernameValidation.status === 'invalid'
+                            ? 'border-rose-400 bg-rose-50/40 text-rose-950 focus:ring-2 focus:ring-rose-200'
+                            : 'border-blue-300 bg-white text-stone-900 focus:ring-2 focus:ring-blue-200'
+                        }`}
+                        required
+                      />
+                      <span className={`text-[10px] font-mono font-bold absolute right-3 top-1/2 -translate-y-1/2 ${
+                        customUsername.length >= 6 && customUsername.length <= 13 ? 'text-emerald-600' : 'text-stone-400'
+                      }`}>
+                        {customUsername.length}/13
+                      </span>
+                    </div>
+                    <p className={`text-[10px] mt-1 font-medium ${
+                      customUsernameValidation.status === 'available' 
+                        ? 'text-emerald-700 font-bold' 
+                        : customUsernameValidation.status === 'taken' || customUsernameValidation.status === 'invalid'
+                        ? 'text-rose-600 font-semibold'
+                        : 'text-stone-500'
+                    }`}>
+                      {customUsernameValidation.message || 'Must be 6 to 13 characters (letters, numbers, underscores)'}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Avatar Picker */}

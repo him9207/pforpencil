@@ -77,6 +77,7 @@ import VoucherManager from './components/VoucherManager';
 import ResetCredentialsModal from '../auth/ResetCredentialsModal';
 import StudentReportCardModal from '../student/StudentReportCardModal';
 import EditUserProfileModal from './components/EditUserProfileModal';
+import { useBodyScrollLock } from '../../utils/useBodyScrollLock';
 import { getNextRoleId, generateStudentUsername, getNextQuestionId, generateSchoolStudentUsername, generateAccountId, generateSchoolCode, getSchoolPrefix, commitAccountId } from '../../utils/idAndUsernameGenerator';
 import { SUBSCRIPTION_PLANS } from '../../mockData';
 import { COUNTRIES, COUNTRY_STATE_MAP, COUNTRY_CURRICULUM_MAP } from '../../data/curriculumData';
@@ -233,6 +234,31 @@ export default function AdminPortal({
   const [schoolMemberModalMode, setSchoolMemberModalMode] = useState<'teacher' | 'student'>('teacher');
   const [schoolMemberSelectedSchoolId, setSchoolMemberSelectedSchoolId] = useState<string>('');
 
+  const [showParentStudentModal, setShowParentStudentModal] = useState(false);
+  const [parentModalInitialMode, setParentModalInitialMode] = useState<'new' | 'existing'>('existing');
+  const [selectedParentForModal, setSelectedParentForModal] = useState<UserAccount | null>(null);
+  const [showInteractiveActivityModal, setShowInteractiveActivityModal] = useState(false);
+  const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+  const [previewActivity, setPreviewActivity] = useState<Activity | null>(null);
+
+  // Lock body scroll when any admin modal is active
+  useBodyScrollLock(Boolean(
+    inspectUser ||
+    editingUser ||
+    inspectQuestion ||
+    editingQuestion ||
+    showAddQuestionModal ||
+    inspectStudent ||
+    resettingUser ||
+    selectedReportStudent ||
+    showProvisionSchoolModal ||
+    showSchoolMemberModal ||
+    showParentStudentModal ||
+    showInteractiveActivityModal ||
+    editingActivity ||
+    previewActivity
+  ));
+
   const handleOpenAddTeacherToSchool = (schoolId?: string) => {
     sounds.click();
     setSchoolMemberModalMode('teacher');
@@ -246,13 +272,6 @@ export default function AdminPortal({
     setSchoolMemberSelectedSchoolId(schoolId || schools[0]?.id || '');
     setShowSchoolMemberModal(true);
   };
-
-  const [showParentStudentModal, setShowParentStudentModal] = useState(false);
-  const [parentModalInitialMode, setParentModalInitialMode] = useState<'new' | 'existing'>('existing');
-  const [selectedParentForModal, setSelectedParentForModal] = useState<UserAccount | null>(null);
-  const [showInteractiveActivityModal, setShowInteractiveActivityModal] = useState(false);
-  const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
-  const [previewActivity, setPreviewActivity] = useState<Activity | null>(null);
 
   // Subscription Tab Filter
   const [subscriptionStatusFilter, setSubscriptionStatusFilter] = useState<string>('all');
@@ -3075,8 +3094,14 @@ CREATE TABLE public.audit_logs (id text PRIMARY KEY, timestamp timestamp, accoun
       {/* MODAL 1: USER DETAIL INSPECTOR MODAL */}
       {/* ========================================================================= */}
       {inspectUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-lg w-full p-6 space-y-4 text-xs">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-stone-950/70 backdrop-blur-xs overflow-y-auto overscroll-contain modal-scroll-container"
+          onClick={() => setInspectUser(null)}
+        >
+          <div 
+            className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-lg w-full p-5 sm:p-6 space-y-4 text-xs my-auto max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain modal-scroll-container"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between pb-3 border-b border-stone-100">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">{inspectUser.avatar}</span>
@@ -3170,8 +3195,14 @@ CREATE TABLE public.audit_logs (id text PRIMARY KEY, timestamp timestamp, accoun
       {/* MODAL 2: QUESTION DETAIL INSPECTOR MODAL */}
       {/* ========================================================================= */}
       {inspectQuestion && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-xl w-full p-6 space-y-4 text-xs">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-stone-950/70 backdrop-blur-xs overflow-y-auto overscroll-contain modal-scroll-container"
+          onClick={() => setInspectQuestion(null)}
+        >
+          <div 
+            className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-xl w-full p-5 sm:p-6 space-y-4 text-xs my-auto max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain modal-scroll-container"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between pb-3 border-b border-stone-100">
               <div>
                 <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-900">
@@ -3242,8 +3273,14 @@ CREATE TABLE public.audit_logs (id text PRIMARY KEY, timestamp timestamp, accoun
       {/* MODAL 3: ADD QUESTION MODAL */}
       {/* ========================================================================= */}
       {showAddQuestionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-2xl w-full max-h-[92vh] overflow-y-auto p-6 space-y-4 text-xs">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-stone-950/70 backdrop-blur-xs overflow-y-auto overscroll-contain modal-scroll-container"
+          onClick={() => setShowAddQuestionModal(false)}
+        >
+          <div 
+            className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-2xl w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[92vh] overflow-y-auto overscroll-contain modal-scroll-container p-5 sm:p-6 space-y-4 text-xs my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between pb-3 border-b border-stone-100">
               <div>
                 <span className="font-bold text-[10px] text-blue-600 uppercase">Super Admin / Curator</span>
@@ -3380,8 +3417,14 @@ CREATE TABLE public.audit_logs (id text PRIMARY KEY, timestamp timestamp, accoun
       )}
       {/* UNIFIED PROVISION SCHOOL CAMPUS MODAL */}
       {showProvisionSchoolModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200">
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto overscroll-contain modal-scroll-container"
+          onClick={() => setShowProvisionSchoolModal(false)}
+        >
+          <div 
+            className="bg-white rounded-3xl p-5 sm:p-8 max-w-lg w-full shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200 my-auto max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain modal-scroll-container"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between pb-3 border-b border-stone-100">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { sounds } from '../../utils/audio';
+import { useBodyScrollLock } from '../../utils/useBodyScrollLock';
 
 interface SubscriptionsViewProps {
   currentUser: UserAccount;
@@ -43,6 +44,9 @@ export default function SubscriptionsView({
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
   const [checkoutCompleted, setCheckoutCompleted] = useState(false);
+
+  // Lock body scroll while checkout modal is open
+  useBodyScrollLock(checkoutModalOpen);
 
   const plans = SUBSCRIPTION_PLANS.filter((p) => p.type === activeType);
 
@@ -320,8 +324,14 @@ export default function SubscriptionsView({
 
       {/* Simulated Checkout Modal */}
       {checkoutModalOpen && selectedPlan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-md w-full p-6 sm:p-8 flex flex-col">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-stone-950/70 backdrop-blur-xs animate-in fade-in overflow-y-auto overscroll-contain modal-scroll-container"
+          onClick={() => setCheckoutModalOpen(false)}
+        >
+          <div 
+            className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-md w-full p-5 sm:p-8 flex flex-col max-h-[calc(100dvh-1.5rem)] my-auto overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
             {!checkoutCompleted ? (
               <>
                 <div className="pb-4 border-b border-stone-100 flex items-center justify-between">

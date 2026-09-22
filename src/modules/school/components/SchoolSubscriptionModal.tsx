@@ -1,6 +1,7 @@
 import React, { useState, FormEvent } from 'react';
 import { SchoolOrganization } from '../../../types';
 import { X, Building2, Calendar, ShieldCheck, CreditCard, Sparkles, Check } from 'lucide-react';
+import { useBodyScrollLock } from '../../../utils/useBodyScrollLock';
 
 interface SchoolSubscriptionModalProps {
   school: SchoolOrganization;
@@ -53,9 +54,18 @@ export default function SchoolSubscriptionModal({
     onSave(updated);
   };
 
+  // Lock body scroll while modal is open
+  useBodyScrollLock(true);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-lg w-full p-6 space-y-5">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-stone-950/70 backdrop-blur-xs animate-in fade-in overflow-y-auto overscroll-contain modal-scroll-container"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-lg w-full p-5 sm:p-6 space-y-5 my-auto max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain modal-scroll-container"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between pb-3 border-b border-stone-100">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-base">

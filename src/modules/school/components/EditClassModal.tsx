@@ -1,6 +1,7 @@
 import React, { useState, FormEvent } from 'react';
 import { ClassRoom, UserAccount, GradeLevel, CurriculumGrade } from '../../../types';
 import { X, Layers, UserCheck, Power, DoorOpen, FileText } from 'lucide-react';
+import { useBodyScrollLock } from '../../../utils/useBodyScrollLock';
 
 interface EditClassModalProps {
   classroom: ClassRoom;
@@ -50,9 +51,18 @@ export default function EditClassModal({
     onSave(updated);
   };
 
+  // Lock body scroll while editing class
+  useBodyScrollLock(true);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-5">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in overflow-y-auto overscroll-contain modal-scroll-container"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-5 sm:p-6 space-y-5 my-auto max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain modal-scroll-container"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-base">

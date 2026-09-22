@@ -41,6 +41,7 @@ import {
   getCompleteSupabaseSeedSql,
   DATABASE_TABLES
 } from '../../database';
+import { useBodyScrollLock } from '../../utils/useBodyScrollLock';
 import { 
   UserAccount, 
   Question, 
@@ -74,6 +75,9 @@ export default function SupabaseSchemaModal({
   studentProgressMap = {},
   frameworks = []
 }: SupabaseSchemaModalProps) {
+  // Lock document body scroll on mobile and desktop while database hub is open
+  useBodyScrollLock(isOpen);
+
   const [copiedType, setCopiedType] = useState<'combined' | 'schema' | 'seed' | null>(null);
   const [activeTab, setActiveTab] = useState<'setup' | 'data' | 'tables' | 'sql'>('setup');
   const [sqlViewMode, setSqlViewMode] = useState<'combined' | 'schema' | 'seed'>('combined');
@@ -298,8 +302,14 @@ export default function SupabaseSchemaModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-stone-950/75 backdrop-blur-xs animate-fade-in font-sans">
-      <div className="bg-white rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl border border-stone-200 flex flex-col max-h-[92vh]">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-stone-950/75 backdrop-blur-xs animate-fade-in font-sans overflow-y-auto overscroll-contain modal-scroll-container"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl border border-stone-200 flex flex-col max-h-[calc(100dvh-1rem)] sm:max-h-[92vh] my-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Header */}
         <div className="p-5 sm:p-6 bg-stone-900 text-white flex items-center justify-between">

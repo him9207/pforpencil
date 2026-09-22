@@ -5,6 +5,7 @@ import confetti from 'canvas-confetti';
 import InteractiveGameEngine from './InteractiveGameEngine';
 import { convertActivityToInteractiveSteps, detectQuestionGameMechanic, questionToGameTask } from './activityGameMapper';
 import { sounds } from '../../utils/audio';
+import { useBodyScrollLock } from '../../utils/useBodyScrollLock';
 
 interface Props {
   activity: Activity | null;
@@ -47,6 +48,9 @@ export default function ActivityPlayerModal({ activity, questions, studentName, 
     const id = window.setInterval(() => setSeconds(v => Math.max(0, v - 1)), 1000);
     return () => window.clearInterval(id);
   }, [activity, completed]);
+
+  // Lock body scroll while game player modal is active
+  useBodyScrollLock(Boolean(activity));
 
   if (!activity) return null;
 

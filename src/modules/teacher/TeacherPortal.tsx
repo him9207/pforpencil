@@ -46,6 +46,7 @@ import { COUNTRIES, COUNTRY_STATE_MAP, COUNTRY_CURRICULUM_MAP } from '../../data
 import StudentReportCardModal from '../student/StudentReportCardModal';
 import ResetCredentialsModal from '../auth/ResetCredentialsModal';
 import EditUserProfileModal from '../admin/components/EditUserProfileModal';
+import { useBodyScrollLock } from '../../utils/useBodyScrollLock';
 
 interface TeacherPortalProps {
   currentUser: UserAccount;
@@ -128,6 +129,17 @@ export default function TeacherPortal({
   const [selectedReportStudent, setSelectedReportStudent] = useState<StudentProgress | null>(null);
   const [resettingUser, setResettingUser] = useState<UserAccount | null>(null);
   const [editingUser, setEditingUser] = useState<UserAccount | null>(null);
+
+  // Lock body scroll while any teacher modal is open
+  useBodyScrollLock(Boolean(
+    showCreateClassModal || 
+    showCreateStudentModal || 
+    showCreateAssignmentModal || 
+    showCreateQuestionModal || 
+    selectedReportStudent || 
+    resettingUser || 
+    editingUser
+  ));
 
   // Class Form State
   const [newClassName, setNewClassName] = useState('');
@@ -1351,8 +1363,14 @@ export default function TeacherPortal({
       {/* MODAL 1: CREATE CLASS (Includes Preschool & Foundation) */}
       {/* ========================================================================= */}
       {showCreateClassModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-md w-full p-6 space-y-4">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-stone-950/70 backdrop-blur-xs overflow-y-auto overscroll-contain modal-scroll-container"
+          onClick={() => setShowCreateClassModal(false)}
+        >
+          <div 
+            className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-md w-full p-5 sm:p-6 space-y-4 my-auto max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain modal-scroll-container"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between pb-3 border-b border-stone-100">
               <h3 className="text-base font-black text-stone-900">Create New Classroom</h3>
               <button onClick={() => setShowCreateClassModal(false)} className="text-stone-400 hover:text-stone-900 cursor-pointer p-1">✕</button>
@@ -1443,8 +1461,14 @@ export default function TeacherPortal({
       {/* MODAL 2: ENROLL STUDENT (Includes Preschool & Foundation) */}
       {/* ========================================================================= */}
       {showCreateStudentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-md w-full p-6 space-y-4">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-stone-950/70 backdrop-blur-xs overflow-y-auto overscroll-contain modal-scroll-container"
+          onClick={() => setShowCreateStudentModal(false)}
+        >
+          <div 
+            className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-md w-full p-5 sm:p-6 space-y-4 my-auto max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain modal-scroll-container"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between pb-3 border-b border-stone-100">
               <h3 className="text-base font-black text-stone-900">Enroll Student</h3>
               <button onClick={() => setShowCreateStudentModal(false)} className="text-stone-400 hover:text-stone-900 cursor-pointer p-1">✕</button>
@@ -1530,8 +1554,14 @@ export default function TeacherPortal({
       {/* MODAL 3: CREATE ASSIGNMENT (From Accessible Bank) */}
       {/* ========================================================================= */}
       {showCreateAssignmentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-3xl w-full max-h-[92vh] overflow-y-auto p-6 sm:p-8 flex flex-col">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-stone-950/70 backdrop-blur-xs overflow-y-auto overscroll-contain modal-scroll-container"
+          onClick={() => setShowCreateAssignmentModal(false)}
+        >
+          <div 
+            className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-3xl w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[92vh] overflow-y-auto overscroll-contain modal-scroll-container p-5 sm:p-8 flex flex-col my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between pb-4 border-b border-stone-100 mb-4">
               <div>
                 <h3 className="text-lg font-black text-stone-900 flex items-center gap-2">
@@ -1708,8 +1738,14 @@ export default function TeacherPortal({
       {/* MODAL 4: AUTHOR SCHOOL CUSTOM QUESTION (Exclusive to this school) */}
       {/* ========================================================================= */}
       {showCreateQuestionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-xl w-full p-6 space-y-4 text-xs my-auto">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-stone-950/70 backdrop-blur-xs overflow-y-auto overscroll-contain modal-scroll-container"
+          onClick={() => setShowCreateQuestionModal(false)}
+        >
+          <div 
+            className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-xl w-full p-5 sm:p-6 space-y-4 text-xs my-auto max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain modal-scroll-container"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between pb-3 border-b border-stone-100">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center text-base">

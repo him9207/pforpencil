@@ -463,7 +463,7 @@ export default function AuthModal({
             />
             <div>
               <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#eef4ff] text-[#10246f] text-[10px] font-bold uppercase tracking-wider mb-0.5">
-                <Sparkles className="w-3 h-3 text-[#f20b86]" />
+                <Sparkles className="w-3 h-3 text-blue-600" />
                 <span>Authentication Center</span>
               </div>
               <h2 className="text-lg font-black text-[#10246f]">
@@ -504,8 +504,8 @@ export default function AuthModal({
               onClick={() => setActiveScreen('register')}
               className={`flex-1 py-2.5 rounded-full font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 activeScreen === 'register'
-                  ? 'bg-[#f20b86] text-white shadow-xs font-bold'
-                  : 'bg-[#f8faff] text-[#59627a] border border-[#e1e6f1] hover:bg-[#fdf2f8]'
+                  ? 'bg-blue-600 text-white shadow-xs font-bold'
+                  : 'bg-[#f8faff] text-[#59627a] border border-[#e1e6f1] hover:bg-blue-50/50'
               }`}
             >
               <UserPlus className="w-3.5 h-3.5" />
@@ -537,7 +537,7 @@ export default function AuthModal({
                         <span className="text-[#a0aec0]">•</span>
                         <span>{selectedState}</span>
                       </div>
-                      <div className="text-[11px] font-semibold text-[#f20b86] truncate">
+                      <div className="text-[11px] font-semibold text-blue-600 truncate">
                         {selectedCurriculum}
                       </div>
                     </div>
@@ -549,7 +549,7 @@ export default function AuthModal({
                       onClick={() => setIsEditingRegion(!isEditingRegion)}
                       className="px-2.5 py-1 rounded-full border border-[#bfcbe8] bg-white hover:bg-[#eef4ff] text-[#10246f] font-bold text-[10px] shrink-0 transition-all cursor-pointer flex items-center gap-1 shadow-xs"
                     >
-                      <SlidersHorizontal className="w-2.5 h-2.5 text-[#f20b86]" />
+                      <SlidersHorizontal className="w-2.5 h-2.5 text-blue-600" />
                       <span>{isEditingRegion ? 'Done' : 'Change'}</span>
                     </button>
                     {onOpenRegionModal && (
@@ -814,7 +814,7 @@ export default function AuthModal({
               <button
                 id="submit-register-btn"
                 type="submit"
-                className="w-full py-3.5 px-4 rounded-full bg-[#f20b86] hover:bg-[#df0879] text-white font-bold text-xs sm:text-sm shadow-md shadow-[#f20b86]/25 flex items-center justify-center gap-2 transition-all cursor-pointer mt-2"
+                className="w-full py-3.5 px-4 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-600/25 flex items-center justify-center gap-2 transition-all cursor-pointer mt-2 hover:scale-101 active:scale-99"
               >
                 <span>Create Free Account & Access Portal</span>
                 <ArrowRight className="w-4 h-4" />
@@ -929,7 +929,7 @@ export default function AuthModal({
                     id="submit-student-login"
                     type="submit"
                     disabled={isVerifying}
-                    className="w-full py-3 px-4 rounded-full bg-[#f20b86] hover:bg-[#df0879] text-white font-bold text-sm shadow-md shadow-[#f20b86]/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    className="w-full py-3 px-4 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-600/25 flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-101 active:scale-99"
                   >
                     <span>{isVerifying ? 'Checking database...' : 'Enter Kid Learning Adventure'}</span>
                     <ArrowRight className="w-4 h-4" />
@@ -981,7 +981,7 @@ export default function AuthModal({
                           setForgotIdentifier(adultIdentifier);
                           setActiveScreen('forgot_password');
                         }}
-                        className="text-xs font-bold text-[#f20b86] hover:underline cursor-pointer"
+                        className="text-xs font-bold text-blue-600 hover:underline cursor-pointer"
                       >
                         Forgot password?
                       </button>
@@ -1225,7 +1225,7 @@ export default function AuthModal({
 
                   <button
                     type="submit"
-                    className="w-full py-3 px-4 rounded-full bg-[#f20b86] hover:bg-[#df0879] text-white font-bold text-xs sm:text-sm shadow-md shadow-[#f20b86]/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    className="w-full py-3 px-4 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-600/25 flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-101 active:scale-99"
                   >
                     <span>Save New Password & Sign In</span>
                     <ArrowRight className="w-4 h-4" />

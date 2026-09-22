@@ -106,7 +106,7 @@ export default function Navbar({
             >
               <span>Home</span>
               {currentView === 'home' && (
-                <span className="absolute -bottom-1 left-0 right-0 h-1 rounded-full bg-[#f20b86]" />
+                <span className="absolute -bottom-1 left-0 right-0 h-1 rounded-full bg-[#10246f]" />
               )}
             </button>
 
@@ -199,13 +199,13 @@ export default function Navbar({
             Log In
           </button>
 
-          {/* Sign Up Hot Pink Pill Button */}
+          {/* Sign Up Crisp Primary Button */}
           <button
             id="nav-signup-btn"
             onClick={() => onOpenAuthModal ? onOpenAuthModal({ screen: 'register' }) : onNavigateView('home')}
-            className="px-5 py-2.5 rounded-full bg-[#f20b86] hover:bg-[#df0879] text-white font-bold text-xs sm:text-sm shadow-md shadow-[#f20b86]/25 transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
+            className="px-5 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-600/20 transition-all transform hover:scale-102 active:scale-98 cursor-pointer"
           >
-            Sign Up
+            Sign Up Free
           </button>
 
           {/* Current User & Role Selector Dropdown */}

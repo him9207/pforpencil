@@ -27,7 +27,7 @@ export default function PforPencilLogo({
         }}
       />
       <span className="text-xl font-black text-[#10246f] tracking-tight" style={{ display: 'none' }}>
-        P<b className="text-[#f20b86]">for</b>Pencil
+        P<b className="text-blue-600">for</b>Pencil
       </span>
 
       {showSubtitle && (

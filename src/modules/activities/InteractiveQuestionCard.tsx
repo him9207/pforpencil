@@ -1443,7 +1443,7 @@ export default function InteractiveQuestionCard({
                 cardStyle = 'bg-[#f8faff] border-[#e1e6f1] text-stone-400 opacity-40';
               }
             } else if (isSelected) {
-              cardStyle = 'bg-[#fdf2f8] border-[#f20b86] text-[#10246f] font-bold ring-2 ring-[#f20b86]/30 shadow-sm scale-[1.01]';
+              cardStyle = 'bg-indigo-50/80 border-indigo-600 text-[#10246f] font-bold ring-2 ring-indigo-500/30 shadow-sm scale-[1.01]';
             }
 
             return (
@@ -1461,7 +1461,7 @@ export default function InteractiveQuestionCard({
                   <span
                     className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center font-bold text-sm sm:text-base shrink-0 border transition-colors ${
                       isSelected
-                        ? 'bg-[#f20b86] text-white border-[#f20b86]'
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
                         : isSubmitted && isCorrectOption
                         ? 'bg-[#16c47f] text-white border-[#16c47f]'
                         : 'bg-[#f8faff] text-[#10246f] border-[#e1e6f1]'

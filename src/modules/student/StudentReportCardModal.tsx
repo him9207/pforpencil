@@ -132,7 +132,7 @@ export default function StudentReportCardModal({
                 🎓
               </div>
               <div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-[#f20b86] block">
+                <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 block">
                   PforPencil Academic Mastery Network
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-stone-900 tracking-tight">

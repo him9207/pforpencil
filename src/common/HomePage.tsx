@@ -288,8 +288,10 @@ export default function PForPencilHomePage({
           --navy-2: #172d7d;
           --text: #1b2d72;
           --muted: #6073a9;
-          --pink: #f20b86;
-          --pink-dark: #df0879;
+          --primary: #2563eb;
+          --primary-dark: #1d4ed8;
+          --pink: #2563eb;
+          --pink-dark: #1d4ed8;
           --teal: #13b7ad;
           --blue: #168bea;
           --green: #16c47f;
@@ -528,7 +530,7 @@ export default function PForPencilHomePage({
           color: #fff;
           background: var(--pink);
           border: 1px solid var(--pink);
-          box-shadow: 0 8px 20px rgba(242,11,134,.2);
+          box-shadow: 0 8px 20px rgba(37,99,235,.25);
         }
 
         .btn-signup:hover {
@@ -589,7 +591,7 @@ export default function PForPencilHomePage({
           font-size: 16px;
           font-weight: 700;
           cursor: pointer;
-          box-shadow: 0 12px 24px rgba(242,11,134,.22);
+          box-shadow: 0 12px 24px rgba(37,99,235,.25);
           transition: transform .15s ease, background .15s ease;
         }
 

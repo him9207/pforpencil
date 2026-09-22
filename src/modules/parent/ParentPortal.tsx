@@ -305,7 +305,7 @@ export default function ParentPortal({
                 }}
                 className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
                   child.studentId === activeChild?.studentId
-                    ? 'bg-[#f20b86] text-white shadow-xs'
+                    ? 'bg-[#10246f] text-white shadow-xs'
                     : 'text-[#59627a] hover:text-[#10246f] hover:bg-white'
                 }`}
               >
@@ -446,7 +446,7 @@ export default function ParentPortal({
                   sounds.playLevelUp();
                   setShowReportCardModal(true);
                 }}
-                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#f20b86] hover:bg-[#df0879] text-white text-xs font-bold transition shadow-xs cursor-pointer hover:scale-105 active:scale-95"
+                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-xs cursor-pointer hover:scale-102 active:scale-98"
               >
                 <FileText className="w-4 h-4" />
                 <span>View Full Report Card & Analytics</span>
@@ -927,7 +927,7 @@ export default function ParentPortal({
               </button>
               <button
                 type="submit"
-                className="px-6 py-2 rounded-full bg-[#f20b86] hover:bg-[#df0879] text-white font-bold cursor-pointer shadow-xs transition-all hover:scale-105 active:scale-95 text-xs sm:text-sm"
+                className="px-6 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer shadow-xs transition-all hover:scale-102 active:scale-98 text-xs sm:text-sm"
               >
                 Enroll Child
               </button>

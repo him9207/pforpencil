@@ -542,7 +542,7 @@ export default function SchoolPortal({
             onClick={() => setActiveTab('classes')}
             className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'classes'
-                ? 'bg-[#f20b86] text-white shadow-xs'
+                ? 'bg-[#10246f] text-white shadow-xs'
                 : 'text-[#59627a] hover:text-[#10246f]'
             }`}
           >
@@ -552,7 +552,7 @@ export default function SchoolPortal({
             onClick={() => setActiveTab('teachers')}
             className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'teachers'
-                ? 'bg-[#f20b86] text-white shadow-xs'
+                ? 'bg-[#10246f] text-white shadow-xs'
                 : 'text-[#59627a] hover:text-[#10246f]'
             }`}
           >
@@ -562,7 +562,7 @@ export default function SchoolPortal({
             onClick={() => setActiveTab('students')}
             className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'students'
-                ? 'bg-[#f20b86] text-white shadow-xs'
+                ? 'bg-[#10246f] text-white shadow-xs'
                 : 'text-[#59627a] hover:text-[#10246f]'
             }`}
           >
@@ -602,7 +602,7 @@ export default function SchoolPortal({
                 setNewStudentPin(String(Math.floor(1000 + Math.random() * 9000)));
                 setShowAddStudentModal(true);
               }}
-              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#f20b86] hover:bg-[#df0879] text-white text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-105 active:scale-95"
+              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-102 active:scale-98"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Enroll Student</span>
@@ -1787,7 +1787,7 @@ export default function SchoolPortal({
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 rounded-full bg-[#f20b86] hover:bg-[#df0879] text-white font-bold cursor-pointer shadow-xs transition-all hover:scale-105 active:scale-95 text-xs sm:text-sm"
+                  className="px-6 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer shadow-xs transition-all hover:scale-102 active:scale-98 text-xs sm:text-sm"
                 >
                   Enroll Student
                 </button>

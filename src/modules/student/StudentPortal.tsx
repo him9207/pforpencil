@@ -1105,7 +1105,7 @@ export default function StudentPortal({
       {/* Kid Welcome & Gamification Bar - Vibrant, Colorful & High-Contrast Student Profile */}
       <div className="bg-white border-2 border-[#e1e6f1] rounded-3xl p-6 sm:p-8 shadow-xs relative overflow-hidden">
         {/* Soft colorful backdrop accents */}
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 rounded-full bg-[#fdf2f8] pointer-events-none blur-2xl" />
+        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 rounded-full bg-blue-50/60 pointer-events-none blur-2xl" />
         <div className="absolute bottom-0 left-1/3 -mb-10 w-40 h-40 rounded-full bg-[#eaf8f5] pointer-events-none blur-xl" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -1118,8 +1118,8 @@ export default function StudentPortal({
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-bold px-3 py-0.5 rounded-full bg-[#fdf2f8] text-[#f20b86] border border-[#fbcfe8] uppercase tracking-wider flex items-center gap-1.5 shadow-2xs">
-                  <Lock className="w-3 h-3 text-[#f20b86]" />
+                <span className="text-xs font-bold px-3 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 uppercase tracking-wider flex items-center gap-1.5 shadow-2xs">
+                  <Lock className="w-3 h-3 text-indigo-600" />
                   <span>{studentGrade}</span>
                 </span>
                 <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#eaf8f5] text-[#13b7ad] border border-[#a7f3d0] flex items-center gap-1 shadow-2xs">
@@ -1154,16 +1154,16 @@ export default function StudentPortal({
             </div>
           </div>
 
-          {/* Gamification Stats - Colorful Cards */}
+          {/* Gamification Stats - Refined Professional Badges */}
           <div className="grid grid-cols-3 gap-2.5 sm:gap-3 bg-[#f8faff] border border-[#e1e6f1] p-3 sm:p-4 rounded-3xl shadow-xs">
             {/* Level Card */}
-            <div className="text-center px-3 py-2 rounded-2xl bg-[#FCE8F3] border border-[#fbcfe8]">
-              <div className="flex items-center justify-center gap-1 text-[#f20b86] text-xs font-bold">
-                <Zap className="w-3.5 h-3.5 fill-[#f20b86] text-[#f20b86]" />
+            <div className="text-center px-3 py-2 rounded-2xl bg-indigo-50/70 border border-indigo-200">
+              <div className="flex items-center justify-center gap-1 text-indigo-700 text-xs font-bold">
+                <Zap className="w-3.5 h-3.5 fill-indigo-600 text-indigo-600" />
                 <span>Level {studentProgress.level}</span>
               </div>
               <span className="block text-xl sm:text-2xl font-black text-[#10246f] mt-0.5">
-                {studentProgress.xp} <span className="text-[11px] font-bold text-[#f20b86]">XP</span>
+                {studentProgress.xp} <span className="text-[11px] font-bold text-indigo-600">XP</span>
               </span>
             </div>
 
@@ -1192,19 +1192,19 @@ export default function StudentPortal({
           </div>
         </div>
 
-        {/* Level XP Progress Bar with colorful styling */}
+        {/* Level XP Progress Bar with refined styling */}
         <div className="mt-5 pt-4 border-t border-[#e1e6f1] flex items-center justify-between gap-4 text-xs font-semibold text-[#59627a]">
           <span className="font-bold text-[#10246f] flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#f20b86] animate-ping" />
+            <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
             <span>Level {studentProgress.level} Explorer</span>
           </span>
           <div className="flex-1 max-w-md bg-[#eef4ff] border border-[#e1e6f1] h-3 rounded-full overflow-hidden p-0.5">
             <div 
-              className="bg-gradient-to-r from-[#f20b86] via-[#168bea] to-[#16c47f] h-full rounded-full transition-all duration-500 shadow-xs"
+              className="bg-gradient-to-r from-blue-600 via-indigo-600 to-[#16c47f] h-full rounded-full transition-all duration-500 shadow-xs"
               style={{ width: `${(studentProgress.xp % 500) / 5}%` }}
             />
           </div>
-          <span className="text-[#f20b86] font-bold">{500 - (studentProgress.xp % 500)} XP to Level {studentProgress.level + 1}</span>
+          <span className="text-indigo-600 font-bold">{500 - (studentProgress.xp % 500)} XP to Level {studentProgress.level + 1}</span>
         </div>
       </div>
 
@@ -1223,11 +1223,11 @@ export default function StudentPortal({
           onClick={() => setActiveTab('adventures')}
           className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition cursor-pointer whitespace-nowrap ${
             activeTab === 'adventures'
-              ? 'bg-[#f20b86] text-white shadow-xs'
+              ? 'bg-[#10246f] text-white shadow-xs'
               : 'text-[#59627a] hover:text-[#10246f] hover:bg-[#eef4ff]'
           }`}
         >
-          <Sparkles className="w-4 h-4" />
+          <Sparkles className="w-4 h-4 text-amber-300" />
           <span>Adventures & Quizzes</span>
         </button>
 
@@ -1236,7 +1236,7 @@ export default function StudentPortal({
           onClick={() => setActiveTab('leaderboard')}
           className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition cursor-pointer whitespace-nowrap ${
             activeTab === 'leaderboard'
-              ? 'bg-[#f20b86] text-white shadow-xs'
+              ? 'bg-[#10246f] text-white shadow-xs'
               : 'text-[#59627a] hover:text-[#10246f] hover:bg-[#eef4ff]'
           }`}
         >
@@ -1249,11 +1249,11 @@ export default function StudentPortal({
           onClick={() => setActiveTab('skills')}
           className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition cursor-pointer whitespace-nowrap ${
             activeTab === 'skills'
-              ? 'bg-[#f20b86] text-white shadow-xs'
+              ? 'bg-[#10246f] text-white shadow-xs'
               : 'text-[#59627a] hover:text-[#10246f] hover:bg-[#eef4ff]'
           }`}
         >
-          <Compass className="w-4 h-4" />
+          <Compass className="w-4 h-4 text-sky-400" />
           <span>Skill Standards Browser</span>
         </button>
 
@@ -1262,11 +1262,11 @@ export default function StudentPortal({
           onClick={() => setActiveTab('analytics')}
           className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition cursor-pointer whitespace-nowrap ${
             activeTab === 'analytics'
-              ? 'bg-[#f20b86] text-white shadow-xs'
+              ? 'bg-[#10246f] text-white shadow-xs'
               : 'text-[#59627a] hover:text-[#10246f] hover:bg-[#eef4ff]'
           }`}
         >
-          <BarChart3 className="w-4 h-4" />
+          <BarChart3 className="w-4 h-4 text-emerald-400" />
           <span>Learning Analytics</span>
         </button>
       </div>
@@ -1309,11 +1309,11 @@ export default function StudentPortal({
 
             {/* Center: Question Indicator */}
             {!quizFinished && activeQuestions.length > 0 && (
-              <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#fdf2f8] text-[#f20b86] border border-[#fbcfe8] text-xs sm:text-sm font-bold shadow-2xs">
+              <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs sm:text-sm font-bold shadow-2xs">
                 <span>Question</span>
-                <span className="font-black text-[#f20b86]">{currentQuestionIndex + 1}</span>
-                <span className="text-[#f20b86]/70">of</span>
-                <span className="font-black">{activeQuestions.length}</span>
+                <span className="font-black text-indigo-800">{currentQuestionIndex + 1}</span>
+                <span className="text-indigo-400">of</span>
+                <span className="font-black text-indigo-800">{activeQuestions.length}</span>
               </div>
             )}
 
@@ -1348,10 +1348,10 @@ export default function StudentPortal({
                     setActivePlayActivity(null);
                     setModernActivity(target);
                   }}
-                  className="hidden lg:inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#fdf2f8] hover:bg-[#fce7f3] border border-[#fbcfe8] text-[#f20b86] text-xs font-bold transition-all cursor-pointer hover:scale-105"
+                  className="hidden lg:inline-flex items-center gap-1 px-3 py-1 rounded-full bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-bold transition-all cursor-pointer hover:scale-105"
                   title="Switch to Arcade Mini-Game Canvas"
                 >
-                  <Gamepad2 className="w-3.5 h-3.5 text-[#f20b86]" />
+                  <Gamepad2 className="w-3.5 h-3.5 text-indigo-600" />
                   <span>Arcade Mode</span>
                 </button>
               )}
@@ -1372,7 +1372,7 @@ export default function StudentPortal({
           {!quizFinished && activeQuestions.length > 0 && (
             <div className="w-full bg-[#eef4ff] h-1.5 shrink-0 overflow-hidden">
               <div 
-                className="bg-gradient-to-r from-[#f20b86] via-[#168bea] to-[#16c47f] h-full transition-all duration-300 shadow-xs"
+                className="bg-gradient-to-r from-blue-600 via-indigo-600 to-[#16c47f] h-full transition-all duration-300 shadow-xs"
                 style={{ width: `${((currentQuestionIndex + (isAnswerSubmitted ? 1 : 0)) / activeQuestions.length) * 100}%` }}
               />
             </div>
@@ -1464,10 +1464,10 @@ export default function StudentPortal({
                     <button
                       type="button"
                       onClick={() => handleReadAloud(currentQ.prompt)}
-                      className="px-3.5 py-1.5 rounded-full bg-[#fdf2f8] hover:bg-[#fce7f3] text-[#f20b86] border border-[#fbcfe8] font-bold text-xs flex items-center gap-1.5 shrink-0 cursor-pointer shadow-2xs transition-all hover:scale-105 active:scale-95"
+                      className="px-3.5 py-1.5 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs flex items-center gap-1.5 shrink-0 cursor-pointer shadow-2xs transition-all hover:scale-105 active:scale-95"
                       title="Read question aloud"
                     >
-                      <Volume2 className="w-3.5 h-3.5 text-[#f20b86]" />
+                      <Volume2 className="w-3.5 h-3.5 text-indigo-600" />
                       <span>Listen 🔊</span>
                     </button>
                   </div>
@@ -1561,18 +1561,18 @@ export default function StudentPortal({
             ) : (
               /* 3. ACTIVITY RESULTS SUMMARY (ELEGANT FULL-SCREEN CARD) */
               <div className="bg-white rounded-3xl border-2 border-[#e1e6f1] p-6 sm:p-8 shadow-xl text-center space-y-4 max-w-lg mx-auto w-full my-auto animate-in zoom-in-95 duration-200">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-[#fdf2f8] text-[#f20b86] flex items-center justify-center text-3xl sm:text-4xl shadow-xs mx-auto border border-[#fbcfe8]">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-amber-50 text-amber-600 flex items-center justify-center text-3xl sm:text-4xl shadow-xs mx-auto border border-amber-200">
                   🏆
                 </div>
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#f20b86] bg-[#fdf2f8] px-3 py-1 rounded-full border border-[#fbcfe8]">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
                     Activity Completed!
                   </span>
                   <h3 className="text-xl sm:text-2xl font-black text-[#10246f] mt-2">
                     Fantastic Job, {studentProgress.studentName}!
                   </h3>
                   <p className="text-[#59627a] text-xs sm:text-sm mt-1">
-                    You earned <strong className="text-[#f20b86]">+{activePlayActivity.rewardXP + (speedBonusesEarned * 10)} XP</strong> and <strong className="text-[#ffbf32]">+{activePlayActivity.rewardCoins} 🪙 Coins</strong>!
+                    You earned <strong className="text-blue-600">+{activePlayActivity.rewardXP + (speedBonusesEarned * 10)} XP</strong> and <strong className="text-[#ffbf32]">+{activePlayActivity.rewardCoins} 🪙 Coins</strong>!
                   </p>
                 </div>
 
@@ -1666,7 +1666,7 @@ export default function StudentPortal({
                 <button
                   type="button"
                   onClick={() => setActivePlayActivity(null)}
-                  className="w-full py-3 px-6 rounded-full bg-[#f20b86] hover:bg-[#df0879] text-white font-bold text-sm shadow-md shadow-[#f20b86]/25 transition-all hover:scale-105 active:scale-95 cursor-pointer mt-2"
+                  className="w-full py-3 px-6 rounded-full bg-[#10246f] hover:bg-[#0c1a52] text-white font-bold text-sm shadow-md shadow-[#10246f]/20 transition-all hover:scale-102 active:scale-98 cursor-pointer mt-2"
                 >
                   Return to Student Adventures
                 </button>
@@ -1691,17 +1691,17 @@ export default function StudentPortal({
                   id="submit-answer-btn"
                   disabled={!canSubmitAnswer}
                   onClick={handleSubmitAnswer}
-                  className="px-8 sm:px-12 py-2.5 sm:py-3 rounded-full bg-[#f20b86] hover:bg-[#df0879] disabled:opacity-40 text-white text-xs sm:text-sm font-bold shadow-md shadow-[#f20b86]/25 hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center gap-2"
+                  className="px-8 sm:px-12 py-2.5 sm:py-3 rounded-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-600/25 hover:scale-102 active:scale-98 transition-all cursor-pointer flex items-center gap-2"
                 >
                   <span>Check Answer</span>
-                  <Sparkles className="w-4 h-4" />
+                  <Sparkles className="w-4 h-4 text-blue-200" />
                 </button>
               ) : (
                 <button
                   type="button"
                   id="next-question-btn"
                   onClick={handleNextQuestion}
-                  className="px-8 sm:px-12 py-2.5 sm:py-3 rounded-full bg-[#10246f] hover:bg-[#0c1a52] text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-md shadow-[#10246f]/25 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                  className="px-8 sm:px-12 py-2.5 sm:py-3 rounded-full bg-[#10246f] hover:bg-[#0c1a52] text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-md shadow-[#10246f]/25 hover:scale-102 active:scale-98 transition-all cursor-pointer"
                 >
                   <span>{currentQuestionIndex + 1 < activeQuestions.length ? 'Next Question' : 'View Results'}</span>
                   <ArrowRight className="w-4 h-4 text-white" />

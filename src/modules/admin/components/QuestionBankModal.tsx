@@ -854,7 +854,7 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
       {/* 1. Visual Breadcrumb Pathway */}
       <div className="flex flex-wrap items-center gap-1.5 p-2.5 bg-white border border-[#d7def0] rounded-xl text-[11px] font-bold text-stone-800 shadow-2xs">
         <span className="text-[#10246f] flex items-center gap-1">
-          <Globe className="w-3.5 h-3.5 text-[#f20b86]" /> Standard Pathway:
+          <Globe className="w-3.5 h-3.5 text-blue-600" /> Standard Pathway:
         </span>
         <span className="bg-[#f0f4ff] px-2 py-0.5 rounded-md text-[#10246f] font-extrabold border border-[#c3d1f8]">
           {activeCurriculum?.flag || '🌐'} {names.curriculum}
@@ -952,7 +952,7 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
                 setIsCustomCategory(!isCustomCategory);
                 if (!isCustomCategory) setCustomCategoryText('');
               }}
-              className="text-[10px] font-bold text-[#f20b86] hover:underline"
+              className="text-[10px] font-bold text-blue-600 hover:underline"
             >
               {isCustomCategory ? '← Choose from List' : '+ Custom Topic'}
             </button>
@@ -964,7 +964,7 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
               value={customCategoryText}
               onChange={e => setCustomCategoryText(e.target.value)}
               placeholder="e.g. Fractions & Decimals"
-              className="w-full p-2 rounded-xl border border-[#f20b86]/40 bg-pink-50/30 text-stone-900 text-xs font-semibold focus:ring-2 focus:ring-[#f20b86]"
+              className="w-full p-2 rounded-xl border border-blue-300 bg-blue-50/30 text-stone-900 text-xs font-semibold focus:ring-2 focus:ring-blue-600"
             />
           ) : (
             <select
@@ -997,7 +997,7 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
                 setIsCustomSkill(!isCustomSkill);
                 if (!isCustomSkill) setCustomSkillText('');
               }}
-              className="text-[10px] font-bold text-[#f20b86] hover:underline"
+              className="text-[10px] font-bold text-blue-600 hover:underline"
             >
               {isCustomSkill ? '← Choose from List' : '+ Custom Skill'}
             </button>
@@ -1009,7 +1009,7 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
               value={customSkillText}
               onChange={e => setCustomSkillText(e.target.value)}
               placeholder="e.g. Identifying 1/2 and 1/4 fractions"
-              className="w-full p-2 rounded-xl border border-[#f20b86]/40 bg-pink-50/30 text-stone-900 text-xs font-semibold focus:ring-2 focus:ring-[#f20b86]"
+              className="w-full p-2 rounded-xl border border-blue-300 bg-blue-50/30 text-stone-900 text-xs font-semibold focus:ring-2 focus:ring-blue-600"
             />
           ) : (
             <select

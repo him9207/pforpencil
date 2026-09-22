@@ -516,7 +516,7 @@ export default function TeacherPortal({
               setNewStudentPin(String(Math.floor(1000 + Math.random() * 9000)));
               setShowCreateStudentModal(true);
             }}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#f20b86] hover:bg-[#df0879] text-white font-bold text-xs transition-all shadow-xs cursor-pointer hover:scale-105 active:scale-95"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-xs cursor-pointer hover:scale-102 active:scale-98"
           >
             <Users className="w-3.5 h-3.5" />
             <span>Enroll Student</span>
@@ -592,7 +592,7 @@ export default function TeacherPortal({
             onClick={() => setActiveTab('students')}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'students'
-                ? 'bg-[#f20b86] text-white shadow-xs'
+                ? 'bg-[#10246f] text-white shadow-xs'
                 : 'text-[#59627a] hover:text-[#10246f]'
             }`}
           >
@@ -602,7 +602,7 @@ export default function TeacherPortal({
             onClick={() => setActiveTab('assignments')}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'assignments'
-                ? 'bg-[#f20b86] text-white shadow-xs'
+                ? 'bg-[#10246f] text-white shadow-xs'
                 : 'text-[#59627a] hover:text-[#10246f]'
             }`}
           >
@@ -612,7 +612,7 @@ export default function TeacherPortal({
             onClick={() => setActiveTab('questions')}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'questions'
-                ? 'bg-[#f20b86] text-white shadow-xs'
+                ? 'bg-[#10246f] text-white shadow-xs'
                 : 'text-[#59627a] hover:text-[#10246f]'
             }`}
           >
@@ -622,7 +622,7 @@ export default function TeacherPortal({
             onClick={() => setActiveTab('activities')}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'activities'
-                ? 'bg-[#f20b86] text-white shadow-xs'
+                ? 'bg-[#10246f] text-white shadow-xs'
                 : 'text-[#59627a] hover:text-[#10246f]'
             }`}
           >

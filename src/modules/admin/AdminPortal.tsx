@@ -2361,7 +2361,7 @@ export default function AdminPortal({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-stone-100 gap-3">
               <div>
                 <h3 className="text-base font-black text-stone-900 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-[#f20b86]" />
+                  <Sparkles className="w-4 h-4 text-blue-600" />
                   <span>Interactive Activities Library ({activities.length})</span>
                 </h3>
                 <p className="text-xs text-stone-500">
@@ -2371,7 +2371,7 @@ export default function AdminPortal({
 
               <div className="flex items-center gap-2 self-start sm:self-auto">
                 <span className="text-xs font-bold text-[#10246f] bg-[#eef4ff] px-3 py-1.5 rounded-2xl flex items-center gap-1.5 border border-[#d7def0]">
-                  <Sparkles className="w-3.5 h-3.5 text-[#f20b86]" />
+                  <Sparkles className="w-3.5 h-3.5 text-blue-600" />
                   <span>{filteredActivities.length} Displayed</span>
                 </span>
                 <button

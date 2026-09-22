@@ -437,7 +437,7 @@ export default function MasterQuestionBank({
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 text-xs font-bold text-[#10246f] uppercase tracking-wider">
-              <Layers3 className="w-4 h-4 text-[#f20b86]" /> Master Question Bank
+              <Layers3 className="w-4 h-4 text-blue-600" /> Master Question Bank
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-stone-900 mt-1">
               Curriculum → Category → Skill → Questions
@@ -462,7 +462,7 @@ export default function MasterQuestionBank({
         <div className="p-3 bg-[#f8faff] border border-[#d7def0] rounded-2xl space-y-2">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <label className="text-[11px] font-bold text-[#10246f] flex items-center gap-1.5">
-              <Globe2 className="w-3.5 h-3.5 text-[#f20b86]" /> Academic Curriculum Standard
+              <Globe2 className="w-3.5 h-3.5 text-blue-600" /> Academic Curriculum Standard
             </label>
             <span className="text-[10px] text-stone-500 font-medium">
               Country: <strong className="text-stone-800">{selectedCountry?.name || 'Global'}</strong> · Region: <strong className="text-stone-800">{selectedRegion?.name || 'All'}</strong>

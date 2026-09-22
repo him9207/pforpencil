@@ -4,8 +4,11 @@
 :root {
   --navy: #10246f;
   --navy-dark: #0c1a52;
-  --pink: #f20b86;
-  --pink-hover: #df0879;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --indigo: #4f46e5;
+  --pink: #2563eb;
+  --pink-hover: #1d4ed8;
   --teal: #13b7ad;
   --blue: #168bea;
   --green: #16c47f;

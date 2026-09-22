@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { UserAccount } from '../../types';
 import { KeyRound, ShieldAlert, CheckCircle2, Copy, Check, Sparkles, X, Eye, EyeOff } from 'lucide-react';
 import { sounds } from '../../utils/audio';
+import { useBodyScrollLock } from '../../utils/useBodyScrollLock';
 
 interface ResetCredentialsModalProps {
   user: UserAccount;
@@ -72,11 +73,20 @@ export default function ResetCredentialsModal({
     }, 1200);
   };
 
+  // Lock body scroll on mobile and desktop while modal is open
+  useBodyScrollLock(true);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/75 backdrop-blur-xs">
-      <div className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-md w-full p-6 space-y-5 text-stone-900 animate-in fade-in zoom-in-95 duration-200">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-stone-950/75 backdrop-blur-xs overflow-y-auto overscroll-contain modal-scroll-container"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-md w-full p-5 sm:p-6 space-y-4 text-stone-900 animate-in fade-in zoom-in-95 duration-200 my-auto max-h-[calc(100dvh-1.5rem)] flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-stone-100">
+        <div className="flex items-center justify-between pb-3 border-b border-stone-100 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center text-lg">
               <KeyRound className="w-5 h-5" />
@@ -121,7 +131,7 @@ export default function ResetCredentialsModal({
             </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+          <form onSubmit={handleSubmit} className="space-y-4 text-xs overflow-y-auto overscroll-contain pr-1 flex-1 modal-scroll-container">
             {isStudent ? (
               <>
                 <div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { UserAccount, GradeLevel, SchoolOrganization } from '../../../types';
 import { X, Lock, CheckCircle2, User, ShieldAlert, Sparkles } from 'lucide-react';
 import { sounds } from '../../../utils/audio';
+import { useBodyScrollLock } from '../../../utils/useBodyScrollLock';
 
 interface Props {
   isOpen: boolean;
@@ -57,6 +58,9 @@ export default function EditUserProfileModal({
     }
   }, [user]);
 
+  // Lock body scroll on mobile and desktop while modal is open
+  useBodyScrollLock(isOpen);
+
   if (!isOpen || !user) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -88,9 +92,12 @@ export default function EditUserProfileModal({
   const roleAvatars = COMMON_AVATARS[user.role] || COMMON_AVATARS.student;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-xs animate-in fade-in duration-200">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-stone-950/70 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto overscroll-contain modal-scroll-container"
+      onClick={onClose}
+    >
       <div 
-        className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]"
+        className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

@@ -16,6 +16,7 @@ import {
   Calendar,
   X
 } from 'lucide-react';
+import { useBodyScrollLock } from '../../utils/useBodyScrollLock';
 
 interface StudentReportCardModalProps {
   student: StudentProgress;
@@ -78,11 +79,18 @@ export default function StudentReportCardModal({
   const effectivePrincipalName = principalName || (student.schoolOrParent === 'school' ? `Principal / Academic Dean (${effectiveSchoolName})` : 'Academic Certification Board');
   const effectiveParentName = parentName || student.parentName || userAccount?.parentName || 'Parent / Legal Guardian';
 
+  // Lock body scroll on mobile and desktop while report card modal is open
+  useBodyScrollLock(true);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-stone-950/75 backdrop-blur-xs overflow-y-auto print:p-0 print:bg-white print:static">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-stone-950/75 backdrop-blur-xs overflow-y-auto overscroll-contain modal-scroll-container print:p-0 print:bg-white print:static"
+      onClick={onClose}
+    >
       <div 
         ref={printRef}
-        className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-4xl w-full my-auto overflow-hidden text-stone-900 print:shadow-none print:border-none print:max-w-none print:rounded-none"
+        className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-4xl w-full my-auto overflow-hidden text-stone-900 print:shadow-none print:border-none print:max-w-none print:rounded-none max-h-[calc(100dvh-1rem)] sm:max-h-[92vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Top Action Bar (hidden when printing) */}
         <div className="p-4 bg-stone-900 text-white flex items-center justify-between print:hidden">
@@ -116,7 +124,7 @@ export default function StudentReportCardModal({
         </div>
 
         {/* Scrollable Report Content */}
-        <div className="p-6 sm:p-8 space-y-6 max-h-[85vh] overflow-y-auto print:max-h-none print:overflow-visible">
+        <div className="p-4 sm:p-8 space-y-6 overflow-y-auto overscroll-contain modal-scroll-container flex-1 print:max-h-none print:overflow-visible">
           {/* Official Academy / Institution Header */}
           <div className="border-b-2 border-stone-200 pb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3.5">

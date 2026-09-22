@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { sounds } from '../utils/audio';
 import { COUNTRIES, COUNTRY_STATE_MAP, COUNTRY_CURRICULUM_MAP, COUNTRY_FLAG_MAP } from '../data/curriculumData';
+import { useBodyScrollLock } from '../utils/useBodyScrollLock';
 
 interface RegionSelectorModalProps {
   isOpen: boolean;
@@ -41,6 +42,9 @@ export default function RegionSelectorModal({
       setIsSaved(false);
     }
   }, [isOpen, currentUser]);
+
+  // Lock body scroll on mobile and desktop while region selector is open
+  useBodyScrollLock(isOpen);
 
   if (!isOpen) return null;
 
@@ -72,13 +76,17 @@ export default function RegionSelectorModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto overscroll-contain modal-scroll-container"
+      onClick={onClose}
+    >
       <div 
         id="region-selector-modal-card"
-        className="bg-white rounded-3xl border-2 border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden flex flex-col"
+        className="bg-white rounded-3xl border-2 border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[calc(100dvh-1.5rem)] sm:max-h-[92vh] my-auto"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header - Unified Blue/Slate Theme */}
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+        <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/80 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl shadow-md shadow-blue-600/20">
               <Globe className="w-5 h-5" />
@@ -103,7 +111,7 @@ export default function RegionSelectorModal({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSave} className="p-6 space-y-5 text-xs">
+        <form onSubmit={handleSave} className="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto overscroll-contain modal-scroll-container flex-1">
           <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3.5 text-blue-900 flex items-start gap-2.5">
             <AlertCircle className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
             <span className="leading-relaxed">

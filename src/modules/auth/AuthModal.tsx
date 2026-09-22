@@ -33,6 +33,7 @@ import {
   COUNTRY_CURRICULUM_MAP 
 } from '../../data/curriculumData';
 import { fetchUsersFromSupabase, isSupabaseConfigured, syncUserToSupabase } from '../../database';
+import { useBodyScrollLock } from '../../utils/useBodyScrollLock';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -111,6 +112,9 @@ export default function AuthModal({
       }
     }
   }, [isOpen, initialScreen, initialRole]);
+
+  // Lock document body scroll on mobile and desktop while auth modal is active
+  useBodyScrollLock(isOpen);
 
   // ---------------------------------------------------------------------------
   // 1. SIGN-IN STATE (Unified Adult Identifier + Kid PIN)
@@ -439,10 +443,14 @@ export default function AuthModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto overscroll-contain modal-scroll-container"
+      onClick={onClose}
+    >
       <div
         id="auth-modal-card"
-        className="bg-white rounded-3xl border-2 border-[#e1e6f1] shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[92vh]"
+        className="bg-white rounded-3xl border-2 border-[#e1e6f1] shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[calc(100dvh-1rem)] sm:max-h-[92vh] my-auto"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
         <div className="p-5 border-b border-[#e1e6f1] flex items-center justify-between bg-[#f8faff] shrink-0">
@@ -507,7 +515,7 @@ export default function AuthModal({
         )}
 
         {/* Scrollable Form Body */}
-        <div className="p-6 overflow-y-auto">
+        <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain modal-scroll-container flex-1">
           {/* ========================================================================= */}
           {/* SCREEN 1: REGISTER WITH UNIQUE USERNAME & MANDATORY EMAIL */}
           {/* ========================================================================= */}

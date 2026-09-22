@@ -39,6 +39,7 @@ import { COUNTRIES, COUNTRY_STATE_MAP, COUNTRY_CURRICULUM_MAP } from '../../data
 import StudentReportCardModal from '../student/StudentReportCardModal';
 import ResetCredentialsModal from '../auth/ResetCredentialsModal';
 import EditUserProfileModal from '../admin/components/EditUserProfileModal';
+import { useBodyScrollLock } from '../../utils/useBodyScrollLock';
 
 interface ParentPortalProps {
   currentUser: UserAccount;
@@ -132,6 +133,9 @@ export default function ParentPortal({
 
   const activeChild = myChildren.find((c) => c.studentId === selectedChildId) || myChildren[0];
   const activeChildUser = allUsers.find(u => u.id === activeChild?.studentId);
+
+  // Lock background scrolling when any modal is open on mobile/desktop
+  useBodyScrollLock(showAddChildModal || showReportCardModal || showResetPinModal || !!editingUser);
 
   // Active Class linked to child
   const childClass = classes.find(c => 
@@ -656,9 +660,15 @@ export default function ParentPortal({
       {/* MODAL 1: ADD CHILD MODAL (Up to 3 Children) */}
       {/* ========================================================================= */}
       {showAddChildModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-md w-full p-6 space-y-4 text-xs">
-            <div className="flex items-center justify-between pb-3 border-b border-stone-100">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-stone-950/70 backdrop-blur-xs overflow-y-auto overscroll-contain modal-scroll-container"
+          onClick={() => setShowAddChildModal(false)}
+        >
+          <div 
+            className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-md w-full p-5 sm:p-6 text-xs my-auto max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-stone-100 shrink-0">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center text-lg">
                   👶
@@ -668,30 +678,37 @@ export default function ParentPortal({
                   <span className="text-[10px] text-stone-400">Child {myChildren.length + 1} of 3 Allowed</span>
                 </div>
               </div>
-              <button onClick={() => setShowAddChildModal(false)} className="text-stone-400 hover:text-stone-900 cursor-pointer p-1">✕</button>
+              <button 
+                type="button"
+                onClick={() => setShowAddChildModal(false)} 
+                className="w-8 h-8 rounded-full hover:bg-stone-100 text-stone-400 hover:text-stone-900 flex items-center justify-center cursor-pointer transition-colors"
+              >
+                ✕
+              </button>
             </div>
 
-            <form onSubmit={handleCreateChild} className="space-y-3.5">
-              <div>
-                <label className="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1">
-                  Child Full Name *
-                </label>
-                <input
-                  type="text"
-                  value={newChildName}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setNewChildName(val);
-                    if (val.trim()) {
-                      const autoUser = generateStudentUsername(val, allUsers, undefined, false, currentUser.name);
-                      setNewChildUsername(autoUser);
-                    }
-                  }}
-                  placeholder="e.g. Larry Smith"
-                  className="w-full p-2.5 rounded-xl border border-stone-200 font-bold text-stone-900 text-xs focus:ring-2 focus:ring-rose-500"
-                  required
-                />
-              </div>
+            <form onSubmit={handleCreateChild} className="flex-1 flex flex-col min-h-0">
+              <div className="space-y-3.5 overflow-y-auto overscroll-contain pr-1 py-1 modal-scroll-container flex-1">
+                <div>
+                  <label className="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1">
+                    Child Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={newChildName}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNewChildName(val);
+                      if (val.trim()) {
+                        const autoUser = generateStudentUsername(val, allUsers, undefined, false, currentUser.name);
+                        setNewChildUsername(autoUser);
+                      }
+                    }}
+                    placeholder="e.g. Larry Smith"
+                    className="w-full p-2.5 rounded-xl border border-stone-200 font-bold text-stone-900 text-xs focus:ring-2 focus:ring-rose-500"
+                    required
+                  />
+                </div>
 
               <div>
                 <label className="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1">
@@ -898,26 +915,27 @@ export default function ParentPortal({
                   required
                 />
               </div>
+            </div>
 
-              <div className="pt-3 border-t border-stone-100 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAddChildModal(false)}
-                  className="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2 rounded-full bg-[#f20b86] hover:bg-[#df0879] text-white font-bold cursor-pointer shadow-xs transition-all hover:scale-105 active:scale-95 text-xs sm:text-sm"
-                >
-                  Enroll Child
-                </button>
-              </div>
-            </form>
-          </div>
+            <div className="pt-3 border-t border-stone-100 flex items-center justify-end gap-2 shrink-0 bg-white mt-2">
+              <button
+                type="button"
+                onClick={() => setShowAddChildModal(false)}
+                className="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-2 rounded-full bg-[#f20b86] hover:bg-[#df0879] text-white font-bold cursor-pointer shadow-xs transition-all hover:scale-105 active:scale-95 text-xs sm:text-sm"
+              >
+                Enroll Child
+              </button>
+            </div>
+          </form>
         </div>
-      )}
+      </div>
+    )}
 
       {/* ========================================================================= */}
       {/* MODAL 2: FULL DETAIL REPORT CARD MODAL */}

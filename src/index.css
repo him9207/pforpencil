@@ -1,16 +1,16 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@500;600;700;800;900&family=Nunito:wght@700;800;900&display=swap');
 
 :root {
   --navy: #10246f;
-  --navy-dark: #0c1a52;
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --indigo: #4f46e5;
-  --pink: #2563eb;
-  --pink-hover: #1d4ed8;
+  --primary: #1a56db;
+  --primary-hover: #10246f;
+  --indigo: #4338ca;
+  --pink: #f43f5e;
+  --pink-hover: #e11d48;
   --teal: #13b7ad;
-  --blue: #168bea;
+  --teal-hover: #0f928a;
+  --blue: #1a56db;
   --green: #16c47f;
   --yellow: #ffbf32;
   --bg-soft: #f8faff;
@@ -19,13 +19,42 @@
 
 body {
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  color: var(--navy);
-  background-color: #ffffff;
+  color: #10246f;
+  background-color: #f8faff;
 }
 
 h1, h2, h3, h4, .font-display {
   font-family: 'Poppins', 'Inter', system-ui, sans-serif;
+  color: #10246f;
 }
+
+/* Master Brand Helper Classes */
+.bg-pfp-navy { background-color: #10246f; }
+.text-pfp-navy { color: #10246f; }
+.bg-pfp-blue { background-color: #1a56db; }
+.text-pfp-blue { color: #1a56db; }
+.border-pfp-blue { border-color: #1a56db; }
+.bg-pfp-green { background-color: #16c47f; }
+.text-pfp-green { color: #16c47f; }
+.border-pfp-green { border-color: #16c47f; }
+.bg-pfp-coral { background-color: #f43f5e; }
+.text-pfp-coral { color: #f43f5e; }
+.border-pfp-coral { border-color: #f43f5e; }
+.bg-pfp-yellow { background-color: #ffbf32; }
+.text-pfp-yellow { color: #ffbf32; }
+.border-pfp-yellow { border-color: #ffbf32; }
+.bg-pfp-lavender { background-color: #818cf8; }
+.text-pfp-lavender { color: #818cf8; }
+.text-pfp-grey { color: #59627a; }
+.bg-pfp-light { background-color: #f8faff; }
+.border-pfp { border-color: #e1e6f1; }
+
+/* Soft Pastel Background Helpers */
+.bg-pfp-soft-blue { background-color: #eff6ff; }
+.bg-pfp-soft-green { background-color: #ecfdf5; }
+.bg-pfp-soft-coral { background-color: #fff1f2; }
+.bg-pfp-soft-yellow { background-color: #fffbeb; }
+.bg-pfp-soft-lavender { background-color: #eef2ff; }
 
 @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
 .animate-shake { animation: shake .28s ease-in-out 2; }
@@ -40,4 +69,3 @@ body.modal-open {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 }
-

@@ -61,7 +61,8 @@ import {
   Globe,
   Menu,
   RotateCcw,
-  Heart
+  Heart,
+  Gamepad2
 } from 'lucide-react';
 import { sounds } from '../../utils/audio';
 import ParentStudentModal from './components/ParentStudentModal';
@@ -503,7 +504,6 @@ export default function AdminPortal({
       items: [
         { id: 'curriculum_master' as AdminTab, label: 'Curriculum Master', shortLabel: 'Curriculum Master', icon: Globe, description: 'Country, region & curriculum hierarchy' },
         { id: 'question_bank' as AdminTab, label: 'Master Question Bank', shortLabel: 'Question Bank', icon: HelpCircle, count: questions.length, description: 'Questions, CSV import & generator' },
-        { id: 'activities' as AdminTab, label: 'Interactive Activities', shortLabel: 'Activities', icon: Sparkles, count: activities.length, description: 'Sunrise quizzes & boss battles' },
         { id: 'classes_subjects' as AdminTab, label: 'Grades & Subjects', shortLabel: 'Grades & Subjects', icon: GraduationCap, count: grades.length, description: 'Active curriculum levels' }
       ]
     },

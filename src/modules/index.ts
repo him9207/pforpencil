@@ -8,3 +8,4 @@ export * from './admin';
 export * from './activities';
 export * from './subscriptions';
 export * from './database-hub';
+export * from './tactile-activities';

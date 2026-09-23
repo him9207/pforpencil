@@ -38,6 +38,7 @@ import {
 import { sounds } from '../../utils/audio';
 import { getNextQuestionId } from '../../utils/idAndUsernameGenerator';
 import { COUNTRIES, COUNTRY_STATE_MAP, COUNTRY_CURRICULUM_MAP } from '../../data/curriculumData';
+import { loadQuestionBankMasters } from '../../data/questionBankMasterData';
 import QuestionBankModal from '../admin/components/QuestionBankModal';
 import InteractiveActivityModal from '../admin/components/InteractiveActivityModal';
 
@@ -817,6 +818,8 @@ export default function ContentManagerPortal({
         availableSubjects={allSubjects}
         questions={questions}
         nextQuestionId={getNextQuestionId('Grade 1', questions)}
+        categoryMasters={loadQuestionBankMasters().categories}
+        skillMasters={loadQuestionBankMasters().skills}
         onAddQuestion={(q) => {
           onAddQuestion(q);
           setNotification(`Added question ${q.id} to master bank!`);

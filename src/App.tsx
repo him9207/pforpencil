@@ -1536,23 +1536,25 @@ export default function App() {
       <div className={`min-h-screen text-stone-900 flex flex-col font-sans selection:bg-stone-900 selection:text-white ${
         currentView === 'home' ? 'bg-white' : 'bg-stone-100/60'
       }`}>
-      {/* Top Navbar with Persona quick-switcher & Supabase viewer (Only on portal & sub-views) */}
-      {currentView !== 'home' && (
-        <Navbar
-          currentUser={currentUser}
-          allUsers={allUsers}
-          onSelectUser={(user) => {
-            setCurrentUser(user);
-            setCurrentView('dashboard');
-          }}
-          onOpenAuthModal={() => setAuthModalConfig({ isOpen: true, initialScreen: 'signin', initialRole: 'parent' })}
-          onOpenPricingModal={() => setCurrentView(currentView === 'pricing' ? 'dashboard' : 'pricing')}
-          onOpenSupabaseModal={() => setSupabaseModalOpen(true)}
-          onOpenRegionModal={() => setRegionModalOpen(true)}
-          currentView={currentView}
-          onNavigateView={(v) => setCurrentView(v)}
-        />
-      )}
+      {/* Top Navbar Header with Brand Logo, Navigation Links, Region Selector, Sound, & Auth Buttons */}
+      <Navbar
+        currentUser={currentUser}
+        allUsers={allUsers}
+        onSelectUser={(user) => {
+          setCurrentUser(user);
+          setCurrentView('dashboard');
+        }}
+        onOpenAuthModal={(opts) => setAuthModalConfig({ 
+          isOpen: true, 
+          initialScreen: opts?.screen || 'signin', 
+          initialRole: opts?.role || 'parent' 
+        })}
+        onOpenPricingModal={() => setCurrentView(currentView === 'pricing' ? 'dashboard' : 'pricing')}
+        onOpenSupabaseModal={() => setSupabaseModalOpen(true)}
+        onOpenRegionModal={() => setRegionModalOpen(true)}
+        currentView={currentView}
+        onNavigateView={(v) => setCurrentView(v)}
+      />
 
       {currentView === 'home' ? (
         <HomePage

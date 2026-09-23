@@ -6,6 +6,9 @@ export interface ParsedExcelResult {
   questions: Question[];
   errors: string[];
   warnings: string[];
+  totalRowsProcessed?: number;
+  validRowsCount?: number;
+  failedRowsCount?: number;
 }
 
 export interface ExcelGenerationOptions {
@@ -17,6 +20,8 @@ export interface ExcelGenerationOptions {
   categoryCode?: string;
   skillCode?: string;
   targetGradeName?: string;
+  targetCategoryName?: string;
+  targetSkillName?: string;
   masterCategories?: any[];
   masterSkills?: any[];
   gradesList?: any[];
@@ -28,7 +33,7 @@ export const MASTER_CATEGORY_SKILL_CATALOG = [
   // Numbers & Quantities
   { catCode: 'CAT-NUM', catName: 'Numbers & Quantities', skCode: 'SK-NUM-01', skName: 'Recognizing Numbers & Counting', subject: 'SUB_MTH', grades: 'Preschool, Foundation, Grade 1' },
   { catCode: 'CAT-NUM', catName: 'Numbers & Quantities', skCode: 'SK-NUM-02', skName: 'Number Sequencing & Order', subject: 'SUB_MTH', grades: 'Preschool, Foundation, Grade 1' },
-  { catCode: 'CAT-NUM', catName: 'Numbers & Quantities', skCode: 'SK-NUM-03', skName: 'Number Line Counting', subject: 'SUB_MTH', grades: 'Preschool, Foundation, Grade 1, Grade 2' },
+  { catCode: 'CAT-NUM', catName: 'Numbers & Quantities', skCode: 'SK-NUM-03', skName: 'Number Line Counting', subject: 'SUB_MTH', grades: 'Grade 1, Grade 2' },
   { catCode: 'CAT-NUM', catName: 'Numbers & Quantities', skCode: 'SK-NUM-04', skName: 'Integers and Absolute Value', subject: 'SUB_MTH', grades: 'Grade 6' },
   { catCode: 'CAT-NUM', catName: 'Numbers & Quantities', skCode: 'SK-NUM-05', skName: 'Four-Quadrant Coordinate Graphing', subject: 'SUB_MTH', grades: 'Grade 6' },
   // Counting & Cardinality
@@ -38,12 +43,13 @@ export const MASTER_CATEGORY_SKILL_CATALOG = [
   { catCode: 'CAT-CNT', catName: 'Counting & Cardinality', skCode: 'SK-CNT-04', skName: 'Counting 1 to 10', subject: 'SUB_MTH', grades: 'Foundation' },
   { catCode: 'CAT-CNT', catName: 'Counting & Cardinality', skCode: 'SK-CNT-05', skName: 'Counting Objects to 10', subject: 'SUB_MTH', grades: 'Foundation' },
   { catCode: 'CAT-CNT', catName: 'Counting & Cardinality', skCode: 'SK-CNT-06', skName: 'Comparing Quantities', subject: 'SUB_MTH', grades: 'Foundation' },
-  // Addition & Subtraction / Operations
+  // Operations & Basic Arithmetic
   { catCode: 'CAT-OPS', catName: 'Operations & Algebraic Thinking', skCode: 'SK-OPS-01', skName: 'Basic Addition within 5', subject: 'SUB_MTH', grades: 'Foundation, Grade 1' },
   { catCode: 'CAT-OPS', catName: 'Operations & Algebraic Thinking', skCode: 'SK-OPS-02', skName: 'Basic Subtraction within 5', subject: 'SUB_MTH', grades: 'Foundation, Grade 1' },
   { catCode: 'CAT-OPS', catName: 'Operations & Algebraic Thinking', skCode: 'SK-OPS-03', skName: 'Addition within 10', subject: 'SUB_MTH', grades: 'Foundation, Grade 1' },
   { catCode: 'CAT-OPS', catName: 'Multi-Digit Operations', skCode: 'SK-OPS-04', skName: 'Multi-Digit Multiplication', subject: 'SUB_MTH', grades: 'Grade 4' },
-  { catCode: 'CAT-OPS', catName: 'Multi-Digit Operations', skCode: 'SK-OPS-05', skName: 'Long Division with Quotients', subject: 'SUB_MTH', grades: 'Grade 4' },
+  { catCode: 'CAT-OPS', catName: 'Multi-Digit Operations', skCode: 'SK-OPS-05', skName: 'Long Division with Quotients', subject: 'SUB_MTH', grades: 'Grade 4, Grade 5' },
+  // Addition & Subtraction
   { catCode: 'CAT-ADD', catName: 'Addition & Subtraction', skCode: 'SK-ADD-01', skName: 'Addition within 20', subject: 'SUB_MTH', grades: 'Grade 1, Grade 2' },
   { catCode: 'CAT-ADD', catName: 'Addition & Subtraction', skCode: 'SK-ADD-02', skName: 'Subtraction within 20', subject: 'SUB_MTH', grades: 'Grade 1, Grade 2' },
   { catCode: 'CAT-ADD', catName: 'Addition & Subtraction', skCode: 'SK-ADD-03', skName: 'Two-Digit Addition', subject: 'SUB_MTH', grades: 'Grade 2, Grade 3' },
@@ -56,7 +62,7 @@ export const MASTER_CATEGORY_SKILL_CATALOG = [
   { catCode: 'CAT-MUL', catName: 'Multiplication & Division', skCode: 'SK-MUL-02', skName: 'Equal Groups', subject: 'SUB_MTH', grades: 'Grade 2, Grade 3' },
   { catCode: 'CAT-MUL', catName: 'Multiplication & Division', skCode: 'SK-MUL-03', skName: 'Times Tables Mastery', subject: 'SUB_MTH', grades: 'Grade 3, Grade 4' },
   { catCode: 'CAT-MUL', catName: 'Multiplication & Division', skCode: 'SK-MUL-04', skName: 'Division with Remainders', subject: 'SUB_MTH', grades: 'Grade 3, Grade 4' },
-  // Fractions
+  // Fractions & Decimals
   { catCode: 'CAT-FRAC', catName: 'Fractions Foundations', skCode: 'SK-FRAC-01', skName: 'Halves and Quarters', subject: 'SUB_MTH', grades: 'Grade 2' },
   { catCode: 'CAT-FRAC', catName: 'Fractions', skCode: 'SK-FRAC-02', skName: 'Visual Fractions', subject: 'SUB_MTH', grades: 'Grade 3' },
   { catCode: 'CAT-FRAC', catName: 'Fractions', skCode: 'SK-FRAC-03', skName: 'Equivalent Fractions', subject: 'SUB_MTH', grades: 'Grade 3, Grade 4' },
@@ -94,20 +100,7 @@ export const MASTER_CATEGORY_SKILL_CATALOG = [
   { catCode: 'CAT-ALG', catName: 'Algebraic Expressions & Equations', skCode: 'SK-ALG-01', skName: 'Writing Algebraic Expressions', subject: 'SUB_MTH', grades: 'Grade 6' },
   { catCode: 'CAT-ALG', catName: 'Algebraic Expressions & Equations', skCode: 'SK-ALG-02', skName: 'One-Step Linear Equations', subject: 'SUB_MTH', grades: 'Grade 6' },
   { catCode: 'CAT-DATA', catName: 'Word Problems & Data', skCode: 'SK-DATA-01', skName: 'Reading Bar Graphs', subject: 'SUB_MTH', grades: 'Grade 3' },
-  { catCode: 'CAT-DATA', catName: 'Word Problems & Data', skCode: 'SK-DATA-02', skName: 'Two-Step Word Problems', subject: 'SUB_MTH', grades: 'Grade 3' },
-  // Science & Nature
-  { catCode: 'CAT-SCI', catName: 'Living Things & Science', skCode: 'SK-SCI-01', skName: 'Animal & Nature Characteristics', subject: 'SUB_SCI', grades: 'Preschool, Foundation, Grade 1' },
-  { catCode: 'CAT-SCI', catName: 'Living Things & Science', skCode: 'SK-SCI-02', skName: 'Habitats & Living Things', subject: 'SUB_SCI', grades: 'Preschool, Foundation, Grade 1' },
-  { catCode: 'CAT-BIO', catName: 'Living Things & Nature', skCode: 'SK-BIO-01', skName: 'Baby Animals', subject: 'SUB_SCI', grades: 'Preschool' },
-  { catCode: 'CAT-BIO', catName: 'Living Things & Nature', skCode: 'SK-BIO-02', skName: 'Animal Habitats', subject: 'SUB_SCI', grades: 'Preschool' },
-  { catCode: 'CAT-BIO', catName: 'Living Things & Nature', skCode: 'SK-BIO-03', skName: 'Animal Families', subject: 'SUB_SCI', grades: 'Preschool' },
-  { catCode: 'CAT-BIO', catName: 'Living Things & Nature', skCode: 'SK-BIO-04', skName: 'Animal Diets', subject: 'SUB_SCI', grades: 'Preschool' },
-  // English & Phonics
-  { catCode: 'CAT-ENG', catName: 'English & Phonics', skCode: 'SK-ENG-01', skName: 'Letter Sounds & Phonics', subject: 'SUB_ENG', grades: 'Preschool, Foundation, Grade 1' },
-  { catCode: 'CAT-ENG', catName: 'English & Phonics', skCode: 'SK-ENG-02', skName: 'Vocabulary & Sight Words', subject: 'SUB_ENG', grades: 'Preschool, Foundation, Grade 1' },
-  // Art & Creativity
-  { catCode: 'CAT-ART', catName: 'Art & Creativity', skCode: 'SK-ART-01', skName: 'Color Mixing & Primary Colors', subject: 'SUB_ART', grades: 'Preschool, Foundation, Grade 1' },
-  { catCode: 'CAT-ART', catName: 'Art & Creativity', skCode: 'SK-ART-02', skName: 'Drawing Basic Shapes', subject: 'SUB_ART', grades: 'Foundation, Grade 1, Grade 2' }
+  { catCode: 'CAT-DATA', catName: 'Word Problems & Data', skCode: 'SK-DATA-02', skName: 'Two-Step Word Problems', subject: 'SUB_MTH', grades: 'Grade 3' }
 ];
 
 export function resolveGradeMapping(raw: string, gradesList?: Array<{ id: string; name: string }>): { id: string; name: string } {
@@ -187,55 +180,146 @@ export function resolveCurriculumMapping(raw: string, curriculaList?: Array<{ id
   return { id: trimmed || 'CUR-GLOBAL', code: trimmed || 'CUR-GLOBAL', name: trimmed || 'Global Standard Framework' };
 }
 
-export function resolveCategoryAndSkill(
-  catInput: string,
-  skInput: string,
-  gradeId?: string,
-  masterCategories?: any[],
-  masterSkills?: any[]
-): {
+export interface CategorySkillResolution {
   categoryId: string;
   categoryCode: string;
   categoryName: string;
   skillId: string;
   skillCode: string;
   skillName: string;
-} {
+  curriculumReference?: string;
+  isValid: boolean;
+  errorReason?: string;
+}
+
+export function resolveCategoryAndSkill(
+  catInput: string,
+  skInput: string,
+  gradeId?: string,
+  masterCategories?: any[],
+  masterSkills?: any[],
+  strictValidation: boolean = true
+): CategorySkillResolution {
   const trimmedCat = (catInput || '').trim();
   const trimmedSk = (skInput || '').trim();
   const catLower = trimmedCat.toLowerCase();
   const skLower = trimmedSk.toLowerCase();
 
-  // 1. Try matching in live master categories/skills if available
-  let matchedCat = masterCategories?.find(c => 
-    c.code?.toLowerCase() === catLower ||
-    c.id?.toLowerCase() === catLower ||
-    c.name?.toLowerCase() === catLower
-  );
+  if (!trimmedCat) {
+    return {
+      categoryId: '',
+      categoryCode: '',
+      categoryName: '',
+      skillId: '',
+      skillCode: '',
+      skillName: '',
+      isValid: false,
+      errorReason: 'Category Name is missing.'
+    };
+  }
 
-  let matchedSk = masterSkills?.find(s => 
-    s.code?.toLowerCase() === skLower ||
-    s.id?.toLowerCase() === skLower ||
-    s.name?.toLowerCase() === skLower
-  );
+  if (!trimmedSk) {
+    return {
+      categoryId: '',
+      categoryCode: '',
+      categoryName: '',
+      skillId: '',
+      skillCode: '',
+      skillName: '',
+      isValid: false,
+      errorReason: 'Skill Name is missing.'
+    };
+  }
 
-  // 2. Try matching from comprehensive catalog
-  const catalogMatch = MASTER_CATEGORY_SKILL_CATALOG.find(entry => 
-    (entry.catCode.toLowerCase() === catLower || entry.catName.toLowerCase() === catLower) &&
-    (entry.skCode.toLowerCase() === skLower || entry.skName.toLowerCase() === skLower)
-  ) || MASTER_CATEGORY_SKILL_CATALOG.find(entry => 
-    entry.skCode.toLowerCase() === skLower || entry.skName.toLowerCase() === skLower
-  ) || MASTER_CATEGORY_SKILL_CATALOG.find(entry => 
-    entry.catCode.toLowerCase() === catLower || entry.catName.toLowerCase() === catLower
-  );
+  // 1. Check live master categories from Admin
+  let matchedCat: any = undefined;
+  if (masterCategories && masterCategories.length > 0) {
+    matchedCat = masterCategories.find(c => 
+      (c.name && c.name.toLowerCase() === catLower) ||
+      (c.code && c.code.toLowerCase() === catLower) ||
+      (c.id && c.id.toLowerCase() === catLower) ||
+      (c.name && c.name.toLowerCase().replace(/[^a-z0-9]/g, '') === catLower.replace(/[^a-z0-9]/g, ''))
+    );
+  }
 
-  const categoryCode = matchedCat?.code || catalogMatch?.catCode || trimmedCat || 'CAT-NUM';
-  const categoryName = matchedCat?.name || catalogMatch?.catName || trimmedCat || 'Numbers & Quantities';
+  // 2. Check catalog fallback if no live master or not found
+  let catalogMatch: any = undefined;
+  if (!matchedCat) {
+    catalogMatch = MASTER_CATEGORY_SKILL_CATALOG.find(entry => 
+      entry.catName.toLowerCase() === catLower || entry.catCode.toLowerCase() === catLower
+    );
+  }
+
+  if (!matchedCat && !catalogMatch) {
+    if (strictValidation) {
+      return {
+        categoryId: '',
+        categoryCode: '',
+        categoryName: trimmedCat,
+        skillId: '',
+        skillCode: '',
+        skillName: trimmedSk,
+        isValid: false,
+        errorReason: `Category "${trimmedCat}" was not found in the Admin master catalog. Categories must be created by an Admin in the portal first.`
+      };
+    }
+  }
+
+  const categoryCode = matchedCat?.code || catalogMatch?.catCode || `CAT-${trimmedCat.toUpperCase().slice(0, 4)}`;
+  const categoryName = matchedCat?.name || catalogMatch?.catName || trimmedCat;
   const categoryId = matchedCat?.id || `CAT-${categoryCode}`;
 
-  const skillCode = matchedSk?.code || catalogMatch?.skCode || trimmedSk || 'SK-NUM-01';
-  const skillName = matchedSk?.name || catalogMatch?.skName || trimmedSk || 'Recognizing Numbers & Counting';
+  // 3. Match Skill under the validated Category
+  let matchedSk: any = undefined;
+  if (masterSkills && masterSkills.length > 0) {
+    matchedSk = masterSkills.find(s => {
+      const isBelong = (!s.categoryId || s.categoryId === categoryId || s.categoryCode === categoryCode || s.category === categoryName);
+      const isNameMatch = (s.name && s.name.toLowerCase() === skLower) ||
+                          (s.code && s.code.toLowerCase() === skLower) ||
+                          (s.id && s.id.toLowerCase() === skLower) ||
+                          (s.name && s.name.toLowerCase().replace(/[^a-z0-9]/g, '') === skLower.replace(/[^a-z0-9]/g, ''));
+      return isBelong && isNameMatch;
+    });
+
+    if (!matchedSk) {
+      // Check across all skills in case category ID format differs slightly
+      matchedSk = masterSkills.find(s => 
+        (s.name && s.name.toLowerCase() === skLower) ||
+        (s.code && s.code.toLowerCase() === skLower) ||
+        (s.id && s.id.toLowerCase() === skLower)
+      );
+    }
+  }
+
+  let catalogSkillMatch: any = undefined;
+  if (!matchedSk) {
+    catalogSkillMatch = MASTER_CATEGORY_SKILL_CATALOG.find(entry => 
+      (entry.skName.toLowerCase() === skLower || entry.skCode.toLowerCase() === skLower) &&
+      (entry.catName.toLowerCase() === catLower || entry.catCode.toLowerCase() === catLower)
+    ) || MASTER_CATEGORY_SKILL_CATALOG.find(entry => 
+      entry.skName.toLowerCase() === skLower || entry.skCode.toLowerCase() === skLower
+    );
+  }
+
+  if (!matchedSk && !catalogSkillMatch) {
+    if (strictValidation) {
+      return {
+        categoryId,
+        categoryCode,
+        categoryName,
+        skillId: '',
+        skillCode: '',
+        skillName: trimmedSk,
+        isValid: false,
+        errorReason: `Skill "${trimmedSk}" does not exist in Category "${categoryName}". Skills must be created by an Admin in the portal first.`
+      };
+    }
+  }
+
+  const skillCode = matchedSk?.code || catalogSkillMatch?.skCode || `SK-${trimmedSk.toUpperCase().slice(0, 4)}`;
+  const skillName = matchedSk?.name || catalogSkillMatch?.skName || trimmedSk;
   const skillId = matchedSk?.id || `SKL-${categoryId}-${skillCode}`;
+  const curriculumReference = matchedSk?.curriculumReference || catalogSkillMatch?.curriculumReference;
 
   return {
     categoryId,
@@ -243,7 +327,9 @@ export function resolveCategoryAndSkill(
     categoryName,
     skillId,
     skillCode,
-    skillName
+    skillName,
+    curriculumReference,
+    isValid: true
   };
 }
 
@@ -255,54 +341,7 @@ export function generateQuestionMasterExcel(options: ExcelGenerationOptions = {}
   const wb = XLSX.utils.book_new();
 
   // -------------------------------------------------------------
-  // Sheet 1: Quick Start Instructions & Guide
-  // -------------------------------------------------------------
-  const instructionsData = [
-    ['PforPencil Question Bank - Excel Master Template & Guide'],
-    [''],
-    ['HOW TO USE THIS EXCEL TEMPLATE:'],
-    ['1. Go to the "Questions" sheet to add or edit questions for ANY Grade, Category, or Skill.'],
-    ['2. For visual questions, you do NOT need to upload or paste images!'],
-    ['   Simply use the "Clipart Reference" column with codes from the "Clipart_Library" sheet (e.g. "apple", "star", "cookie").'],
-    ['3. Specify the "Visual Count" (e.g. 3) and "Animation" (bounce, pulse, pop, float, spin).'],
-    ['4. Save the file and upload it in the Question Bank modal!'],
-    [''],
-    ['QUESTION TYPES SUPPORTED:'],
-    ['- multiple_choice : Standard A, B, C, D multiple choice.'],
-    ['- picture_counting: Interactive counting of bouncing or animated objects.'],
-    ['- picture_choice  : Multiple choice with visual object options.'],
-    ['- select_objects  : Tap to select and count target objects on screen.'],
-    ['- open_box        : Direct number/word input with quick option buttons.'],
-    ['- true_false      : True / False question format.'],
-    ['- drag_and_drop   : Drag items into matching destination zones (Option format: "Item -> Target").'],
-    ['- ordering        : Arrange sequence in correct order (Options: 1, 2, 3, 4).'],
-    ['- sorting         : Sort items into distinct buckets (Option format: "BucketName: item1, item2").'],
-    ['- match_making    : Connect matching pairs on left and right (Option format: "LeftItem -> RightMatch").'],
-    [''],
-    ['COLUMN GUIDE (QUESTIONS SHEET):'],
-    ['Question Text       : The question prompt displayed to students.'],
-    ['Option A / B / C / D: The choices offered to students.'],
-    ['Correct Answer      : The correct choice ("A", "B", "C", "D" or direct answer text).'],
-    ['Clipart Reference   : Clipart ID or Code from the Clipart_Library sheet (e.g. "apple", "CLIP_STAR").'],
-    ['Visual Count        : How many items to show (e.g. 1, 3, 5).'],
-    ['Visual Animation    : "bounce", "pulse", "pop", "float", "spin", or "none".'],
-    ['Visual Template     : "picture_counting", "picture_choice", "pattern", or leave blank.'],
-    ['Visual Instructions : Hint or prompt for the visual action (e.g. "Tap each apple to count them!").'],
-    ['Question Type       : One of the supported question types listed above.'],
-    ['Difficulty          : "Easy", "Medium", or "Hard".'],
-    ['Curriculum Code     : Reference code from Master_Codes sheet (e.g. "CUR-VCAA20", "CUR-CCSS").'],
-    ['Subject Code        : Reference code (e.g. "SUB_MTH", "SUB_SCI", "SUB_ENG", "SUB_ART").'],
-    ['Grade Code          : Reference code (e.g. "GRD_PRE_K", "GRD_KG", "GRD_G1", "GRD_G2", "GRD_G3", "GRD_G4", "GRD_G5", "GRD_G6").'],
-    ['Category Code       : Category Code from Master_Codes sheet (e.g. "CAT-NUM", "CAT-ADD", "CAT-GEO").'],
-    ['Skill Code          : Skill Code from Master_Codes sheet (e.g. "SK-NUM-01", "SK-ADD-01").']
-  ];
-
-  const wsInstructions = XLSX.utils.aoa_to_sheet(instructionsData);
-  wsInstructions['!cols'] = [{ wch: 80 }];
-  XLSX.utils.book_append_sheet(wb, wsInstructions, 'Instructions_Guide');
-
-  // -------------------------------------------------------------
-  // Sheet 2: Questions (Sample question for each major type)
+  // Sheet 1 (Tab 1): Questions (Question Bank - Primary Interactive Sheet)
   // -------------------------------------------------------------
   const questionsHeaders = [
     'Question Text',
@@ -320,22 +359,22 @@ export function generateQuestionMasterExcel(options: ExcelGenerationOptions = {}
     'Difficulty',
     'Explanation',
     'Hint',
-    'Curriculum Code',
-    'Subject Code',
-    'Grade Code',
-    'Category Code',
-    'Skill Code'
+    'Curriculum',
+    'Subject',
+    'Grade',
+    'Category Name',
+    'Skill Name'
   ];
 
-  const curr = options.curriculumCode || 'CUR-VCAA20';
-  const subj = options.subjectCode || 'SUB_MTH';
-  const grd = options.gradeCode || 'GRD_G1';
-  const cat = options.categoryCode || 'CAT-NUM';
-  const sk = options.skillCode || 'SK-NUM-01';
+  const curr = options.curriculumCode || 'Victorian Curriculum 2.0 (Australia)';
+  const subj = 'Mathematics';
+  const grd = options.targetGradeName || 'Grade 1';
+  const cat = options.targetCategoryName || 'Counting & Cardinality';
+  const sk = options.targetSkillName || 'Counting 1 to 5';
 
   const sampleQuestionsRows = [
     // =========================================================================
-    // 1. PICTURE COUNTING (10 Grade 1 Questions)
+    // 1. PICTURE COUNTING (Math Counting 1-10)
     // =========================================================================
     [
       'How many red apples are on the screen?',
@@ -344,7 +383,7 @@ export function generateQuestionMasterExcel(options: ExcelGenerationOptions = {}
       'Tap each apple to count them!',
       'picture_counting', 'Easy',
       'There are 3 red apples on the screen.',
-      'Count them one by one from left to right.',
+      'Count them one by one: 1, 2, 3.',
       curr, subj, grd, cat, sk
     ],
     [
@@ -378,10 +417,10 @@ export function generateQuestionMasterExcel(options: ExcelGenerationOptions = {}
       curr, subj, grd, cat, sk
     ],
     [
-      'How many happy green frogs are hopping near the pond?',
+      'How many hopping green frogs are near the pond?',
       '4', '5', '6', '7',
       'C', 'frog', '6', 'pop', 'picture_counting',
-      'Count all the hopping green frogs!',
+      'Count all the green frogs!',
       'picture_counting', 'Medium',
       'There are 6 green frogs in total.',
       'Count row by row.',
@@ -391,10 +430,10 @@ export function generateQuestionMasterExcel(options: ExcelGenerationOptions = {}
       'Count the yellow ripe bananas:',
       '1', '2', '3', '4',
       'A', 'banana', '1', 'bounce', 'picture_counting',
-      'Count the delicious yellow banana.',
+      'Count the yellow banana.',
       'picture_counting', 'Easy',
       'There is 1 banana.',
-      'There is only one fruit on screen.',
+      'There is only one banana on screen.',
       curr, subj, grd, cat, sk
     ],
     [
@@ -418,13 +457,13 @@ export function generateQuestionMasterExcel(options: ExcelGenerationOptions = {}
       curr, subj, grd, cat, sk
     ],
     [
-      'Count the friendly playful puppies:',
+      'Count the friendly puppies playing together:',
       '2', '3', '4', '5',
       'C', 'dog', '4', 'bounce', 'picture_counting',
       'Count each puppy on the screen.',
       'picture_counting', 'Easy',
       'There are 4 puppies playing.',
-      'Count each friendly puppy.',
+      'Count each puppy: 1, 2, 3, 4.',
       curr, subj, grd, cat, sk
     ],
     [
@@ -439,10 +478,10 @@ export function generateQuestionMasterExcel(options: ExcelGenerationOptions = {}
     ],
 
     // =========================================================================
-    // 2. PICTURE CHOICE (10 Grade 1 Questions)
+    // 2. PICTURE CHOICE (Math Shapes, Sizes & Quantities)
     // =========================================================================
     [
-      'Which shape is an orange triangle with 3 sides?',
+      'Which shape is a triangle with 3 straight sides?',
       'Red Circle', 'Orange Triangle', 'Blue Square', 'Golden Star',
       'B', 'circle_red|triangle|square_blue|star', '1', 'pop', 'picture_choice',
       'Tap the triangle shape.',
@@ -452,98 +491,78 @@ export function generateQuestionMasterExcel(options: ExcelGenerationOptions = {}
       curr, subj, grd, 'CAT-GEO', 'SK-GEO-01'
     ],
     [
-      'Which animal is the tallest in the safari?',
-      'Mouse', 'Dog', 'Giraffe', 'Cat',
-      'C', 'mouse|dog|giraffe|cat', '1', 'bounce', 'picture_choice',
-      'Tap the tallest animal.',
+      'Which group has MORE items (3 stars or 1 star)?',
+      'Group with 1 Star', 'Group with 3 Stars', 'Both are equal', 'None',
+      'B', 'star', '3', 'pulse', 'picture_choice',
+      'Tap the group with more items.',
       'picture_choice', 'Easy',
-      'The giraffe has a very long neck and is the tallest.',
-      'Look for the animal with the longest neck.',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
+      '3 stars is more than 1 star.',
+      '3 is greater than 1.',
+      curr, subj, grd, 'CAT-CMP', 'SK-CMP-01'
     ],
     [
-      'Which item is a sweet healthy fruit?',
-      'Toy Car', 'Red Apple', 'Wall Clock', 'Party Balloon',
-      'B', 'car|apple|clock|balloon', '1', 'bounce', 'picture_choice',
-      'Tap the healthy fruit.',
+      'Which shape is completely round with 0 straight sides?',
+      'Square', 'Red Circle', 'Triangle', 'Rectangle',
+      'B', 'square|circle|triangle|rectangle', '1', 'bounce', 'picture_choice',
+      'Tap the round circle.',
       'picture_choice', 'Easy',
-      'An apple is a sweet, healthy fruit you can eat.',
-      'Which of these can you eat for a snack?',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
-    ],
-    [
-      'Which vehicle flies up high in the sky?',
-      'Car', 'Boat', 'Airplane', 'Bicycle',
-      'C', 'car|boat|airplane|bicycle', '1', 'float', 'picture_choice',
-      'Tap the vehicle that flies.',
-      'picture_choice', 'Easy',
-      'An airplane flies high in the air.',
-      'Look for wings that fly.',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
-    ],
-    [
-      'Which creature swims and lives in the ocean?',
-      'Swimming Fish', 'Roaring Lion', 'Playful Monkey', 'Hopping Rabbit',
-      'A', 'fish|lion|monkey|rabbit', '1', 'float', 'picture_choice',
-      'Tap the ocean creature.',
-      'picture_choice', 'Easy',
-      'Fish live and swim in water with fins.',
-      'Look for the swimming animal with fins.',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
-    ],
-    [
-      'Which shape has 4 straight equal sides?',
-      'Round Circle', 'Blue Square', 'Pointy Star', 'Heart Shape',
-      'B', 'circle|square|star|heart', '1', 'pulse', 'picture_choice',
-      'Tap the square.',
-      'picture_choice', 'Easy',
-      'A square has 4 equal straight sides.',
-      'Look for 4 equal sides.',
+      'A circle is round and has no straight sides or corners.',
+      'Look for the perfectly round shape.',
       curr, subj, grd, 'CAT-GEO', 'SK-GEO-01'
     ],
     [
-      'Which object tells us what time of day it is?',
-      'Storybook', 'Wall Clock', 'Golden Star', 'Sweet Apple',
-      'B', 'book|clock|star|apple', '1', 'bounce', 'picture_choice',
-      'Tap the object that tells time.',
+      'Which shape has 4 equal straight sides and 4 square corners?',
+      'Circle', 'Triangle', 'Blue Square', 'Oval',
+      'C', 'circle|triangle|square|oval', '1', 'pulse', 'picture_choice',
+      'Tap the square shape.',
       'picture_choice', 'Easy',
-      'A clock has numbers and hands to tell time.',
-      'Look for numbers on a dial.',
-      curr, subj, grd, 'CAT-MSR', 'SK-MSR-01'
+      'A square has 4 equal sides and 4 corners.',
+      'Count the 4 equal sides.',
+      curr, subj, grd, 'CAT-GEO', 'SK-GEO-01'
     ],
     [
-      'Which animal says "Meow"?',
-      'Friendly Dog', 'Fluffy Cat', 'Spotted Cow', 'Green Frog',
-      'B', 'dog|cat|cow|frog', '1', 'bounce', 'picture_choice',
-      'Tap the animal that purrs and meows.',
+      'Which number quantity represents a pair (2 objects)?',
+      '1 Apple', '2 Apples', '3 Apples', '4 Apples',
+      'B', 'apple', '2', 'bounce', 'picture_choice',
+      'Tap the pair of 2 apples.',
       'picture_choice', 'Easy',
-      'Cats purr and make the meow sound.',
-      'Think about pet sounds.',
-      curr, subj, grd, 'CAT-ENG', 'SK-ENG-01'
+      'A pair always means 2 objects.',
+      'Count 1, 2.',
+      curr, subj, grd, cat, sk
     ],
     [
-      'Which animal loves to hop and eat fresh carrots?',
-      'Cute Rabbit', 'Big Elephant', 'Brown Bear', 'Yellow Duck',
-      'A', 'rabbit|elephant|bear|duck', '1', 'bounce', 'picture_choice',
-      'Tap the hopping animal with long ears.',
+      'Which group shows LESS objects (2 cookies vs 5 cookies)?',
+      '2 Cookies', '5 Cookies', 'Both are equal', 'None',
+      'A', 'cookie', '2', 'bounce', 'picture_choice',
+      'Tap the smaller group.',
       'picture_choice', 'Easy',
-      'Rabbits have long ears and love carrots.',
-      'Look for long fluffy ears.',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
+      '2 cookies is less than 5 cookies.',
+      '2 is smaller than 5.',
+      curr, subj, grd, 'CAT-CMP', 'SK-CMP-01'
     ],
     [
-      'Which object shines brightly in the night sky?',
-      'Sunny Sun', 'Crescent Moon', 'Green Tree', 'Blue Car',
-      'B', 'sun|moon|tree|car', '1', 'pulse', 'picture_choice',
-      'Tap the moon in the night sky.',
+      'Which shape looks like a doorway or postcard with 2 long and 2 short sides?',
+      'Rectangle', 'Circle', 'Triangle', 'Star',
+      'A', 'rectangle|circle|triangle|star', '1', 'pulse', 'picture_choice',
+      'Tap the rectangle.',
       'picture_choice', 'Easy',
-      'The moon shines during nighttime.',
-      'Look for the night sky object.',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
+      'A rectangle has 4 sides: 2 long sides and 2 short sides.',
+      'Look for the oblong 4-sided shape.',
+      curr, subj, grd, 'CAT-GEO', 'SK-GEO-01'
+    ],
+    [
+      'Which object represents zero (0) items?',
+      'Empty Basket', 'Basket with 1 Apple', 'Basket with 2 Apples', 'Basket with 3 Apples',
+      'A', '', '', '', 'picture_choice',
+      'Tap the option with zero items.',
+      'picture_choice', 'Easy',
+      'Zero means empty or having no items.',
+      'Zero means none.',
+      curr, subj, grd, cat, sk
     ],
 
     // =========================================================================
-    // 3. SELECT OBJECTS / TAP TO COUNT (10 Grade 1 Questions)
+    // 3. SELECT OBJECTS / TAP TO COUNT (Math Cardinality)
     // =========================================================================
     [
       'Tap to select exactly 4 glowing stars on the screen:',
@@ -576,13 +595,13 @@ export function generateQuestionMasterExcel(options: ExcelGenerationOptions = {}
       curr, subj, grd, cat, sk
     ],
     [
-      'Tap to select 2 friendly dogs:',
+      'Tap to select 2 friendly toy cars:',
       '2', '1', '3', '4',
-      'A', 'dog', '4', 'bounce', 'picture_counting',
-      'Tap 2 dogs on the screen!',
+      'A', 'car', '4', 'bounce', 'picture_counting',
+      'Tap 2 cars on the screen!',
       'select_objects', 'Easy',
-      'You selected 2 friendly dogs.',
-      'Tap just two puppies.',
+      'You selected 2 toy cars.',
+      'Tap just two cars.',
       curr, subj, grd, cat, sk
     ],
     [
@@ -596,58 +615,18 @@ export function generateQuestionMasterExcel(options: ExcelGenerationOptions = {}
       curr, subj, grd, cat, sk
     ],
     [
-      'Tap to select 1 golden crown:',
+      'Tap to select 1 golden star:',
       '1', '2', '3', '4',
-      'A', 'crown', '3', 'pulse', 'picture_counting',
-      'Tap 1 crown to wear it!',
+      'A', 'star', '3', 'pulse', 'picture_counting',
+      'Tap 1 star!',
       'select_objects', 'Easy',
-      'You selected 1 crown.',
-      'Tap only one crown.',
-      curr, subj, grd, cat, sk
-    ],
-    [
-      'Tap to select 4 blue toy cars:',
-      '4', '3', '5', '6',
-      'A', 'car', '6', 'bounce', 'picture_counting',
-      'Tap 4 cars to start the race!',
-      'select_objects', 'Easy',
-      'You selected 4 toy cars.',
-      'Tap 4 cars.',
-      curr, subj, grd, cat, sk
-    ],
-    [
-      'Tap to select 5 green hopping frogs:',
-      '5', '4', '6', '7',
-      'A', 'frog', '7', 'pop', 'picture_counting',
-      'Tap 5 frogs to help them jump!',
-      'select_objects', 'Medium',
-      'You selected 5 hopping frogs.',
-      'Count each frog as you tap.',
-      curr, subj, grd, cat, sk
-    ],
-    [
-      'Tap to select 3 yellow sweet bananas:',
-      '3', '2', '4', '5',
-      'A', 'banana', '5', 'bounce', 'picture_counting',
-      'Tap 3 bananas to feed the monkey!',
-      'select_objects', 'Easy',
-      'You selected 3 bananas.',
-      'Tap 3 times.',
-      curr, subj, grd, cat, sk
-    ],
-    [
-      'Tap to select 7 glowing hearts:',
-      '7', '6', '8', '5',
-      'A', 'heart', '9', 'pulse', 'picture_counting',
-      'Tap 7 hearts to light them up!',
-      'select_objects', 'Hard',
-      'You selected 7 glowing hearts.',
-      'Count 1 to 7 carefully.',
+      'You selected 1 star.',
+      'Tap only one star.',
       curr, subj, grd, cat, sk
     ],
 
     // =========================================================================
-    // 4. STANDARD MULTIPLE CHOICE (10 Grade 1 Questions)
+    // 4. STANDARD MULTIPLE CHOICE (Math Operations & Number Sense)
     // =========================================================================
     [
       'What is 3 + 2?',
@@ -659,21 +638,21 @@ export function generateQuestionMasterExcel(options: ExcelGenerationOptions = {}
       curr, subj, grd, cat, sk
     ],
     [
-      'What is 7 - 3?',
-      '3', '4', '5', '6',
+      'What is 5 - 2?',
+      '2', '3', '4', '5',
       'B', '', '', '', '', '',
       'multiple_choice', 'Easy',
-      '7 take away 3 leaves 4.',
-      'Count backwards 3 steps from 7.',
+      '5 take away 2 leaves 3.',
+      'Count backwards 2 steps from 5.',
       curr, subj, grd, cat, sk
     ],
     [
-      'Which number comes immediately after 9?',
-      '8', '10', '11', '12',
+      'Which number comes immediately after 4 when counting?',
+      '3', '5', '6', '7',
       'B', '', '', '', '', '',
       'multiple_choice', 'Easy',
-      'When counting, 10 comes right after 9.',
-      'Think of standard 1 to 10 counting.',
+      'When counting, 5 comes right after 4.',
+      'Count 1, 2, 3, 4, __.',
       curr, subj, grd, cat, sk
     ],
     [
@@ -686,110 +665,55 @@ export function generateQuestionMasterExcel(options: ExcelGenerationOptions = {}
       curr, subj, grd, cat, sk
     ],
     [
-      'How many days are in one full week?',
-      '5', '6', '7', '8',
-      'C', '', '', '', '', '',
-      'multiple_choice', 'Easy',
-      'There are 7 days in a week (Monday to Sunday).',
-      'Count the days from Monday to Sunday.',
-      curr, subj, grd, cat, sk
-    ],
-    [
-      'What is double of 4 (4 + 4)?',
-      '6', '8', '10', '12',
-      'B', '', '', '', '', '',
-      'multiple_choice', 'Medium',
-      '4 + 4 = 8.',
-      'Add 4 and 4 together.',
-      curr, subj, grd, cat, sk
-    ],
-    [
-      'Which of these numbers is an even number?',
-      '3', '5', '7', '8',
-      'D', '', '', '', '', '',
-      'multiple_choice', 'Medium',
-      '8 can be split into two equal groups of 4, so it is even.',
-      'Even numbers end in 0, 2, 4, 6, 8.',
-      curr, subj, grd, cat, sk
-    ],
-    [
-      'If you have 5 candies and eat 2, how many candies do you have left?',
-      '2', '3', '4', '5',
+      'What is double of 2 (2 + 2)?',
+      '3', '4', '5', '6',
       'B', '', '', '', '', '',
       'multiple_choice', 'Easy',
-      '5 minus 2 equals 3 candies.',
-      'Subtract 2 from 5.',
+      '2 + 2 = 4.',
+      'Add 2 and 2 together.',
       curr, subj, grd, cat, sk
     ],
     [
-      'Which number comes between 14 and 16?',
-      '13', '15', '17', '18',
-      'B', '', '', '', '', '',
+      'Which number represents having nothing or an empty set?',
+      '0', '1', '5', '10',
+      'A', '', '', '', '', '',
       'multiple_choice', 'Easy',
-      'The number 15 is between 14 and 16.',
-      'Count: 14, __, 16.',
-      curr, subj, grd, cat, sk
-    ],
-    [
-      'What is 10 + 5?',
-      '12', '14', '15', '16',
-      'C', '', '', '', '', '',
-      'multiple_choice', 'Medium',
-      '10 + 5 = 15.',
-      'Add 5 onto 10.',
+      'Zero (0) means having no objects.',
+      'Zero means empty.',
       curr, subj, grd, cat, sk
     ],
 
     // =========================================================================
-    // 5. OPEN BOX / KEYPAD FILL IN THE BLANK (10 Grade 1 Questions)
+    // 5. OPEN BOX / KEYPAD FILL IN THE BLANK (Math Calculations)
     // =========================================================================
     [
-      'Calculate: 5 + 3 = ?',
-      '8', '', '', '',
-      '8', 'apple', '8', 'bounce', 'picture_counting',
+      'Calculate: 3 + 2 = ?',
+      '5', '', '', '',
+      '5', 'apple', '5', 'bounce', 'picture_counting',
       'Type the correct answer number into the box.',
       'open_box', 'Easy',
-      '5 + 3 = 8.',
-      'Add 3 to 5.',
+      '3 + 2 = 5.',
+      'Add 2 to 3.',
       curr, subj, grd, cat, sk
     ],
     [
-      'Calculate: 9 - 4 = ?',
-      '5', '', '', '',
-      '5', 'cookie', '5', 'bounce', 'picture_counting',
+      'Calculate: 5 - 1 = ?',
+      '4', '', '', '',
+      '4', 'cookie', '4', 'bounce', 'picture_counting',
       'Type the answer in the box.',
       'open_box', 'Easy',
-      '9 take away 4 equals 5.',
-      'Count back 4 from 9.',
+      '5 take away 1 equals 4.',
+      'Count back 1 from 5.',
       curr, subj, grd, cat, sk
     ],
     [
-      'What number is 2 more than 6?',
-      '8', '', '', '',
-      '8', 'star', '8', 'pulse', 'picture_counting',
+      'What number is 1 more than 4?',
+      '5', '', '', '',
+      '5', 'star', '5', 'pulse', 'picture_counting',
       'Type the number.',
       'open_box', 'Easy',
-      '6 + 2 = 8.',
-      'Add 2 to 6.',
-      curr, subj, grd, cat, sk
-    ],
-    [
-      'Count the total wheels on 2 standard bicycles:',
-      '4', '', '', '',
-      '4', 'car', '4', 'bounce', 'picture_counting',
-      'Type the total number of wheels.',
-      'open_box', 'Easy',
-      'Each bike has 2 wheels: 2 + 2 = 4.',
-      '2 wheels + 2 wheels.',
-      curr, subj, grd, cat, sk
-    ],
-    [
-      'Complete the counting sequence: 2, 4, 6, _',
-      '8', '', '', '',
-      '8', '', '', '', '', '',
-      'open_box', 'Medium',
-      'Counting by 2s: 2, 4, 6, 8.',
-      'Add 2 to 6.',
+      '4 + 1 = 5.',
+      'Add 1 to 4.',
       curr, subj, grd, cat, sk
     ],
     [
@@ -798,52 +722,22 @@ export function generateQuestionMasterExcel(options: ExcelGenerationOptions = {}
       '3', 'triangle', '1', 'pop', 'picture_choice',
       'Type the number of sides.',
       'open_box', 'Easy',
-      'A triangle always has 3 sides.',
-      'Count the corners of a triangle.',
+      'A triangle always has 3 straight sides.',
+      'Count the sides of a triangle.',
       curr, subj, grd, 'CAT-GEO', 'SK-GEO-01'
     ],
     [
-      'Calculate: 10 - 7 = ?',
-      '3', '', '', '',
-      '3', 'balloon', '3', 'float', 'picture_counting',
-      'Type the answer in the box.',
-      'open_box', 'Medium',
-      '10 - 7 = 3.',
-      'How much more does 7 need to reach 10?',
-      curr, subj, grd, cat, sk
-    ],
-    [
-      'What is 6 + 4?',
-      '10', '', '', '',
-      '10', 'heart', '10', 'pulse', 'picture_counting',
-      'Type the sum.',
-      'open_box', 'Medium',
-      '6 + 4 = 10 (number bond of 10).',
-      'Friends of 10: 6 + 4.',
-      curr, subj, grd, cat, sk
-    ],
-    [
-      'What number is 1 less than 20?',
-      '19', '', '', '',
-      '19', '', '', '', '', '',
-      'open_box', 'Medium',
-      'The number right before 20 is 19.',
-      'Count down 1 from 20.',
-      curr, subj, grd, cat, sk
-    ],
-    [
-      'How many legs does a dog have?',
+      'Complete the counting sequence: 1, 2, 3, _',
       '4', '', '', '',
-      '4', 'dog', '1', 'bounce', 'picture_choice',
-      'Type the number of legs.',
+      '4', '', '', '', '', '',
       'open_box', 'Easy',
-      'Dogs have 4 legs.',
-      'Two front legs and two back legs.',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
+      'Counting sequence: 1, 2, 3, 4.',
+      'What comes after 3?',
+      curr, subj, grd, cat, sk
     ],
 
     // =========================================================================
-    // 6. TRUE / FALSE (10 Grade 1 Questions)
+    // 6. TRUE / FALSE (Math Statements)
     // =========================================================================
     [
       'True or False: A square has 4 equal straight sides.',
@@ -856,12 +750,12 @@ export function generateQuestionMasterExcel(options: ExcelGenerationOptions = {}
       curr, subj, grd, 'CAT-GEO', 'SK-GEO-01'
     ],
     [
-      'True or False: 5 is greater than 8.',
+      'True or False: 5 is greater than 2.',
       'True', 'False', '', '',
-      'False', '', '', '', '', '',
+      'True', '', '', '', '', '',
       'true_false', 'Easy',
-      'False. 8 is bigger than 5.',
-      '5 is smaller than 8.',
+      'True. 5 is a bigger number than 2.',
+      '5 items is more than 2 items.',
       curr, subj, grd, cat, sk
     ],
     [
@@ -881,125 +775,40 @@ export function generateQuestionMasterExcel(options: ExcelGenerationOptions = {}
       'Choose True or False.',
       'true_false', 'Easy',
       'False. A circle is round and has 0 corners.',
-      'Does a circle have any corners?',
+      'Does a circle have any sharp corners?',
       curr, subj, grd, 'CAT-GEO', 'SK-GEO-01'
     ],
     [
-      'True or False: 10 is an even number.',
+      'True or False: 3 take away 1 leaves 2.',
       'True', 'False', '', '',
       'True', '', '', '', '', '',
       'true_false', 'Easy',
-      'True. 10 splits into 5 and 5 with no remainder.',
-      'Even numbers end in 0.',
-      curr, subj, grd, cat, sk
-    ],
-    [
-      'True or False: There are 12 months in one full year.',
-      'True', 'False', '', '',
-      'True', '', '', '', '', '',
-      'true_false', 'Easy',
-      'True. There are 12 months from January to December.',
-      'Think of months in the year.',
-      curr, subj, grd, cat, sk
-    ],
-    [
-      'True or False: 7 minus 2 equals 6.',
-      'True', 'False', '', '',
-      'False', '', '', '', '', '',
-      'true_false', 'Easy',
-      'False. 7 - 2 = 5, not 6.',
-      'Count back 2 from 7.',
-      curr, subj, grd, cat, sk
-    ],
-    [
-      'True or False: A triangle has exactly 3 straight sides.',
-      'True', 'False', '', '',
-      'True', 'triangle', '1', 'pop', 'picture_choice',
-      'Choose True or False.',
-      'true_false', 'Easy',
-      'True. Every triangle has 3 sides.',
-      'Count the sides on a triangle.',
-      curr, subj, grd, 'CAT-GEO', 'SK-GEO-01'
-    ],
-    [
-      'True or False: The number zero (0) means empty or nothing.',
-      'True', 'False', '', '',
-      'True', '', '', '', '', '',
-      'true_false', 'Easy',
-      'True. Zero represents having no items.',
-      'Zero means none.',
-      curr, subj, grd, cat, sk
-    ],
-    [
-      'True or False: 15 comes before 14 when counting up.',
-      'True', 'False', '', '',
-      'False', '', '', '', '', '',
-      'true_false', 'Easy',
-      'False. We count 14, then 15.',
-      '14 comes first, then 15.',
+      'True. 3 - 1 = 2.',
+      'Take away 1 from 3.',
       curr, subj, grd, cat, sk
     ],
 
     // =========================================================================
-    // 7. MATCH MAKING (10 Grade 1 Questions)
+    // 7. MATCH MAKING (Math Fact Connections)
     // =========================================================================
-    [
-      'Match each animal with its sound:',
-      'Cat -> Meow', 'Dog -> Woof', 'Cow -> Moo', 'Duck -> Quack',
-      'All', 'cat|dog|cow|duck', '4', 'bounce', 'picture_choice',
-      'Connect each animal on the left to its sound on the right.',
-      'match_making', 'Easy',
-      'Cat goes meow, dog goes woof, cow goes moo, and duck goes quack.',
-      'Think of animal sounds.',
-      curr, subj, grd, 'CAT-ENG', 'SK-ENG-01'
-    ],
     [
       'Match each number digit to its written word:',
       '1 -> One', '2 -> Two', '3 -> Three', '4 -> Four',
       'All', '', '', '', '', '',
       'match_making', 'Easy',
       '1 is One, 2 is Two, 3 is Three, 4 is Four.',
-      'Read number words.',
+      'Read the number words.',
       curr, subj, grd, cat, sk
     ],
     [
-      'Match each baby animal to its mother:',
-      'Puppy -> Dog', 'Kitten -> Cat', 'Calf -> Cow', 'Duckling -> Duck',
-      'All', 'dog|cat|cow|duck', '4', 'bounce', 'picture_choice',
-      'Connect each baby animal with its parent.',
-      'match_making', 'Easy',
-      'Puppies grow into dogs, kittens into cats, calves into cows, and ducklings into ducks.',
-      'Pair babies with grown-ups.',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
-    ],
-    [
       'Match each shape to its number of sides:',
-      'Triangle -> 3 Sides', 'Square -> 4 Sides', 'Pentagon -> 5 Sides', 'Circle -> 0 Sides',
+      'Triangle -> 3 Sides', 'Square -> 4 Sides', 'Circle -> 0 Sides', 'Rectangle -> 4 Sides',
       'All', 'triangle|square|circle', '3', 'pulse', 'picture_choice',
       'Match each shape to the count of its sides.',
       'match_making', 'Medium',
-      'Triangle has 3 sides, square has 4, pentagon has 5, and circle has 0.',
+      'Triangle has 3 sides, square has 4, and circle has 0.',
       'Count sides on each shape.',
       curr, subj, grd, 'CAT-GEO', 'SK-GEO-01'
-    ],
-    [
-      'Match each word with its opposite word:',
-      'Big -> Small', 'Hot -> Cold', 'Up -> Down', 'Fast -> Slow',
-      'All', '', '', '', '', '',
-      'match_making', 'Easy',
-      'Big is opposite to small, hot to cold, up to down, and fast to slow.',
-      'Think of opposite meanings.',
-      curr, subj, grd, 'CAT-ENG', 'SK-ENG-01'
-    ],
-    [
-      'Match each healthy fruit to its natural color:',
-      'Apple -> Red', 'Banana -> Yellow', 'Grape -> Purple', 'Orange -> Orange',
-      'All', 'apple|banana|strawberry', '3', 'bounce', 'picture_choice',
-      'Connect each fruit to its color.',
-      'match_making', 'Easy',
-      'Apples are red, bananas are yellow, grapes are purple, and oranges are orange.',
-      'What color is each fruit?',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
     ],
     [
       'Match each double addition fact to its sum:',
@@ -1011,65 +820,25 @@ export function generateQuestionMasterExcel(options: ExcelGenerationOptions = {}
       curr, subj, grd, cat, sk
     ],
     [
-      'Match the rhyming words together:',
-      'Cat -> Hat', 'Sun -> Fun', 'Frog -> Log', 'Star -> Car',
+      'Match each subtraction equation to its result:',
+      '5 - 1 -> 4', '4 - 2 -> 2', '3 - 2 -> 1', '5 - 5 -> 0',
       'All', '', '', '', '', '',
       'match_making', 'Easy',
-      'Cat rhymes with hat, sun with fun, frog with log, star with car.',
-      'Listen for matching ending sounds.',
-      curr, subj, grd, 'CAT-ENG', 'SK-ENG-01'
-    ],
-    [
-      'Match each creature to where it lives (habitat):',
-      'Bird -> Nest', 'Fish -> Water', 'Bear -> Cave', 'Bee -> Hive',
-      'All', 'fish|bear', '2', 'bounce', 'picture_choice',
-      'Connect each animal to its home.',
-      'match_making', 'Easy',
-      'Birds live in nests, fish in water, bears in caves, bees in hives.',
-      'Where does each animal sleep?',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
-    ],
-    [
-      'Match each vehicle to how it travels:',
-      'Car -> Road', 'Boat -> Water', 'Airplane -> Sky', 'Train -> Tracks',
-      'All', 'car|boat|airplane', '3', 'bounce', 'picture_choice',
-      'Connect each vehicle to its route.',
-      'match_making', 'Easy',
-      'Cars travel on roads, boats on water, planes in the sky, trains on tracks.',
-      'Where does each vehicle move?',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
+      '5-1=4, 4-2=2, 3-2=1, 5-5=0.',
+      'Subtract to find the match.',
+      curr, subj, grd, cat, sk
     ],
 
     // =========================================================================
-    // 8. DRAG AND DROP (10 Grade 1 Questions)
+    // 8. DRAG AND DROP (Math Categorization)
     // =========================================================================
     [
-      'Drag each object into its correct category basket:',
-      'Apple -> Fruit Basket', 'Toy Car -> Toy Box', 'Banana -> Fruit Basket', 'Balloon -> Toy Box',
-      'All', 'apple|car|banana|balloon', '4', 'bounce', 'picture_choice',
-      'Drag each item to its matching target zone.',
-      'drag_and_drop', 'Easy',
-      'Fruits go into the fruit basket and cars/balloons go to the toy box.',
-      'Separate fruits from toys.',
-      curr, subj, grd, cat, sk
-    ],
-    [
-      'Drag each animal to where it lives:',
-      'Goldfish -> Water Pond', 'Lion -> Jungle Land', 'Dolphin -> Water Pond', 'Monkey -> Jungle Land',
-      'All', 'fish|lion|monkey', '3', 'bounce', 'picture_choice',
-      'Drag each animal to Water Pond or Jungle Land.',
-      'drag_and_drop', 'Easy',
-      'Fish and dolphins belong in water; lions and monkeys belong on land.',
-      'Water swimmers vs Land climbers.',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
-    ],
-    [
-      'Drag each number into the Even or Odd bucket:',
-      '2 -> Even Numbers', '3 -> Odd Numbers', '4 -> Even Numbers', '5 -> Odd Numbers',
+      'Drag each number into the Small Numbers (1-3) or Bigger Numbers (4-6) bin:',
+      '1 -> Small Numbers (1-3)', '2 -> Small Numbers (1-3)', '5 -> Bigger Numbers (4-6)', '6 -> Bigger Numbers (4-6)',
       'All', '', '', '', '', '',
-      'drag_and_drop', 'Medium',
-      '2 and 4 are even; 3 and 5 are odd.',
-      'Even numbers can be split in half evenly.',
+      'drag_and_drop', 'Easy',
+      '1 and 2 are small numbers (1-3); 5 and 6 are bigger numbers (4-6).',
+      'Compare each number to 3.',
       curr, subj, grd, cat, sk
     ],
     [
@@ -1083,66 +852,17 @@ export function generateQuestionMasterExcel(options: ExcelGenerationOptions = {}
       curr, subj, grd, 'CAT-GEO', 'SK-GEO-01'
     ],
     [
-      'Drag each clothing item to the correct weather:',
-      'Warm Coat -> Cold Winter', 'Swimsuit -> Sunny Summer', 'Wool Scarf -> Cold Winter', 'Sunglasses -> Sunny Summer',
+      'Drag each number into Even or Odd bucket:',
+      '2 -> Even Numbers', '3 -> Odd Numbers', '4 -> Even Numbers', '5 -> Odd Numbers',
       'All', '', '', '', '', '',
-      'drag_and_drop', 'Easy',
-      'Coats and scarves are for winter; swimsuits and sunglasses are for summer.',
-      'What do you wear when it is cold vs hot?',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
-    ],
-    [
-      'Drag each food to Healthy Food or Sweet Treat:',
-      'Broccoli -> Healthy Food', 'Lollipop -> Sweet Treat', 'Carrot -> Healthy Food', 'Candy Bar -> Sweet Treat',
-      'All', 'apple|cookie', '2', 'bounce', 'picture_choice',
-      'Drag vegetables/fruits to Healthy and candies to Sweet Treat.',
-      'drag_and_drop', 'Easy',
-      'Broccoli and carrots are healthy foods; lollipops and candies are sweet treats.',
-      'Which foods are good for your body?',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
-    ],
-    [
-      'Drag each tool to the worker who uses it:',
-      'Stethoscope -> Doctor', 'Fire Hose -> Firefighter', 'Thermometer -> Doctor', 'Ladder -> Firefighter',
-      'All', '', '', '', '', '',
-      'drag_and_drop', 'Easy',
-      'Doctors use stethoscopes and thermometers; firefighters use hoses and ladders.',
-      'Match tools to community helpers.',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
-    ],
-    [
-      'Drag each word to its starting letter sound:',
-      'Sun -> S Sound', 'Apple -> A Sound', 'Star -> S Sound', 'Ant -> A Sound',
-      'All', 'sun|apple|star', '3', 'bounce', 'picture_choice',
-      'Drag words to the S Sound box or A Sound box.',
-      'drag_and_drop', 'Easy',
-      'Sun and Star start with S; Apple and Ant start with A.',
-      'Say the first sound out loud.',
-      curr, subj, grd, 'CAT-ENG', 'SK-ENG-01'
-    ],
-    [
-      'Drag each item into Light Weight or Heavy Weight:',
-      'Feather -> Light Weight', 'Big Elephant -> Heavy Weight', 'Party Balloon -> Light Weight', 'Giant Rock -> Heavy Weight',
-      'All', 'balloon|elephant', '2', 'float', 'picture_choice',
-      'Drag light items to Light Weight and heavy items to Heavy Weight.',
-      'drag_and_drop', 'Easy',
-      'Feathers and balloons are light; elephants and big rocks are heavy.',
-      'Which items can float in air?',
-      curr, subj, grd, 'CAT-MSR', 'SK-MSR-01'
-    ],
-    [
-      'Drag each animal into Mammal or Bird:',
-      'Puppy -> Mammal', 'Parrot -> Bird', 'Cat -> Mammal', 'Penguin -> Bird',
-      'All', 'dog|cat', '2', 'bounce', 'picture_choice',
-      'Drag animals with fur to Mammal and animals with feathers to Bird.',
       'drag_and_drop', 'Medium',
-      'Dogs and cats are mammals with fur; parrots and penguins are birds with feathers.',
-      'Look for feathers or fur.',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
+      '2 and 4 are even; 3 and 5 are odd.',
+      'Even numbers can be paired up equally.',
+      curr, subj, grd, cat, sk
     ],
 
     // =========================================================================
-    // 9. ORDERING (10 Grade 1 Questions)
+    // 9. ORDERING (Math Number Sequencing)
     // =========================================================================
     [
       'Arrange these numbers in counting order from smallest to largest:',
@@ -1165,211 +885,62 @@ export function generateQuestionMasterExcel(options: ExcelGenerationOptions = {}
       curr, subj, grd, cat, sk
     ],
     [
-      'Arrange the sizes in order from smallest to largest:',
-      'Small', 'Medium', 'Large', 'Extra Large',
-      'Small, Medium, Large, Extra Large', '', '', '', '', '',
-      'ordering', 'Easy',
-      'The sizes grow from Small to Medium to Large to Extra Large.',
-      'Smallest comes first.',
-      curr, subj, grd, 'CAT-MSR', 'SK-MSR-01'
-    ],
-    [
-      'Arrange the morning routine in the correct order:',
-      'Wake up', 'Brush teeth', 'Eat breakfast', 'Go to school',
-      'Wake up, Brush teeth, Eat breakfast, Go to school', '', '', '', '', '',
-      'ordering', 'Easy',
-      'First wake up, then brush teeth, eat breakfast, and head to school.',
-      'What do you do first when you get out of bed?',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
-    ],
-    [
-      'Arrange the life cycle of a butterfly in correct order:',
-      'Tiny Egg', 'Caterpillar', 'Chrysalis', 'Butterfly',
-      'Tiny Egg, Caterpillar, Chrysalis, Butterfly', '', '', '', '', '',
-      'ordering', 'Medium',
-      'A butterfly starts as an egg, becomes a caterpillar, makes a chrysalis, and emerges as a butterfly.',
-      'First is the egg on a leaf.',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
-    ],
-    [
-      'Arrange the days of the school week in order:',
-      'Monday', 'Tuesday', 'Wednesday', 'Thursday',
-      'Monday, Tuesday, Wednesday, Thursday', '', '', '', '', '',
-      'ordering', 'Easy',
-      'The order of weekdays is Monday, Tuesday, Wednesday, Thursday.',
-      'Start with Monday.',
-      curr, subj, grd, cat, sk
-    ],
-    [
-      'Arrange the numbers skip counting by 2s:',
-      '2', '4', '6', '8',
-      '2, 4, 6, 8', 'cookie', '4', 'bounce', 'pattern',
-      'Order by counting in 2s.',
-      'ordering', 'Medium',
-      'Skip counting by 2s: 2, 4, 6, 8.',
-      'Add 2 each time.',
-      curr, subj, grd, cat, sk
-    ],
-    [
-      'Arrange the plant growth cycle in order:',
-      'Seed in Soil', 'Tiny Sprout', 'Young Plant', 'Blooming Flower',
-      'Seed in Soil, Tiny Sprout, Young Plant, Blooming Flower', 'tree', '1', 'bounce', 'picture_choice',
-      'Order the plant stages from seed to flower.',
-      'ordering', 'Easy',
-      'First plant the seed, it sprouts, grows into a plant, and blooms a flower.',
-      'Everything begins with a seed.',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
-    ],
-    [
-      'Arrange these letters in alphabetical order:',
-      'A', 'B', 'C', 'D',
-      'A, B, C, D', '', '', '', '', '',
-      'ordering', 'Easy',
-      'Alphabetical order is A, B, C, D.',
-      'Sing the ABC song in your head.',
-      curr, subj, grd, 'CAT-ENG', 'SK-ENG-01'
-    ],
-    [
-      'Arrange the countdown numbers from 10 down to 7:',
-      '10', '9', '8', '7',
-      '10, 9, 8, 7', 'balloon', '4', 'float', 'pattern',
+      'Arrange the countdown numbers from 5 down to 2:',
+      '5', '4', '3', '2',
+      '5, 4, 3, 2', 'balloon', '4', 'float', 'pattern',
       'Order the numbers counting backwards.',
-      'ordering', 'Medium',
-      'Counting backwards: 10, 9, 8, 7.',
-      'Start with 10 and count down.',
+      'ordering', 'Easy',
+      'Counting backwards: 5, 4, 3, 2.',
+      'Start with 5 and count down.',
       curr, subj, grd, cat, sk
     ],
 
     // =========================================================================
-    // 10. SORTING (10 Grade 1 Questions)
+    // 10. SORTING (Math Classification)
     // =========================================================================
     [
-      'Sort the items into Fruit Basket or Toy Box:',
-      'Fruit Basket: Apple, Banana, Strawberry',
-      'Toy Box: Toy Car, Party Balloon',
-      '', '',
-      'All', 'apple|banana|strawberry|car|balloon', '5', 'bounce', 'picture_choice',
-      'Sort each object into its bucket.',
-      'sorting', 'Easy',
-      'Apples, bananas, and strawberries are fruits; cars and balloons are toys.',
-      'Place food in Fruit Basket and toys in Toy Box.',
-      curr, subj, grd, cat, sk
-    ],
-    [
-      'Sort each number into Even or Odd group:',
-      'Even Group: 2, 4, 6, 8',
-      'Odd Group: 1, 3, 5, 7',
+      'Sort each number into Even Numbers or Odd Numbers:',
+      'Even Numbers: 2, 4, 6',
+      'Odd Numbers: 1, 3, 5',
       '', '',
       'All', '', '', '', '', '',
       'sorting', 'Medium',
-      'Even numbers: 2, 4, 6, 8. Odd numbers: 1, 3, 5, 7.',
-      'Even numbers end in 0, 2, 4, 6, 8.',
+      'Even numbers: 2, 4, 6. Odd numbers: 1, 3, 5.',
+      'Even numbers end in 2, 4, 6.',
       curr, subj, grd, cat, sk
     ],
     [
-      'Sort animals into Land Animals or Water Creatures:',
-      'Land Animals: Lion, Dog, Brown Bear',
-      'Water Creatures: Goldfish, Dolphin',
+      'Sort numbers into Less than 5 vs 5 and Greater:',
+      'Less than 5: 1, 2, 3, 4',
+      '5 and Greater: 5, 6, 7, 8',
       '', '',
-      'All', 'lion|dog|bear|fish', '4', 'bounce', 'picture_choice',
-      'Sort animals into land vs water habitats.',
+      'All', '', '', '', '', '',
       'sorting', 'Easy',
-      'Lions, dogs, and bears live on land; fish and dolphins live in water.',
-      'Where does each animal swim or walk?',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
-    ],
-    [
-      'Sort items into Hot Temperature or Cold Temperature:',
-      'Hot Temperature: Campfire, Sun',
-      'Cold Temperature: Ice Cube, Snowman',
-      '', '',
-      'All', 'sun|fire', '2', 'pulse', 'picture_choice',
-      'Sort items by whether they are hot or cold.',
-      'sorting', 'Easy',
-      'The sun and fire are hot; ice cubes and snowmen are cold.',
-      'Feel the heat or chill.',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
-    ],
-    [
-      'Sort objects by their primary color (Red vs Yellow):',
-      'Red Objects: Red Apple, Strawberry, Red Heart',
-      'Yellow Objects: Ripe Banana, Shiny Sun, Star',
-      '', '',
-      'All', 'apple|strawberry|heart|banana|sun|star', '6', 'bounce', 'picture_choice',
-      'Group objects by Red or Yellow color.',
-      'sorting', 'Easy',
-      'Apples, strawberries, and hearts are red; bananas, sun, and stars are yellow.',
-      'Look at the color of each item.',
+      '1, 2, 3, 4 are less than 5; 5, 6, 7, 8 are 5 and greater.',
+      'Compare each number to 5.',
       curr, subj, grd, cat, sk
     ],
     [
-      'Sort into Living Things vs Non-Living Objects:',
-      'Living Things: Green Tree, Fluffy Cat, Puppy',
-      'Non-Living Objects: Stone Rock, Wooden Chair, Pencil',
+      'Sort shapes into Round Shapes vs Straight-Sided Shapes:',
+      'Round Shapes: Circle, Oval',
+      'Straight-Sided Shapes: Triangle, Square, Rectangle',
       '', '',
-      'All', 'tree|cat|dog', '3', 'bounce', 'picture_choice',
-      'Sort things into Living or Non-Living.',
-      'sorting', 'Medium',
-      'Trees, cats, and dogs grow and need water; rocks, chairs, and pencils do not.',
-      'Living things grow and breathe.',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
-    ],
-    [
-      'Sort by geometric shape (Round vs Pointy):',
-      'Round Shapes: Circle, Wheel, Coin',
-      'Pointy Shapes: Triangle, Star',
-      '', '',
-      'All', 'circle|triangle|star', '3', 'pulse', 'picture_choice',
-      'Sort shapes into Round or Pointy buckets.',
+      'All', 'circle|triangle|square', '3', 'pulse', 'picture_choice',
+      'Sort shapes into Round or Straight-Sided buckets.',
       'sorting', 'Easy',
-      'Circles, wheels, and coins are round; triangles and stars have pointy corners.',
-      'Look for sharp corners.',
+      'Circles and ovals are round; triangles, squares, and rectangles have straight sides.',
+      'Check if the shape has straight edges.',
       curr, subj, grd, 'CAT-GEO', 'SK-GEO-01'
-    ],
-    [
-      'Sort vehicles by Land Vehicles vs Air Vehicles:',
-      'Land Vehicles: Blue Car, School Bus',
-      'Air Vehicles: Airplane, Helicopter, Rocket',
-      '', '',
-      'All', 'car|airplane', '2', 'bounce', 'picture_choice',
-      'Sort vehicles into Land or Air.',
-      'sorting', 'Easy',
-      'Cars and buses drive on land; planes, helicopters, and rockets fly in the air.',
-      'Does it drive on a road or fly?',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
-    ],
-    [
-      'Sort food items into Healthy Meal vs Sweet Treat:',
-      'Healthy Meal: Fresh Salad, Red Apple, Steamed Rice',
-      'Sweet Treat: Chocolate Cookie, Cupcake, Candy',
-      '', '',
-      'All', 'apple|cookie', '2', 'bounce', 'picture_choice',
-      'Sort foods into healthy meals or sweet desserts.',
-      'sorting', 'Easy',
-      'Salads, apples, and rice are healthy meals; cookies, cupcakes, and candy are sweet treats.',
-      'Which foods give your body good energy?',
-      curr, subj, grd, 'CAT-SCI', 'SK-SCI-01'
-    ],
-    [
-      'Sort English letters into Vowels vs Consonants:',
-      'Vowels: A, E, I, O, U',
-      'Consonants: B, C, D, F, G',
-      '', '',
-      'All', '', '', '', '', '',
-      'sorting', 'Medium',
-      'A, E, I, O, U are vowels; B, C, D, F, G are consonants.',
-      'Remember the 5 special vowels: A, E, I, O, U.',
-      curr, subj, grd, 'CAT-ENG', 'SK-ENG-01'
     ]
   ];
 
   const wsQuestions = XLSX.utils.aoa_to_sheet([questionsHeaders, ...sampleQuestionsRows]);
   wsQuestions['!cols'] = [
     { wch: 45 }, // Question Text
-    { wch: 18 }, // Option A
-    { wch: 18 }, // Option B
-    { wch: 18 }, // Option C
-    { wch: 18 }, // Option D
+    { wch: 20 }, // Option A
+    { wch: 20 }, // Option B
+    { wch: 20 }, // Option C
+    { wch: 20 }, // Option D
     { wch: 16 }, // Correct Answer
     { wch: 22 }, // Clipart Reference
     { wch: 14 }, // Visual Count
@@ -1378,23 +949,158 @@ export function generateQuestionMasterExcel(options: ExcelGenerationOptions = {}
     { wch: 32 }, // Visual Instructions
     { wch: 18 }, // Question Type
     { wch: 12 }, // Difficulty
-    { wch: 30 }, // Explanation
+    { wch: 32 }, // Explanation
     { wch: 25 }, // Hint
-    { wch: 16 }, // Curriculum
-    { wch: 14 }, // Subject
-    { wch: 14 }, // Grade
-    { wch: 14 }, // Category
-    { wch: 14 }  // Skill
+    { wch: 24 }, // Curriculum
+    { wch: 15 }, // Subject
+    { wch: 15 }, // Grade
+    { wch: 25 }, // Category
+    { wch: 28 }  // Skill
   ];
   XLSX.utils.book_append_sheet(wb, wsQuestions, 'Questions');
 
   // -------------------------------------------------------------
-  // Sheet 3: Clipart Library Catalog
+  // Sheet 2 (Tab 2): Master_Data (Clean Horizontal Tables)
   // -------------------------------------------------------------
-  const clipartHeaders = ['Clipart Code / ID', 'Clipart Name', 'Emoji Preview', 'Category', 'Default Animation', 'Keywords / Aliases'];
+  const currList = options.curriculaList && options.curriculaList.length > 0
+    ? options.curriculaList.map(c => c.name || c.id)
+    : [
+        'Victorian Curriculum 2.0 (Australia)',
+        'Australian Curriculum (ACARA)',
+        'US Common Core State Standards',
+        'CBSE (India)',
+        'UK National Curriculum',
+        'IB Primary Years Programme',
+        'Ontario Curriculum (Canada)',
+        'Global Standard Framework'
+      ];
+
+  const gradeNamesList = options.gradesList && options.gradesList.length > 0
+    ? options.gradesList.map(g => g.name || g.id)
+    : [
+        'Preschool',
+        'Foundation',
+        'Grade 1',
+        'Grade 2',
+        'Grade 3',
+        'Grade 4',
+        'Grade 5',
+        'Grade 6'
+      ];
+
+  const categorySkillRows: string[][] = [];
+  const addedCodes = new Set<string>();
+
+  // 1. Live Admin Portal master categories & skills (dynamically added by Admin)
+  if (options.masterCategories && options.masterCategories.length > 0 && options.masterSkills && options.masterSkills.length > 0) {
+    options.masterCategories.forEach(catItem => {
+      const skills = options.masterSkills!.filter(s => s.categoryId === catItem.id || s.categoryCode === catItem.code);
+      const cleanGrdName = resolveGradeMapping(catItem.gradeId || options.targetGradeName || 'Grade 1', options.gradesList).name;
+      skills.forEach(skItem => {
+        const key = `${cleanGrdName}:${catItem.name}:${skItem.name}`;
+        if (!addedCodes.has(key)) {
+          addedCodes.add(key);
+          categorySkillRows.push([
+            cleanGrdName,
+            'Mathematics',
+            catItem.name,
+            skItem.name,
+            skItem.curriculumReference || skItem.description || `${skItem.name} learning objective`
+          ]);
+        }
+      });
+    });
+  }
+
+  // 2. Standard master mathematics catalog
+  MASTER_CATEGORY_SKILL_CATALOG.forEach(entry => {
+    const rawGrades = entry.grades.split(',').map(g => g.trim());
+    rawGrades.forEach(gStr => {
+      const cleanGrd = resolveGradeMapping(gStr, options.gradesList).name;
+      const key = `${cleanGrd}:${entry.catName}:${entry.skName}`;
+      if (!addedCodes.has(key)) {
+        addedCodes.add(key);
+        categorySkillRows.push([
+          cleanGrd,
+          'Mathematics',
+          entry.catName,
+          entry.skName,
+          `${entry.skName} learning objective`
+        ]);
+      }
+    });
+  });
+
+  // Sort rows logically by Grade then Category
+  const gradeRank: Record<string, number> = {
+    'Preschool': 0,
+    'Foundation': 1,
+    'Foundation / Kindergarten': 1,
+    'Kindergarten': 1,
+    'Grade 1': 2,
+    'Grade 2': 3,
+    'Grade 3': 4,
+    'Grade 4': 5,
+    'Grade 5': 6,
+    'Grade 6': 7
+  };
+  categorySkillRows.sort((a, b) => {
+    const rA = gradeRank[a[0]] !== undefined ? gradeRank[a[0]] : 99;
+    const rB = gradeRank[b[0]] !== undefined ? gradeRank[b[0]] : 99;
+    if (rA !== rB) return rA - rB;
+    if (a[2] !== b[2]) return a[2].localeCompare(b[2]);
+    return a[3].localeCompare(b[3]);
+  });
+
+  const masterDataAOA: any[][] = [
+    // Section 1 Header
+    ['CATEGORIES & SKILLS (MATHEMATICS TAXONOMY)', '', '', '', ''],
+    ['Target Grade Level', 'Subject', 'Category Name (Copy to Excel)', 'Skill Name (Copy to Excel)', 'Description / Standard'],
+    ...categorySkillRows,
+    ['', '', '', '', ''],
+    // Section 2 Header
+    ['SYSTEM ACCEPTED VALUES & OPTIONS', '', '', '', '', '', ''],
+    ['Curriculum Options', 'Subject Options', 'Grade Level Options', 'Question Type Options', 'Difficulty Options', 'Visual Animation Options', 'Visual Template Options']
+  ];
+
+  const qTypes = ['multiple_choice', 'picture_counting', 'picture_choice', 'select_objects', 'open_box', 'true_false', 'drag_and_drop', 'ordering', 'sorting', 'match_making'];
+  const diffs = ['Easy', 'Medium', 'Hard'];
+  const anims = ['bounce', 'pulse', 'pop', 'float', 'spin', 'none'];
+  const temps = ['picture_counting', 'picture_choice', 'pattern', 'drag_drop', 'matching', 'sorting', 'ordering', 'number_line'];
+  const subjs = ['Mathematics'];
+
+  const maxValRows = Math.max(currList.length, subjs.length, gradeNamesList.length, qTypes.length, diffs.length, anims.length, temps.length);
+
+  for (let i = 0; i < maxValRows; i++) {
+    masterDataAOA.push([
+      currList[i] || '',
+      subjs[i] || '',
+      gradeNamesList[i] || '',
+      qTypes[i] || '',
+      diffs[i] || '',
+      anims[i] || '',
+      temps[i] || ''
+    ]);
+  }
+
+  const wsMaster = XLSX.utils.aoa_to_sheet(masterDataAOA);
+  wsMaster['!cols'] = [
+    { wch: 25 },
+    { wch: 18 },
+    { wch: 32 },
+    { wch: 36 },
+    { wch: 36 },
+    { wch: 25 },
+    { wch: 25 }
+  ];
+  XLSX.utils.book_append_sheet(wb, wsMaster, 'Master_Data');
+
+  // -------------------------------------------------------------
+  // Sheet 3 (Tab 3): Clipart_Library (Visual Clipart Catalog)
+  // -------------------------------------------------------------
+  const clipartHeaders = ['Clipart Name / Code', 'Preview Emoji', 'Category', 'Default Animation', 'Keywords / Aliases'];
   const clipartRows = CLIPART_LIBRARY.map(c => [
     c.id,
-    c.name,
     c.emoji,
     c.category,
     c.defaultAnimation,
@@ -1403,129 +1109,71 @@ export function generateQuestionMasterExcel(options: ExcelGenerationOptions = {}
 
   const wsClipart = XLSX.utils.aoa_to_sheet([clipartHeaders, ...clipartRows]);
   wsClipart['!cols'] = [
-    { wch: 20 },
-    { wch: 25 },
+    { wch: 22 },
     { wch: 15 },
     { wch: 22 },
-    { wch: 18 },
-    { wch: 35 }
+    { wch: 20 },
+    { wch: 38 }
   ];
   XLSX.utils.book_append_sheet(wb, wsClipart, 'Clipart_Library');
 
   // -------------------------------------------------------------
-  // Sheet 4: Master Reference Codes & Category/Skill Mappings
+  // Sheet 4 (Tab 4): Instructions (Quick Start & Syntax Guide)
   // -------------------------------------------------------------
-  const currList = options.curriculaList && options.curriculaList.length > 0
-    ? options.curriculaList.map(c => [c.code || c.id, c.name])
-    : [
-        ['CUR-VCAA20', 'Victorian Curriculum 2.0 (Australia)'],
-        ['CUR-ACARA', 'Australian Curriculum (ACARA)'],
-        ['CUR-CCSS', 'US Common Core State Standards'],
-        ['CUR-CBSE', 'CBSE (India)'],
-        ['CUR-UKNC', 'UK National Curriculum'],
-        ['CUR-IBPYP', 'IB Primary Years Programme'],
-        ['CUR-ON', 'Ontario Curriculum (Canada)'],
-        ['CUR-GLOBAL', 'Global Standard Framework']
-      ];
-
-  const subjList = options.subjectsList && options.subjectsList.length > 0
-    ? options.subjectsList.map(s => [s.id, s.name])
-    : [
-        ['SUB_MTH', 'Mathematics'],
-        ['SUB_SCI', 'Science & Nature'],
-        ['SUB_ENG', 'English / Language Arts'],
-        ['SUB_ART', 'Art & Creativity']
-      ];
-
-  const gradeList = options.gradesList && options.gradesList.length > 0
-    ? options.gradesList.map(g => [g.id, g.name])
-    : [
-        ['GRD_PRE_K', 'Preschool (Ages 3-4)'],
-        ['GRD_KG', 'Foundation / Kindergarten (Ages 5-6)'],
-        ['GRD_G1', 'Grade 1 (Ages 6-7)'],
-        ['GRD_G2', 'Grade 2 (Ages 7-8)'],
-        ['GRD_G3', 'Grade 3 (Ages 8-9)'],
-        ['GRD_G4', 'Grade 4 (Ages 9-10)'],
-        ['GRD_G5', 'Grade 5 (Ages 10-11)'],
-        ['GRD_G6', 'Grade 6 (Ages 11-12)']
-      ];
-
-  // Dynamic Category & Skill List (Combined catalog + any system master categories)
-  const categorySkillRows: string[][] = [];
-  const addedCodes = new Set<string>();
-
-  if (options.masterCategories && options.masterCategories.length > 0 && options.masterSkills && options.masterSkills.length > 0) {
-    options.masterCategories.forEach(cat => {
-      const skills = options.masterSkills!.filter(s => s.categoryId === cat.id || s.categoryCode === cat.code);
-      skills.forEach(sk => {
-        const key = `${cat.code || cat.id}:${sk.code || sk.id}`;
-        if (!addedCodes.has(key)) {
-          addedCodes.add(key);
-          categorySkillRows.push([
-            cat.code || cat.id,
-            cat.name,
-            sk.code || sk.id,
-            sk.name,
-            cat.subjectId || 'SUB_MTH',
-            cat.gradeId || 'All Grades'
-          ]);
-        }
-      });
-    });
-  }
-
-  // Add all comprehensive catalog mappings
-  MASTER_CATEGORY_SKILL_CATALOG.forEach(entry => {
-    const key = `${entry.catCode}:${entry.skCode}`;
-    if (!addedCodes.has(key)) {
-      addedCodes.add(key);
-      categorySkillRows.push([
-        entry.catCode,
-        entry.catName,
-        entry.skCode,
-        entry.skName,
-        entry.subject,
-        entry.grades
-      ]);
-    }
-  });
-
-  const maxTopRows = Math.max(currList.length, subjList.length, gradeList.length);
-  const masterRefData: any[][] = [
-    ['CURRICULUM CODES', 'Curriculum Name', 'SUBJECT CODES', 'Subject Name', 'GRADE CODES', 'Grade Level']
+  const instructionsData = [
+    ['PforPencil Question Bank - Excel Master Template & Guide (Mathematics Focus)'],
+    [''],
+    ['1. WORKBOOK STRUCTURE & HOW TO USE:'],
+    ['   - Tab 1 [Questions]: The primary question bank sheet where you write and edit questions.'],
+    ['   - Tab 2 [Master_Data]: Contains all active Categories, Skills, Grade levels, and system-accepted options with clean horizontal headers.'],
+    ['   - Tab 3 [Clipart_Library]: Over 100+ animated math cliparts and emojis you can use without uploading image files!'],
+    ['   - Tab 4 [Instructions]: This quick start guide and syntax reference.'],
+    [''],
+    ['2. HOW CATEGORY & SKILL NAMES WORK (ADMIN-CONTROLLED TAXONOMY):'],
+    ['   - Every question in PforPencil belongs to an Admin-created Category and Skill.'],
+    ['   - In the Questions sheet, enter the natural names in the "Category Name" and "Skill Name" columns.'],
+    ['   - Simply copy and paste exact Category and Skill names from Tab 2 [Master_Data].'],
+    ['   - STRICT VALIDATION: If a row contains a Category or Skill not present in the Admin catalog, that row will fail validation.'],
+    ['   - If you need a new Category or Skill, create it first in the Admin Portal under Master Question Bank.'],
+    [''],
+    ['3. HOW TO ADD VISUAL & TACTILE QUESTIONS (NO IMAGE UPLOADS NEEDED):'],
+    ['   - For visual math questions, you do NOT need to upload image files!'],
+    ['   - In the "Clipart Reference" column, enter any clipart name from Tab 3 [Clipart_Library] (e.g. "apple", "star", "cookie", "car", "triangle").'],
+    ['   - Specify "Visual Count" (e.g. 3) and "Visual Animation" (bounce, pulse, pop, float, spin, none).'],
+    [''],
+    ['4. MATHEMATICS QUESTION TYPES & SYNTAX GUIDE:'],
+    ['   - multiple_choice : Standard A, B, C, D choices (Correct Answer: A, B, C, or D).'],
+    ['   - picture_counting: Interactive bouncing object counting (Correct Answer: e.g. 3, 4, 5).'],
+    ['   - picture_choice  : Visual shape and object selection (Correct Answer: A, B, C, or D).'],
+    ['   - select_objects  : Tap to count target objects (Correct Answer: Target count e.g. 4).'],
+    ['   - open_box        : Direct number keypad entry (Correct Answer: e.g. 5 or 12).'],
+    ['   - true_false      : True / False arithmetic & geometric statements (Correct Answer: True or False).'],
+    ['   - drag_and_drop   : Drag numbers/shapes to match (Format options as: "Item -> Target Zone").'],
+    ['   - ordering        : Ascending / Chronological order (Options: 1st, 2nd, 3rd, 4th item in sequence).'],
+    ['   - sorting         : Sorting items into buckets (Format options as: "BucketName: item1, item2").'],
+    ['   - match_making    : Equation to sum or shape to property matching (Format options as: "LeftItem -> RightMatch").'],
+    [''],
+    ['5. COLUMN DEFINITIONS (QUESTIONS SHEET):'],
+    ['   - Question Text       : The question instructions displayed to the student.'],
+    ['   - Option A / B / C / D: The answer choices.'],
+    ['   - Correct Answer      : The correct answer choice ("A", "B", "C", "D" or direct answer value).'],
+    ['   - Clipart Reference   : Clipart name from Tab 3 (e.g. "apple", "star", "cookie", "circle").'],
+    ['   - Visual Count        : How many items to display (e.g. 1, 3, 5, 10).'],
+    ['   - Visual Animation    : "bounce", "pulse", "pop", "float", "spin", or "none".'],
+    ['   - Visual Template     : "picture_counting", "picture_choice", or leave blank.'],
+    ['   - Visual Instructions : Hint or prompt for the visual interaction (e.g. "Tap each apple to count them!").'],
+    ['   - Question Type       : One of the 10 supported question types listed above.'],
+    ['   - Difficulty          : "Easy", "Medium", or "Hard".'],
+    ['   - Curriculum          : Full Curriculum name (e.g. "Victorian Curriculum 2.0 (Australia)", "US Common Core").'],
+    ['   - Subject             : "Mathematics".'],
+    ['   - Grade               : Clean grade name (e.g. "Preschool", "Foundation", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6").'],
+    ['   - Category Name       : Exact Category Name from Tab 2 [Master_Data].'],
+    ['   - Skill Name          : Exact Skill Name from Tab 2 [Master_Data].']
   ];
 
-  for (let i = 0; i < maxTopRows; i++) {
-    const c = currList[i] || ['', ''];
-    const s = subjList[i] || ['', ''];
-    const g = gradeList[i] || ['', ''];
-    masterRefData.push([c[0], c[1], s[0], s[1], g[0], g[1]]);
-  }
-
-  masterRefData.push(['', '', '', '', '', '']);
-  masterRefData.push(['CATEGORY & SKILL CODE MAPPINGS (DYNAMIC ACROSS ALL GRADES)', '', '', '', '', '']);
-  masterRefData.push(['Category Code', 'Category Name', 'Skill Code', 'Skill Name', 'Subject', 'Target Grades']);
-
-  categorySkillRows.forEach(row => {
-    masterRefData.push(row);
-  });
-
-  masterRefData.push(['', '', '', '', '', '']);
-  masterRefData.push(['ANIMATION OPTIONS', 'Description', 'DIFFICULTY OPTIONS', 'Description', 'QUESTION TYPE OPTIONS', 'Description']);
-  masterRefData.push(['bounce', 'Bounces up and down', 'Easy', 'Primary / Beginner level', 'multiple_choice', 'Standard multiple choice (A, B, C, D)']);
-  masterRefData.push(['pulse', 'Gentle pulsing scale effect', 'Medium', 'Intermediate level', 'picture_counting', 'Count interactive bouncing objects']);
-  masterRefData.push(['pop', 'Snappy popping entrance', 'Hard', 'Advanced challenge', 'picture_choice', 'Choose from picture tiles']);
-  masterRefData.push(['float', 'Floating wave motion', '', '', 'open_box', 'Type answer with number pad']);
-  masterRefData.push(['spin', 'Gentle 360 degree spin', '', '', 'true_false', 'True or False choice']);
-  masterRefData.push(['none', 'Static display', '', '', 'drag_and_drop', 'Drag items to targets']);
-  masterRefData.push(['', '', '', '', 'ordering', 'Number or item sequencing']);
-  masterRefData.push(['', '', '', '', 'sorting', 'Sort items into buckets']);
-  masterRefData.push(['', '', '', '', 'match_making', 'Connect matching pairs']);
-  masterRefData.push(['', '', '', '', 'select_objects', 'Interactive object counting & target tagging']);
-
-  const wsMaster = XLSX.utils.aoa_to_sheet(masterRefData);
-  wsMaster['!cols'] = [{ wch: 18 }, { wch: 36 }, { wch: 18 }, { wch: 36 }, { wch: 18 }, { wch: 36 }];
-  XLSX.utils.book_append_sheet(wb, wsMaster, 'Master_Codes');
+  const wsInstructions = XLSX.utils.aoa_to_sheet(instructionsData);
+  wsInstructions['!cols'] = [{ wch: 100 }];
+  XLSX.utils.book_append_sheet(wb, wsInstructions, 'Instructions');
 
   // Write workbook to binary buffer and return as Blob
   const wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
@@ -1609,26 +1257,33 @@ export async function parseQuestionExcelFile(file: File, context: ExcelParseCont
       return { questions, errors, warnings };
     }
 
-    const findCol = (name: string) => headerRow.findIndex(h => h.toLowerCase() === name.toLowerCase());
-    const colOptA = findCol('Option A');
-    const colOptB = findCol('Option B');
-    const colOptC = findCol('Option C');
-    const colOptD = findCol('Option D');
-    const colCorrect = findCol('Correct Answer');
-    const colClipartRef = findCol('Clipart Reference') >= 0 ? findCol('Clipart Reference') : findCol('Visual Objects');
-    const colCount = findCol('Visual Count');
-    const colAnimation = findCol('Visual Animation');
-    const colTemplate = findCol('Visual Template');
-    const colInstructions = findCol('Visual Instructions');
-    const colType = findCol('Question Type');
-    const colDiff = findCol('Difficulty');
-    const colExp = findCol('Explanation');
+    const findCol = (...names: string[]) => {
+      for (const name of names) {
+        const idx = headerRow.findIndex(h => h.toLowerCase() === name.toLowerCase());
+        if (idx >= 0) return idx;
+      }
+      return -1;
+    };
+
+    const colOptA = findCol('Option A', 'Choice A', 'A');
+    const colOptB = findCol('Option B', 'Choice B', 'B');
+    const colOptC = findCol('Option C', 'Choice C', 'C');
+    const colOptD = findCol('Option D', 'Choice D', 'D');
+    const colCorrect = findCol('Correct Answer', 'Answer', 'Correct Choice', 'Correct');
+    const colClipartRef = findCol('Clipart Reference', 'Visual Objects', 'Clipart Code', 'Clipart Name', 'Emoji / Clipart');
+    const colCount = findCol('Visual Count', 'Count', 'Object Count');
+    const colAnimation = findCol('Visual Animation', 'Animation');
+    const colTemplate = findCol('Visual Template', 'Template');
+    const colInstructions = findCol('Visual Instructions', 'Instructions');
+    const colType = findCol('Question Type', 'Type');
+    const colDiff = findCol('Difficulty', 'Level');
+    const colExp = findCol('Explanation', 'Explanation / Solution');
     const colHint = findCol('Hint');
-    const colCurr = findCol('Curriculum Code');
-    const colSub = findCol('Subject Code');
-    const colGrd = findCol('Grade Code');
-    const colCat = findCol('Category Code');
-    const colSk = findCol('Skill Code');
+    const colCurr = findCol('Curriculum', 'Curriculum Name', 'Curriculum Code');
+    const colSub = findCol('Subject', 'Subject Name', 'Subject Code');
+    const colGrd = findCol('Grade', 'Grade Level', 'Grade Name', 'Grade Code');
+    const colCat = findCol('Category Name', 'Category', 'Category Code');
+    const colSk = findCol('Skill Name', 'Skill', 'Skill Code');
 
     if (colPrompt < 0) {
       errors.push(`Missing required column "Question Text" in the Questions sheet.`);
@@ -1752,13 +1407,21 @@ export async function parseQuestionExcelFile(file: File, context: ExcelParseCont
         const rowCat = getVal(colCat);
         const rowSk = getVal(colSk);
         if (rowCat || rowSk) {
+          // Strict validation: Categories and skills must be created by Admin
           const resolvedCatSk = resolveCategoryAndSkill(
             rowCat,
             rowSk,
             grdId,
             context.masterCategories,
-            context.masterSkills
+            context.masterSkills,
+            true // strict validation
           );
+
+          if (!resolvedCatSk.isValid) {
+            errors.push(`Row ${rIdx + 1} (${prompt.slice(0, 35)}...): FAILED - ${resolvedCatSk.errorReason}`);
+            continue; // Fail this record so untracked categories/skills cannot be loaded via Excel
+          }
+
           catId = resolvedCatSk.categoryId;
           catCode = resolvedCatSk.categoryCode;
           catName = resolvedCatSk.categoryName;

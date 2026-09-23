@@ -1432,18 +1432,18 @@ export default function InteractiveQuestionCard({
             const isCorrectOption = idx === question.correctIndex;
             const optionClipart = getOptionClipart(option, '');
 
-            let cardStyle = 'bg-white hover:bg-[#f8faff] border-[#e1e6f1] hover:border-[#10246f]/50 text-[#10246f] shadow-xs';
+            let cardStyle = 'bg-white hover:bg-slate-50 border-[#e1e6f1] hover:border-blue-400 text-[#10246f] shadow-xs';
 
             if (isSubmitted) {
               if (isCorrectOption) {
-                cardStyle = 'bg-[#ecfdf5] border-[#16c47f] text-[#065f46] font-bold ring-2 ring-[#16c47f]/40 shadow-sm';
+                cardStyle = 'bg-emerald-50 border-emerald-500 text-emerald-900 font-bold ring-2 ring-emerald-200 shadow-sm';
               } else if (isSelected && !isCorrectOption) {
-                cardStyle = 'bg-[#fff1f2] border-[#f43f5e] text-[#9f1239] ring-2 ring-[#f43f5e]/40';
+                cardStyle = 'bg-rose-50 border-rose-400 text-rose-900 ring-2 ring-rose-200';
               } else {
-                cardStyle = 'bg-[#f8faff] border-[#e1e6f1] text-stone-400 opacity-40';
+                cardStyle = 'bg-slate-50 border-slate-200 text-slate-400 opacity-50';
               }
             } else if (isSelected) {
-              cardStyle = 'bg-indigo-50/80 border-indigo-600 text-[#10246f] font-bold ring-2 ring-indigo-500/30 shadow-sm scale-[1.01]';
+              cardStyle = 'bg-blue-50/80 border-blue-600 text-[#10246f] font-bold ring-2 ring-blue-200 shadow-sm scale-[1.01]';
             }
 
             return (
@@ -1455,23 +1455,23 @@ export default function InteractiveQuestionCard({
                   playPop();
                   onSelectOption(idx);
                 }}
-                className={`p-3 sm:p-3.5 rounded-2xl border-2 text-left transition-all flex items-center justify-between cursor-pointer ${cardStyle}`}
+                className={`p-3.5 sm:p-4 rounded-2xl border-2 text-left transition-all flex items-center justify-between cursor-pointer ${cardStyle}`}
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <span
-                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center font-bold text-sm sm:text-base shrink-0 border transition-colors ${
+                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm shrink-0 border transition-colors ${
                       isSelected
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                         : isSubmitted && isCorrectOption
-                        ? 'bg-[#16c47f] text-white border-[#16c47f]'
-                        : 'bg-[#f8faff] text-[#10246f] border-[#e1e6f1]'
+                        ? 'bg-emerald-600 text-white border-emerald-600'
+                        : 'bg-slate-100 text-slate-600 border-slate-200'
                     }`}
                   >
                     {String.fromCharCode(65 + idx)}
                   </span>
                   
                   {optionClipart && !option.includes(optionClipart) && (
-                    <span className="text-xl sm:text-2xl shrink-0 drop-shadow-2xs">
+                    <span className="text-xl sm:text-2xl shrink-0 drop-shadow-xs">
                       {optionClipart}
                     </span>
                   )}
@@ -1482,10 +1482,10 @@ export default function InteractiveQuestionCard({
                 </div>
 
                 {isSubmitted && isCorrectOption && (
-                  <CheckCircle2 className="w-5 h-5 text-[#16c47f] shrink-0 ml-2" />
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 ml-2" />
                 )}
                 {isSubmitted && isSelected && !isCorrectOption && (
-                  <span className="w-5 h-5 rounded-full bg-[#f43f5e] text-white flex items-center justify-center text-xs font-bold shrink-0 ml-2">
+                  <span className="w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center text-xs font-bold shrink-0 ml-2">
                     ✕
                   </span>
                 )}

@@ -15,126 +15,272 @@ import {
   COUNTRY_STATE_MAP, 
   COUNTRY_CURRICULUM_MAP 
 } from '../data/curriculumData';
+import { 
+  Sparkles, 
+  ArrowRight, 
+  Check, 
+  BookOpen, 
+  ShieldCheck, 
+  Award, 
+  Flame, 
+  Coins, 
+  Zap, 
+  Database,
+  GraduationCap,
+  Users,
+  School,
+  FileCheck2,
+  TrendingUp,
+  BrainCircuit,
+  Calculator,
+  Shapes,
+  Clock,
+  PieChart,
+  BarChart3,
+  Layers,
+  HeartHandshake,
+  CheckCircle2,
+  ChevronRight,
+  Play,
+  RotateCcw,
+  Star,
+  Quote
+} from 'lucide-react';
+import PforPencilLogo from './PforPencilLogo';
 
-type Grade = {
-  label: string;
+type GradeInfo = {
+  id: string;
+  name: string;
+  age: string;
   short: string;
-  accent: string;
-  icon: string;
+  badgeBg: string;
+  badgeText: string;
+  borderColor: string;
+  focus: string;
+  skills: string[];
+  sampleQuestion: string;
+  sampleAnswer: string;
 };
 
-const gradesList: Grade[] = [
-  { label: 'Preschool', short: 'P', accent: '#FCE8F3', icon: 'spark' },
-  { label: 'Foundation', short: 'F', accent: '#EAF8F5', icon: 'sprout' },
-  { label: 'Grade 1', short: '1', accent: '#EEF6FF', icon: 'number-1' },
-  { label: 'Grade 2', short: '2', accent: '#EAFBF2', icon: 'number-2' },
-  { label: 'Grade 3', short: '3', accent: '#FFF2EA', icon: 'number-3' },
-  { label: 'Grade 4', short: '4', accent: '#F1EDFF', icon: 'number-4' },
-  { label: 'Grade 5', short: '5', accent: '#FFF9E8', icon: 'number-5' },
-  { label: 'Grade 6', short: '6', accent: '#FFEAF5', icon: 'number-6' },
+const gradesData: GradeInfo[] = [
+  {
+    id: 'foundation',
+    name: 'Foundation (Kindergarten)',
+    age: 'Ages 4–5',
+    short: 'K',
+    badgeBg: 'bg-emerald-50',
+    badgeText: 'text-emerald-700',
+    borderColor: 'border-emerald-200',
+    focus: 'Early number sense, counting objects up to 20, 2D shapes, and basic comparison.',
+    skills: ['Counting & Cardinality', 'More vs Less Comparison', 'Shapes & Colors', 'Ten-Frame Visuals'],
+    sampleQuestion: 'Count the stars: ⭐ ⭐ ⭐ ⭐ ⭐',
+    sampleAnswer: '5 stars'
+  },
+  {
+    id: 'grade-1',
+    name: 'Grade 1',
+    age: 'Ages 5–6',
+    short: 'G1',
+    badgeBg: 'bg-blue-50',
+    badgeText: 'text-blue-700',
+    borderColor: 'border-blue-200',
+    focus: 'Addition & subtraction within 20, place value tens/ones, telling time to the hour.',
+    skills: ['Add & Subtract within 20', 'Place Value (Tens & Ones)', 'O\'Clock Time & Halves', 'Simple Bar Graphs'],
+    sampleQuestion: '7 + 5 = ?',
+    sampleAnswer: '12'
+  },
+  {
+    id: 'grade-2',
+    name: 'Grade 2',
+    age: 'Ages 6–7',
+    short: 'G2',
+    badgeBg: 'bg-amber-50',
+    badgeText: 'text-amber-700',
+    borderColor: 'border-amber-200',
+    focus: 'Double-digit operations, skip counting by 2s, 5s & 10s, money coins, and measurement.',
+    skills: ['Double-digit Addition with Regrouping', 'Skip Counting & Odd/Even', 'Money & Coin Values', 'Analog Clocks (5-min intervals)'],
+    sampleQuestion: '34 + 28 = ?',
+    sampleAnswer: '62'
+  },
+  {
+    id: 'grade-3',
+    name: 'Grade 3',
+    age: 'Ages 7–8',
+    short: 'G3',
+    badgeBg: 'bg-rose-50',
+    badgeText: 'text-rose-700',
+    borderColor: 'border-rose-200',
+    focus: 'Multiplication & division foundations, fractions as parts of a whole, area and perimeter.',
+    skills: ['Multiplication Tables (2–10)', 'Division as Equal Sharing', 'Visual Fraction Models', 'Area & Perimeter of Rectangles'],
+    sampleQuestion: '6 × 7 = ?',
+    sampleAnswer: '42'
+  },
+  {
+    id: 'grade-4',
+    name: 'Grade 4',
+    age: 'Ages 8–9',
+    short: 'G4',
+    badgeBg: 'bg-purple-50',
+    badgeText: 'text-purple-700',
+    borderColor: 'border-purple-200',
+    focus: 'Multi-digit multiplication, equivalent fractions, decimals intro, angles and geometric symmetry.',
+    skills: ['Multi-digit Operations', 'Equivalent Fractions & Adding Liked Fractions', 'Decimal Place Value (Tenths/Hundredths)', 'Angles & Line Symmetry'],
+    sampleQuestion: '2/4 + 1/4 = ?',
+    sampleAnswer: '3/4'
+  },
+  {
+    id: 'grade-5',
+    name: 'Grade 5',
+    age: 'Ages 9–10',
+    short: 'G5',
+    badgeBg: 'bg-emerald-50',
+    badgeText: 'text-emerald-700',
+    borderColor: 'border-emerald-200',
+    focus: 'Fraction multiplication/division, decimals operations, 3D volume, and coordinate graphing.',
+    skills: ['Unlike Fractions & Mixed Numbers', 'Decimal Multiplication & Division', 'Volume of 3D Prisms', 'Coordinate Grid (x, y)'],
+    sampleQuestion: '0.4 × 0.5 = ?',
+    sampleAnswer: '0.2'
+  },
+  {
+    id: 'grade-6',
+    name: 'Grade 6',
+    age: 'Ages 10–11',
+    short: 'G6',
+    badgeBg: 'bg-blue-50',
+    badgeText: 'text-blue-700',
+    borderColor: 'border-blue-200',
+    focus: 'Ratios & proportional relationships, negative integers, algebraic expressions and statistics.',
+    skills: ['Ratios, Rates & Percentages', 'Negative Integers on Number Line', 'One-step Algebraic Equations', 'Mean, Median, Range & Data Sets'],
+    sampleQuestion: 'If 3 pencils cost $6, what is the cost of 5 pencils?',
+    sampleAnswer: '$10'
+  }
 ];
 
-
-type IconKind =
-  | 'game'
-  | 'bolt'
-  | 'chart'
-  | 'shield'
-  | 'spark'
-  | 'sprout'
-  | 'target'
-  | 'smile'
-  | 'sun';
-
-function UiIcon({ kind, size = 24 }: { kind: IconKind; size?: number }) {
-  const common = {
-    width: size,
-    height: size,
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    xmlns: 'http://www.w3.org/2000/svg',
-    'aria-hidden': true,
-  } as const;
-
-  switch (kind) {
-    case 'game':
-      return (
-        <svg {...common}>
-          <path d="M7.5 8h9a4.5 4.5 0 0 1 4.3 5.85l-1.1 3.4a2.2 2.2 0 0 1-4.05.3l-.75-1.35H9.1l-.75 1.35a2.2 2.2 0 0 1-4.05-.3l-1.1-3.4A4.5 4.5 0 0 1 7.5 8Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
-          <path d="M7 11v4M5 13h4M15.5 12.25h.01M18 14h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-        </svg>
-      );
-    case 'bolt':
-      return (
-        <svg {...common}>
-          <path d="m13.2 2.8-7 10.1h5.2l-.6 8.3 7-10.1h-5.2l.6-8.3Z" fill="currentColor"/>
-        </svg>
-      );
-    case 'chart':
-      return (
-        <svg {...common}>
-          <path d="M4 19.5V14h4v5.5H4Zm6 0V9h4v10.5h-4Zm6 0V4.5h4v15h-4Z" fill="currentColor" opacity=".9"/>
-        </svg>
-      );
-    case 'shield':
-      return (
-        <svg {...common}>
-          <path d="M12 3.2 19 6v5.4c0 4.6-2.9 7.8-7 9.4-4.1-1.6-7-4.8-7-9.4V6l7-2.8Z" fill="currentColor" opacity=".92"/>
-          <path d="m8.8 12.2 2.1 2.1 4.5-4.7" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      );
-    case 'spark':
-      return (
-        <svg {...common}>
-          <path d="m12 2 1.55 6.45L20 10l-6.45 1.55L12 18l-1.55-6.45L4 10l6.45-1.55L12 2Z" fill="currentColor"/>
-          <path d="m19 15 .7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7L19 15Z" fill="currentColor" opacity=".65"/>
-        </svg>
-      );
-    case 'sprout':
-      return (
-        <svg {...common}>
-          <path d="M12 21V11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-          <path d="M12 11C7.5 11 5 8.2 5 4.5 8.8 4.5 11.4 6.2 12 9c.6-2.8 3.2-4.5 7-4.5 0 3.7-2.5 6.5-7 6.5Z" fill="currentColor" opacity=".9"/>
-        </svg>
-      );
-    case 'target':
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.8"/>
-          <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.8"/>
-          <circle cx="12" cy="12" r="1.8" fill="currentColor"/>
-        </svg>
-      );
-    case 'smile':
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="12" r="8.8" stroke="currentColor" strokeWidth="1.8"/>
-          <circle cx="9" cy="10" r="1" fill="currentColor"/>
-          <circle cx="15" cy="10" r="1" fill="currentColor"/>
-          <path d="M8.2 14.1c1 1.35 2.25 2 3.8 2s2.8-.65 3.8-2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-        </svg>
-      );
-    case 'sun':
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="12" r="3.6" fill="currentColor"/>
-          <path d="M12 2.5v2M12 19.5v2M21.5 12h-2M4.5 12h-2M18.72 5.28l-1.42 1.42M6.7 17.3l-1.42 1.42M18.72 18.72l-1.42-1.42M6.7 6.7 5.28 5.28" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-        </svg>
-      );
+const topicCards = [
+  {
+    title: 'Numbers & Operations',
+    subtitle: 'From counting up to multi-digit arithmetic & negative numbers',
+    icon: Calculator,
+    iconColor: 'text-blue-600',
+    iconBg: 'bg-blue-50',
+    skillsCount: '240+ Skills',
+    highlights: ['Place Value & Expanded Form', 'Addition & Subtraction Fluency', 'Times Tables & Division Mastery', 'Order of Operations (PEMDAS)']
+  },
+  {
+    title: 'Fractions & Decimals',
+    subtitle: 'Visual part-whole models, decimal math & percentages',
+    icon: PieChart,
+    iconColor: 'text-rose-600',
+    iconBg: 'bg-rose-50',
+    skillsCount: '160+ Skills',
+    highlights: ['Visual Fraction Bars & Pies', 'Equivalent & Mixed Fractions', 'Decimal Conversions & Rounding', 'Percent of a Number']
+  },
+  {
+    title: 'Geometry & Shapes',
+    subtitle: '2D & 3D properties, angles, perimeter, area & volume',
+    icon: Shapes,
+    iconColor: 'text-emerald-600',
+    iconBg: 'bg-emerald-50',
+    skillsCount: '130+ Skills',
+    highlights: ['Polygons & 3D Polyhedra', 'Acute, Right & Obtuse Angles', 'Perimeter & Area Formulas', 'Symmetry & Rotations']
+  },
+  {
+    title: 'Measurement & Time',
+    subtitle: 'Clocks, calendar, metric & customary units, money calculation',
+    icon: Clock,
+    iconColor: 'text-amber-600',
+    iconBg: 'bg-amber-50',
+    skillsCount: '110+ Skills',
+    highlights: ['Analog Clocks & Elapsed Time', 'Metric (m, cm, kg, L) & Customary', 'Currency Exchange & Change', 'Unit Conversions']
+  },
+  {
+    title: 'Patterns & Pre-Algebra',
+    subtitle: 'Sequences, algebraic balance scales & functional equations',
+    icon: BrainCircuit,
+    iconColor: 'text-purple-600',
+    iconBg: 'bg-purple-50',
+    skillsCount: '95+ Skills',
+    highlights: ['Number & Shape Patterns', 'Unknown Variable Balance Scales', 'Input-Output Function Tables', 'Inequalities & Rules']
+  },
+  {
+    title: 'Data & Statistics',
+    subtitle: 'Tally marks, bar graphs, line plots, frequency & probability',
+    icon: BarChart3,
+    iconColor: 'text-sky-600',
+    iconBg: 'bg-sky-50',
+    skillsCount: '80+ Skills',
+    highlights: ['Picture & Bar Charts', 'Line Plots & Histograms', 'Mean, Median, Mode & Range', 'Chance & Probability Events']
   }
-}
+];
 
-function GradeIcon({ icon }: { icon: string }) {
-  if (icon === 'spark') return <UiIcon kind="spark" size={31} />;
-  if (icon === 'sprout') return <UiIcon kind="sprout" size={31} />;
-  const number = icon.replace('number-', '');
-  return <span className="grade-number">{number}</span>;
-}
+const interactiveDemoChallenges = [
+  {
+    id: 1,
+    grade: 'Grade 2 · Addition',
+    question: 'What is 14 + 18?',
+    visualHint: 'Break it down: (10 + 10) + (4 + 8) = 20 + 12',
+    options: ['28', '32', '34', '36'],
+    answer: '32',
+    explanation: '14 + 18 = 32. 4 + 8 makes 12, plus the two tens makes 32!'
+  },
+  {
+    id: 2,
+    grade: 'Grade 3 · Fractions',
+    question: 'Which fraction is equal to 1/2?',
+    visualHint: 'Look for half the numerator in the denominator',
+    options: ['2/3', '2/4', '3/8', '4/10'],
+    answer: '2/4',
+    explanation: '2/4 simplifies to 1/2 because both numerator and denominator divide by 2.'
+  },
+  {
+    id: 3,
+    grade: 'Grade 4 · Multiplication',
+    question: '8 × 7 = ?',
+    visualHint: 'Think: 8 × 5 = 40, plus 8 × 2 = 16',
+    options: ['48', '54', '56', '63'],
+    answer: '56',
+    explanation: '8 × 7 = 56. Master your 7 and 8 times tables for instant speed!'
+  },
+  {
+    id: 4,
+    grade: 'Grade 5 · Geometry',
+    question: 'What is the area of a rectangle with length 9 cm and width 6 cm?',
+    visualHint: 'Formula: Area = length × width',
+    options: ['30 cm²', '45 cm²', '54 cm²', '63 cm²'],
+    answer: '54 cm²',
+    explanation: 'Area = 9 cm × 6 cm = 54 cm².'
+  }
+];
 
-const demoQuestions = [
-  { question: '7 + 5 = ?', options: ['10', '11', '12', '13'], answer: '12' },
-  { question: '9 + 4 = ?', options: ['12', '13', '14', '15'], answer: '13' },
-  { question: '15 − 6 = ?', options: ['7', '8', '9', '10'], answer: '9' },
+const learningPillars = [
+  {
+    title: 'Concrete to Abstract',
+    description: 'Every abstract math concept begins with visual manipulatives, number lines, and step-by-step models before moving to mental math.',
+    icon: Layers,
+    color: 'text-blue-600',
+    bg: 'bg-blue-50'
+  },
+  {
+    title: 'Instant Gentle Hints',
+    description: 'When a student gets stuck, they receive friendly breakdown clues rather than just a buzzer, building real problem-solving confidence.',
+    icon: Zap,
+    color: 'text-amber-600',
+    bg: 'bg-amber-50'
+  },
+  {
+    title: 'Daily Streak & Badges',
+    description: 'Celebrate consistent effort with daily learning streaks, animated badges, and avatar rewards that make practice a daily joy.',
+    icon: Flame,
+    color: 'text-rose-600',
+    bg: 'bg-rose-50'
+  },
+  {
+    title: 'Diagnostic Mastery',
+    description: 'Teachers and parents view comprehensive skill breakdown reports, tracking exact strengths and targeted improvement areas.',
+    icon: TrendingUp,
+    color: 'text-emerald-600',
+    bg: 'bg-emerald-50'
+  }
 ];
 
 interface HomePageProps {
@@ -155,7 +301,6 @@ interface HomePageProps {
   onSaveRegion?: (country: string, state: string, curriculum: string, grade?: string) => void;
 }
 
-// Homepage visual update: preserves existing callbacks and tester functionality; only layout/assets are refined.
 export default function PForPencilHomePage({
   currentUser,
   allUsers,
@@ -165,103 +310,53 @@ export default function PForPencilHomePage({
   onOpenRegionModal,
   onOpenAuthModal,
   onOpenSupabaseModal,
-  onSaveRegion,
 }: HomePageProps) {
-  const [country, setCountry] = useState(currentUser?.country || 'Australia');
-  const [state, setState] = useState(currentUser?.state || 'NSW');
-  const [questionIndex, setQuestionIndex] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [xp, setXp] = useState(0);
-  const [seconds, setSeconds] = useState(24);
-  const [openRegion, setOpenRegion] = useState<'country' | 'state' | null>(null);
+  const [selectedGradeId, setSelectedGradeId] = useState<string>('grade-2');
+  const [demoIndex, setDemoIndex] = useState(0);
+  const [selectedDemoAnswer, setSelectedDemoAnswer] = useState<string | null>(null);
+  const [demoScore, setDemoScore] = useState(0);
+  const [showHint, setShowHint] = useState(false);
 
-  // Synchronize country and state whenever currentUser changes (e.g. via Register modal or Region selector)
-  useEffect(() => {
-    if (currentUser?.country && COUNTRY_STATE_MAP[currentUser.country]) {
-      setCountry(currentUser.country);
-      if (currentUser.state) {
-        setState(currentUser.state);
-      }
-    }
-  }, [currentUser?.country, currentUser?.state]);
+  const activeGrade = useMemo(() => {
+    return gradesData.find(g => g.id === selectedGradeId) || gradesData[1];
+  }, [selectedGradeId]);
 
-  // Close dropdown on clicking outside
-  useEffect(() => {
-    if (!openRegion) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('.region-menu')) {
-        setOpenRegion(null);
-      }
-    };
-    window.addEventListener('mousedown', handleClickOutside);
-    return () => window.removeEventListener('mousedown', handleClickOutside);
-  }, [openRegion]);
+  const activeDemo = interactiveDemoChallenges[demoIndex];
 
-  const question = demoQuestions[questionIndex];
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setSeconds((value) => (value >= 99 ? 0 : value + 1));
-    }, 1000);
-
-    return () => window.clearInterval(timer);
-  }, []);
-
-  const progress = useMemo(
-    () => ((questionIndex + 1) / demoQuestions.length) * 100,
-    [questionIndex]
-  );
-
-  const handleCountryChange = (value: string) => {
-    setCountry(value);
-    const nextStates = COUNTRY_STATE_MAP[value] || ['All Regions'];
-    const nextState = nextStates[0] || '';
-    setState(nextState);
-    setOpenRegion(null);
-    const defaultCurriculum = COUNTRY_CURRICULUM_MAP[value]?.[0] || 'Universal Foundational';
-    onSaveRegion?.(value, nextState, defaultCurriculum);
-  };
-
-  const handleStateChange = (value: string) => {
-    setState(value);
-    setOpenRegion(null);
-    const defaultCurriculum = COUNTRY_CURRICULUM_MAP[country]?.[0] || 'Universal Foundational';
-    onSaveRegion?.(country, value, defaultCurriculum);
-  };
-
-  const chooseAnswer = (answer: string) => {
-    if (selectedAnswer) return;
-    setSelectedAnswer(answer);
-    if (answer === question.answer) {
+  const handleSelectDemoOption = (option: string) => {
+    if (selectedDemoAnswer) return;
+    setSelectedDemoAnswer(option);
+    if (option === activeDemo.answer) {
       sounds.playCorrect();
-      setXp((value) => value + 10);
+      setDemoScore(prev => prev + 10);
+      confetti({
+        particleCount: 30,
+        spread: 50,
+        origin: { y: 0.6 }
+      });
     } else {
       sounds.playWrong();
     }
   };
 
-  const nextQuestion = () => {
+  const handleNextDemoQuestion = () => {
     sounds.playCorrect();
-    setQuestionIndex((value) => (value + 1) % demoQuestions.length);
-    setSelectedAnswer(null);
+    setSelectedDemoAnswer(null);
+    setShowHint(false);
+    setDemoIndex(prev => (prev + 1) % interactiveDemoChallenges.length);
   };
 
-  const resetDemo = () => {
-    setQuestionIndex(0);
-    setSelectedAnswer(null);
-    setXp(0);
-    setSeconds(24);
+  const handleResetDemo = () => {
+    setDemoIndex(0);
+    setSelectedDemoAnswer(null);
+    setShowHint(false);
+    setDemoScore(0);
   };
 
-  const scrollTo = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const handleGradeClick = (grade: Grade) => {
+  const launchPracticeForGrade = (grade: GradeInfo) => {
     sounds.playCorrect();
     confetti({
-      particleCount: 35,
+      particleCount: 40,
       spread: 60,
       origin: { y: 0.6 }
     });
@@ -269,7 +364,7 @@ export default function PForPencilHomePage({
     if (currentUser.role === 'student') {
       onNavigateView('dashboard');
     } else {
-      const student = allUsers.find((u) => u.role === 'student');
+      const student = allUsers.find(u => u.role === 'student');
       if (student) {
         onSelectRoleUser(student);
       } else {
@@ -278,1304 +373,619 @@ export default function PForPencilHomePage({
     }
   };
 
+  const scrollToSection = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
-    <div className="pfp-page">
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700;800&display=swap');
-
-        :root {
-          --navy: #10246f;
-          --navy-2: #172d7d;
-          --text: #1b2d72;
-          --muted: #6073a9;
-          --primary: #2563eb;
-          --primary-dark: #1d4ed8;
-          --pink: #2563eb;
-          --pink-dark: #1d4ed8;
-          --teal: #13b7ad;
-          --blue: #168bea;
-          --green: #16c47f;
-          --yellow: #ffbf32;
-          --border: #d7def0;
-          --surface: #ffffff;
-          --soft-blue: #f5f8ff;
-          --radius-lg: 24px;
-          --radius-md: 16px;
-          --shadow: 0 18px 50px rgba(33, 60, 120, .12);
-        }
-
-        * { box-sizing: border-box; }
-        html { scroll-behavior: smooth; }
-        body {
-          margin: 0;
-          background: #fff;
-          color: var(--text);
-          font-family: Inter, Arial, sans-serif;
-        }
-        button, select { font: inherit; }
-
-        .pfp-page {
-          min-height: 100vh;
-          background: #fff;
-          overflow-x: hidden;
-        }
-
-        /* ---------------- HEADER ---------------- */
-        .header {
-          height: 84px;
-          padding: 0 4.5vw;
-          display: flex;
-          align-items: center;
-          gap: 28px;
-          border-bottom: 1px solid #eef1f8;
-          background: rgba(255,255,255,.97);
-          position: sticky;
-          top: 0;
-          z-index: 20;
-        }
-
-        .logo-container {
-          display: flex;
-          align-items: center;
-          cursor: pointer;
-        }
-
-        .logo {
-          width: 174px;
-          height: auto;
-          object-fit: contain;
-          flex: 0 0 auto;
-        }
-
-        .nav {
-          display: flex;
-          align-items: center;
-          gap: 27px;
-          flex: 1;
-        }
-
-        .nav button {
-          border: 0;
-          background: transparent;
-          color: var(--navy);
-          font-size: 15px;
-          font-weight: 500;
-          padding: 8px 0;
-          cursor: pointer;
-          position: relative;
-          white-space: nowrap;
-        }
-
-        .nav button:hover,
-        .nav button.active { color: var(--pink); }
-
-        .nav button.active::after {
-          content: "";
-          position: absolute;
-          height: 3px;
-          left: 0;
-          right: 0;
-          bottom: -18px;
-          border-radius: 4px;
-          background: var(--pink);
-        }
-
-        .header-actions {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          flex: 0 0 auto;
-        }
-
-        .region-menu {
-          position: relative;
-          flex: 0 0 auto;
-        }
-
-        .region-trigger {
-          height: 42px;
-          min-width: 138px;
-          padding: 0 13px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 9px;
-          border: 1px solid #bfcbe8;
-          border-radius: 23px;
-          background: #fff;
-          color: var(--navy);
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          white-space: nowrap;
-        }
-
-        .region-trigger.state-trigger { min-width: 102px; }
-
-        .region-left {
-          display: inline-flex;
-          align-items: center;
-          gap: 7px;
-        }
-
-        .flag {
-          font-size: 17px;
-          line-height: 1;
-        }
-
-        .region-chevron {
-          font-size: 10px;
-          color: #5d6f9f;
-          transition: transform .15s ease;
-        }
-
-        .region-trigger.open .region-chevron {
-          transform: rotate(180deg);
-        }
-
-        .region-dropdown {
-          position: absolute;
-          top: calc(100% + 8px);
-          right: 0;
-          min-width: 170px;
-          padding: 7px;
-          border: 1px solid #d9e0ef;
-          border-radius: 14px;
-          background: #fff;
-          box-shadow: 0 18px 40px rgba(25,48,105,.16);
-          z-index: 50;
-        }
-
-        .region-option {
-          width: 100%;
-          display: flex;
-          align-items: center;
-          gap: 9px;
-          padding: 9px 10px;
-          border: 0;
-          border-radius: 9px;
-          background: transparent;
-          color: var(--navy);
-          font-size: 13px;
-          font-weight: 600;
-          text-align: left;
-          cursor: pointer;
-        }
-
-        .region-option:hover,
-        .region-option.selected {
-          background: #f4f7ff;
-          color: var(--pink);
-        }
-
-        .state-dropdown { min-width: 130px; }
-
-        .select-wrap {
-          position: relative;
-        }
-
-        .select {
-          height: 40px;
-          min-width: 118px;
-          padding: 0 34px 0 14px;
-          border: 1px solid #bfcbe8;
-          border-radius: 22px;
-          background: #fff;
-          color: var(--navy);
-          font-weight: 600;
-          cursor: pointer;
-          appearance: none;
-        }
-
-        .select.small { min-width: 92px; }
-
-        .select-arrow {
-          position: absolute;
-          right: 13px;
-          top: 50%;
-          transform: translateY(-50%);
-          pointer-events: none;
-          font-size: 11px;
-        }
-
-        .header-divider {
-          width: 1px;
-          height: 28px;
-          background: #dce2ef;
-          margin: 0 8px;
-        }
-
-        .btn-login,
-        .btn-signup {
-          height: 42px;
-          border-radius: 24px;
-          padding: 0 22px;
-          font-size: 14px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: transform .15s ease, box-shadow .15s ease;
-        }
-
-        .btn-login {
-          color: var(--navy);
-          background: #fff;
-          border: 1px solid #aebcdd;
-        }
-
-        .btn-login:hover {
-          background: #f8faff;
-        }
-
-        .btn-signup {
-          color: #fff;
-          background: var(--pink);
-          border: 1px solid var(--pink);
-          box-shadow: 0 8px 20px rgba(37,99,235,.25);
-        }
-
-        .btn-signup:hover {
-          background: var(--pink-dark);
-          transform: translateY(-1px);
-        }
-
-        /* ---------------- HERO ---------------- */
-        .hero {
-          display: grid;
-          grid-template-columns: minmax(390px, 1.02fr) minmax(350px, .88fr) minmax(470px, 1.22fr);
-          min-height: 505px;
-          align-items: center;
-          padding: 38px 4.5vw 26px;
-          gap: 30px;
-          background:
-            radial-gradient(circle at 63% 44%, rgba(216,237,255,.72), transparent 29%),
-            radial-gradient(circle at 90% 52%, rgba(247,235,255,.32), transparent 24%),
-            #fff;
-        }
-
-        .eyebrow {
-          color: #5b71ac;
-          font-size: 14px;
-          font-weight: 700;
-          letter-spacing: 2.4px;
-          line-height: 1.55;
-          margin-bottom: 18px;
-        }
-
-        .hero-title {
-          margin: 0;
-          max-width: 530px;
-          font-family: Poppins, Inter, sans-serif;
-          font-size: clamp(42px, 4.2vw, 62px);
-          line-height: 1.04;
-          letter-spacing: -2.4px;
-          color: var(--navy);
-        }
-
-        .hero-title .pink { color: var(--pink); }
-
-        .hero-copy {
-          max-width: 480px;
-          color: var(--muted);
-          font-size: 19px;
-          line-height: 1.45;
-          margin: 20px 0 22px;
-        }
-
-        .primary-cta {
-          height: 50px;
-          padding: 0 30px;
-          border: 0;
-          border-radius: 27px;
-          color: #fff;
-          background: var(--pink);
-          font-size: 16px;
-          font-weight: 700;
-          cursor: pointer;
-          box-shadow: 0 12px 24px rgba(37,99,235,.25);
-          transition: transform .15s ease, background .15s ease;
-        }
-
-        .primary-cta:hover {
-          background: var(--pink-dark);
-          transform: translateY(-1px);
-        }
-
-        .trust-row {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 22px;
-          margin-top: 22px;
-          color: #6575a1;
-          font-size: 12px;
-        }
-
-        .trust-item {
-          display: flex;
-          align-items: center;
-          gap: 7px;
-        }
-
-        .check {
-          width: 18px;
-          height: 18px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 50%;
-          color: #fff;
-          background: #7d8db9;
-          font-size: 11px;
-          font-weight: 800;
-        }
-
-        /* ---------------- DEMO CARD ---------------- */
-        .demo-card {
-          width: 100%;
-          max-width: 390px;
-          justify-self: center;
-          padding: 22px 22px 18px;
-          border: 1px solid #e0e7f5;
-          border-radius: 18px;
-          background: rgba(255,255,255,.98);
-          box-shadow: 0 20px 55px rgba(45,75,135,.18);
-        }
-
-        .demo-top {
-          display: flex;
-          justify-content: space-between;
-          color: #536ca5;
-          font-size: 13px;
-          font-weight: 500;
-        }
-
-        .progress-track {
-          height: 10px;
-          border-radius: 8px;
-          background: #e5ebf7;
-          margin: 9px 0 28px;
-          overflow: hidden;
-        }
-
-        .progress-fill {
-          height: 100%;
-          border-radius: inherit;
-          background: var(--green);
-          transition: width .25s ease;
-        }
-
-        .question {
-          margin: 0 0 20px;
-          text-align: center;
-          color: var(--navy);
-          font-family: Poppins, Inter, sans-serif;
-          font-size: 36px;
-          font-weight: 700;
-        }
-
-        .answer-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 9px;
-        }
-
-        .answer {
-          height: 50px;
-          border-radius: 8px;
-          border: 1px solid #b8c7e5;
-          background: #fff;
-          color: var(--navy);
-          font-size: 18px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: border-color .15s ease, transform .15s ease;
-        }
-
-        .answer:hover { border-color: var(--blue); transform: translateY(-1px); }
-
-        .answer.correct {
-          border-color: var(--green);
-          background: #e9fbf3;
-          color: #079e66;
-        }
-
-        .answer.wrong {
-          border-color: #f18a9f;
-          background: #fff0f3;
-          color: #c23c58;
-        }
-
-        .feedback {
-          min-height: 65px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 3px;
-          font-size: 16px;
-          font-weight: 700;
-        }
-
-        .feedback.success { color: var(--green); }
-        .feedback.error { color: #d94b63; }
-
-        .feedback-icon {
-          width: 36px;
-          height: 36px;
-          border-radius: 50%;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          background: var(--green);
-          color: #fff;
-          font-size: 21px;
-        }
-
-        .xp { color: var(--navy); font-size: 13px; }
-
-        .next-btn {
-          display: block;
-          margin: 3px auto 0;
-          height: 39px;
-          padding: 0 25px;
-          border-radius: 21px;
-          background: #fff;
-          border: 1px solid #afc0e1;
-          color: var(--navy);
-          font-size: 13px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: background .15s ease;
-        }
-
-        .next-btn:hover {
-          background: #f8faff;
-        }
-
-        /* ---------------- HERO PHOTO ---------------- */
-        .hero-photo {
-          position: relative;
-          width: 100%;
-          max-width: 590px;
-          aspect-ratio: 875 / 570;
-          justify-self: end;
-          overflow: hidden;
-          border-radius: 20px;
-          background: #f5f8ff;
-          box-shadow: 0 22px 52px rgba(33, 60, 120, .15);
-        }
-
-        .hero-photo img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          object-position: center;
-          display: block;
-        }
-
-        /* ---------------- FEATURES ---------------- */
-        .feature-strip {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 10px;
-          padding: 18px 4.5vw 30px;
-        }
-
-        .feature {
-          min-height: 78px;
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          padding: 8px 22px;
-          border-right: 1px solid #e1e6f1;
-        }
-
-        .feature:last-child { border-right: 0; }
-
-        .feature-icon {
-          width: 50px;
-          height: 50px;
-          border-radius: 50%;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          background: #f5f6fb;
-          flex: 0 0 auto;
-        }
-
-        .feature-icon.game { color: #5f35d6; }
-        .feature-icon.bolt { color: #ff9e18; }
-        .feature-icon.chart { color: #5470ad; }
-        .feature-icon.shield { color: #1a9bc9; }
-
-        .feature strong {
-          display: block;
-          color: var(--navy);
-          font-family: Poppins, Inter, sans-serif;
-          font-size: 15px;
-          margin-bottom: 5px;
-        }
-
-        .feature span {
-          color: #7180aa;
-          font-size: 12px;
-          line-height: 1.35;
-        }
-
-        /* ---------------- GRADES ---------------- */
-        .section {
-          padding: 0 4.5vw 38px;
-        }
-
-        .section-title {
-          margin: 0 0 20px;
-          color: var(--navy);
-          font-family: Poppins, Inter, sans-serif;
-          font-size: 27px;
-          letter-spacing: -.7px;
-        }
-
-        .grades {
-          display: grid;
-          grid-template-columns: repeat(8, 1fr);
-          gap: 9px;
-        }
-
-        .grade {
-          min-height: 82px;
-          border: 0;
-          border-radius: 8px;
-          cursor: pointer;
-          color: var(--navy);
-          transition: transform .15s ease, box-shadow .15s ease;
-        }
-
-        .grade:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 10px 22px rgba(35,62,120,.1);
-        }
-
-        .grade-icon {
-          height: 34px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin-bottom: 6px;
-          color: var(--navy);
-        }
-
-        .grade-number {
-          display: block;
-          font-family: Poppins, Inter, sans-serif;
-          font-size: 31px;
-          line-height: 1;
-          font-weight: 800;
-        }
-
-        .grade-name {
-          display: block;
-          font-size: 13px;
-          font-weight: 700;
-        }
-
-
-        /* ---------------- BENEFITS ---------------- */
-        .benefits-section {
-          padding: 12px 4.5vw 42px;
-        }
-
-        .benefits-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 0;
-          border-top: 1px solid #edf0f7;
-          border-bottom: 1px solid #edf0f7;
-        }
-
-        .benefit {
-          min-height: 154px;
-          padding: 25px 34px 22px;
-          display: flex;
-          align-items: flex-start;
-          gap: 16px;
-        }
-
-        .benefit + .benefit {
-          border-left: 1px solid #e6eaf3;
-        }
-
-        .benefit-icon {
-          width: 52px;
-          height: 52px;
-          flex: 0 0 52px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 16px;
-          background: #f6f8ff;
-          color: var(--pink);
-        }
-
-        .benefit:nth-child(2) .benefit-icon { color: var(--teal); }
-        .benefit:nth-child(3) .benefit-icon { color: var(--blue); }
-
-        .benefit h3 {
-          margin: 2px 0 6px;
-          color: var(--navy);
-          font-family: Poppins, Inter, sans-serif;
-          font-size: 17px;
-          line-height: 1.2;
-        }
-
-        .benefit p {
-          margin: 0;
-          max-width: 270px;
-          color: #6879a6;
-          font-size: 13px;
-          line-height: 1.5;
-        }
-
-        /* ---------------- PARENT / SCHOOL ---------------- */
-        .audience-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 28px;
-        }
-
-        .audience-card {
-          min-height: 215px;
-          position: relative;
-          overflow: hidden;
-          border-radius: 12px;
-          padding: 25px;
-        }
-
-        .parent-card {
-          background: linear-gradient(105deg, #fff1f7, #fff8fb);
-        }
-
-        .school-card {
-          background: linear-gradient(105deg, #edf8ff, #f4fbff);
-        }
-
-        .audience-kicker {
-          font-size: 12px;
-          letter-spacing: 1.5px;
-          font-weight: 800;
-          margin-bottom: 8px;
-        }
-
-        .parent-card .audience-kicker { color: var(--pink); }
-        .school-card .audience-kicker { color: var(--blue); }
-
-        .audience-title {
-          max-width: 320px;
-          margin: 0;
-          font-family: Poppins, Inter, sans-serif;
-          color: var(--navy);
-          font-size: 28px;
-          line-height: 1.08;
-        }
-
-        .audience-copy {
-          max-width: 340px;
-          color: #5f72a6;
-          font-size: 14px;
-          line-height: 1.45;
-          margin: 10px 0 15px;
-        }
-
-        .small-cta {
-          height: 42px;
-          padding: 0 25px;
-          border: 0;
-          border-radius: 23px;
-          color: #fff;
-          font-weight: 700;
-          cursor: pointer;
-          transition: background .15s ease;
-        }
-
-        .parent-card .small-cta { background: var(--pink); }
-        .parent-card .small-cta:hover { background: var(--pink-dark); }
-        .school-card .small-cta { background: var(--blue); }
-        .school-card .small-cta:hover { background: #0d75cc; }
-
-        .parent-photo {
-          position: absolute;
-          right: 0;
-          bottom: 0;
-          width: 48%;
-          height: 100%;
-          object-fit: cover;
-          object-position: center;
-          mask-image: linear-gradient(to right, transparent, black 22%);
-          -webkit-mask-image: linear-gradient(to right, transparent, black 22%);
-        }
-
-        .progress-widget {
-          position: absolute;
-          right: 28px;
-          top: 27px;
-          width: 175px;
-          padding: 15px;
-          border-radius: 10px;
-          background: rgba(255,255,255,.96);
-          box-shadow: 0 12px 25px rgba(33,67,120,.1);
-        }
-
-        .progress-widget strong {
-          display: block;
-          margin-bottom: 11px;
-          color: var(--navy);
-          font-size: 12px;
-        }
-
-        .progress-row {
-          display: grid;
-          grid-template-columns: 45px 1fr;
-          align-items: center;
-          gap: 8px;
-          margin: 8px 0;
-          color: #6678a8;
-          font-size: 11px;
-        }
-
-        .bar {
-          height: 7px;
-          background: #e6ebf4;
-          border-radius: 6px;
-          overflow: hidden;
-        }
-
-        .bar span {
-          display: block;
-          height: 100%;
-          border-radius: inherit;
-        }
-
-        .bar.green span { width: 87%; background: #15bf7b; }
-        .bar.blue span { width: 78%; background: #168bea; }
-        .bar.purple span { width: 82%; background: #7b4df2; }
-
-        /* ---------------- FOOTER ---------------- */
-        .footer {
-          margin-top: 30px;
-          padding: 38px 4.5vw 25px;
-          border-top: 1px solid #e7ebf4;
-        }
-
-        .footer-grid {
-          display: grid;
-          grid-template-columns: 1.25fr 1fr 1fr 1fr 1fr;
-          gap: 25px;
-        }
-
-        .footer-logo {
-          width: 155px;
-          margin-bottom: 14px;
-        }
-
-        .footer h4 {
-          margin: 0 0 12px;
-          color: var(--navy);
-          font-family: Poppins, Inter, sans-serif;
-          font-size: 14px;
-        }
-
-        .footer a, .footer button.link-btn {
-          display: block;
-          margin: 8px 0;
-          color: #6c7ca8;
-          text-decoration: none;
-          font-size: 12px;
-          background: transparent;
-          border: 0;
-          padding: 0;
-          cursor: pointer;
-          text-align: left;
-        }
-
-        .footer a:hover, .footer button.link-btn:hover {
-          color: var(--navy);
-        }
-
-        .footer-bottom {
-          margin-top: 28px;
-          color: #7887ae;
-          font-size: 11px;
-        }
-
-        @media (max-width: 1180px) {
-          .header { gap: 14px; }
-          .nav { gap: 15px; }
-          .nav button { font-size: 12.5px; }
-          .logo { width: 145px; }
-          .header-actions { gap: 7px; }
-          .select { min-width: 104px; }
-          .select.small { min-width: 82px; }
-          .region-trigger { min-width: 124px; }
-          .region-trigger.state-trigger { min-width: 92px; }
-          .btn-login, .btn-signup { padding: 0 17px; }
-          .hero { grid-template-columns: minmax(0, 1.05fr) minmax(300px, .9fr) minmax(360px, 1.1fr); }
-          .hero-photo { max-width: 540px; }
-          .hero-title { font-size: 47px; }
-        }
-
-        @media (max-width: 980px) {
-          .header {
-            height: auto;
-            min-height: 78px;
-            flex-wrap: wrap;
-            padding: 14px 5vw;
-          }
-          .nav {
-            order: 3;
-            width: 100%;
-            overflow-x: auto;
-            padding-bottom: 3px;
-          }
-          .nav button.active::after { bottom: -4px; }
-          .header-actions { margin-left: auto; }
-          .region-trigger { height: 40px; font-size: 13px; }
-          .hero { grid-template-columns: 1fr 1fr; }
-          .hero-photo {
-            grid-column: 1 / -1;
-            justify-self: center;
-            width: min(100%, 620px);
-            max-width: 620px;
-            margin-top: 4px;
-          }
-          .demo-card { max-width: 430px; }
-          .grades { grid-template-columns: repeat(4, 1fr); }
-          .feature-strip { grid-template-columns: repeat(2, 1fr); }
-          .benefits-grid { grid-template-columns: 1fr; }
-          .benefit + .benefit { border-left: 0; border-top: 1px solid #e6eaf3; }
-          .feature:nth-child(2) { border-right: 0; }
-          .audience-grid { grid-template-columns: 1fr; }
-        }
-
-        @media (max-width: 640px) {
-          .header { gap: 12px; }
-          .logo { width: 135px; }
-          .header-actions {
-            gap: 5px;
-          }
-          .select { min-width: 95px; height: 37px; font-size: 12px; }
-          .select.small { min-width: 76px; }
-          .region-trigger { min-width: 102px; height: 37px; padding: 0 10px; font-size: 12px; }
-          .region-trigger.state-trigger { min-width: 72px; }
-          .region-dropdown { right: auto; left: 0; }
-          .benefits-section { padding-bottom: 30px; }
-          .header-divider { display: none; }
-          .btn-login, .btn-signup {
-            height: 37px;
-            padding: 0 13px;
-            font-size: 12px;
-          }
-          .hero {
-            grid-template-columns: 1fr;
-            padding-top: 28px;
-          }
-          .hero-title { font-size: 42px; }
-          .hero-copy { font-size: 16px; }
-          .demo-card { margin-top: 5px; }
-          .hero-photo {
-            width: 100%;
-            max-width: 100%;
-            margin-top: 4px;
-            border-radius: 14px;
-          }
-          .feature-strip { grid-template-columns: 1fr; }
-          .feature { border-right: 0; border-bottom: 1px solid #e1e6f1; }
-          .grades { grid-template-columns: repeat(2, 1fr); }
-          .parent-photo { opacity: .25; width: 65%; }
-          .progress-widget { display: none; }
-          .audience-title { font-size: 24px; }
-          .footer-grid { grid-template-columns: 1fr 1fr; }
-        }
-      `}</style>
-
-      {/* ---------------- HEADER ---------------- */}
-      <header className="header">
-        <div className="logo-container" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <img 
-            className="logo" 
-            src="/assets/pforpencil-logo.png" 
-            alt="P for Pencil" 
-            onError={(e) => {
-              e.currentTarget.src = '/assets/logo.png';
-            }}
-          />
+    <div className="min-h-screen bg-white text-[#10246f] font-sans antialiased selection:bg-blue-100 selection:text-[#1a56db]">
+
+      {/* ========================================================================= */}
+      {/* 1. HERO SECTION */}
+      {/* ========================================================================= */}
+      <section className="relative overflow-hidden pt-10 pb-16 lg:pt-16 lg:pb-24 bg-gradient-to-b from-[#f8faff] via-white to-white border-b border-[#e1e6f1]">
+        
+        {/* Subtle background decorative shapes */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 pointer-events-none opacity-40 overflow-hidden">
+          <div className="absolute top-10 left-10 w-72 h-72 bg-blue-200/50 rounded-full blur-3xl" />
+          <div className="absolute top-20 right-10 w-80 h-80 bg-amber-100/60 rounded-full blur-3xl" />
+          <div className="absolute top-40 left-1/3 w-64 h-64 bg-emerald-100/50 rounded-full blur-3xl" />
         </div>
 
-        <nav className="nav" aria-label="Primary navigation">
-          <button className="active" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>Home</button>
-          <button onClick={() => scrollTo('about')}>About</button>
-          <button onClick={() => scrollTo('parents')}>For Parents</button>
-          <button onClick={() => scrollTo('schools')}>For Schools</button>
-          <button onClick={() => onOpenPricing()}>Pricing</button>
-          <button onClick={() => scrollTo('help')}>Help</button>
-        </nav>
-
-        <div className="header-actions">
-          <div className="region-menu">
-            <button
-              type="button"
-              className={`region-trigger ${openRegion === 'country' ? 'open' : ''}`}
-              onClick={() => setOpenRegion(openRegion === 'country' ? null : 'country')}
-              aria-haspopup="listbox"
-              aria-expanded={openRegion === 'country'}
-            >
-              <span className="region-left">
-                <span className="flag">{COUNTRY_FLAG_MAP[country] || '🌐'}</span>
-                <span>{country}</span>
-              </span>
-              <span className="region-chevron">⌄</span>
-            </button>
-            {openRegion === 'country' && (
-              <div className="region-dropdown" role="listbox">
-                {Object.keys(COUNTRY_STATE_MAP).map((item) => (
-                  <button
-                    type="button"
-                    key={item}
-                    className={`region-option ${country === item ? 'selected' : ''}`}
-                    onClick={() => handleCountryChange(item)}
-                  >
-                    <span className="flag">{COUNTRY_FLAG_MAP[item] || '🌐'}</span>
-                    <span>{item}</span>
-                  </button>
-                ))}
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+            
+            {/* Left Column: Value Proposition & CTAs */}
+            <div className="lg:col-span-7 space-y-6 text-left">
+              
+              {/* Unboxed Metadata Tagline */}
+              <div className="flex items-center gap-2 text-xs font-bold text-[#1a56db]">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#1a56db]">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Foundational Mathematics (K – Grade 6)</span>
+                </span>
+                <span className="text-slate-300 hidden sm:inline">·</span>
+                <span className="text-slate-500 hidden sm:inline">Curriculum Aligned</span>
               </div>
-            )}
-          </div>
 
-          <div className="region-menu">
-            <button
-              type="button"
-              className={`region-trigger state-trigger ${openRegion === 'state' ? 'open' : ''}`}
-              onClick={() => setOpenRegion(openRegion === 'state' ? null : 'state')}
-              aria-haspopup="listbox"
-              aria-expanded={openRegion === 'state'}
-            >
-              <span>{state}</span>
-              <span className="region-chevron">⌄</span>
-            </button>
-            {openRegion === 'state' && (
-              <div className="region-dropdown state-dropdown" role="listbox">
-                {(COUNTRY_STATE_MAP[country] || []).map((item) => (
-                  <button
-                    type="button"
-                    key={item}
-                    className={`region-option ${state === item ? 'selected' : ''}`}
-                    onClick={() => handleStateChange(item)}
-                  >
-                    <span>{item}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+              {/* Master Headline */}
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-[#10246f] leading-[1.12]">
+                Small steps <br />
+                <span className="text-[#1a56db]">for a brighter</span>{' '}
+                <span className="text-[#f43f5e]">tomorrow.</span>
+              </h1>
 
-          <div className="header-divider" />
+              {/* High-legibility Subtext */}
+              <p className="text-base sm:text-lg text-[#59627a] font-normal leading-relaxed max-w-xl">
+                Structured math practice that turns confusion into confidence. Engaging question challenges, visual tactile aids, and instant feedback for young learners.
+              </p>
 
-          <button
-            className="btn-login"
-            onClick={() => onOpenAuthModal({ screen: 'signin' })}
-          >
-            Log In
-          </button>
-          <button
-            className="btn-signup"
-            onClick={() => onOpenAuthModal({ screen: 'register' })}
-          >
-            Sign Up
-          </button>
-        </div>
-      </header>
-
-      <main>
-        {/* ---------------- HERO ---------------- */}
-        <section className="hero" id="about">
-          <div>
-            <div className="eyebrow">PRACTICE TODAY.<br />BRIGHTER TOMORROWS.</div>
-            <h1 className="hero-title">
-              Math practice<br />
-              <span className="pink">that builds</span><br />
-              brighter learners
-            </h1>
-            <p className="hero-copy">
-              Interactive, adaptive math practice for Preschool – Grade 6.
-            </p>
-            <button 
-              className="primary-cta" 
-              onClick={() => onOpenAuthModal({ screen: 'register' })}
-            >
-              Get Started Free&nbsp; → 
-            </button>
-
-            <div className="trust-row">
-              <span className="trust-item"><span className="check">✓</span>No credit card required</span>
-              <span className="trust-item"><span className="check">✓</span>Safe & ad-free</span>
-              <span className="trust-item"><span className="check">✓</span>Loved by families</span>
-            </div>
-          </div>
-
-          {/* ---------------- DEMO CARD ---------------- */}
-          <div className="demo-card" aria-label="Interactive math demo">
-            <div className="demo-top">
-              <span>Question {questionIndex + 1} of {demoQuestions.length}</span>
-              <span>◷ 00:{String(seconds).padStart(2, '0')}</span>
-            </div>
-
-            <div className="progress-track">
-              <div className="progress-fill" style={{ width: `${progress}%` }} />
-            </div>
-
-            <h2 className="question">{question.question}</h2>
-
-            <div className="answer-grid">
-              {question.options.map((answer) => (
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-3 pt-2">
                 <button
-                  key={answer}
-                  className={[
-                    'answer',
-                    selectedAnswer === answer && answer === question.answer ? 'correct' : '',
-                    selectedAnswer === answer && answer !== question.answer ? 'wrong' : '',
-                  ].join(' ')}
-                  onClick={() => chooseAnswer(answer)}
+                  onClick={() => onOpenAuthModal({ screen: 'register', role: 'student' })}
+                  className="px-8 py-3.5 rounded-full bg-[#ffbf32] hover:bg-[#f59e0b] text-[#10246f] font-black text-sm sm:text-base shadow-md hover:shadow-lg transition-all transform hover:scale-102 active:scale-98 cursor-pointer flex items-center gap-2"
                 >
-                  {answer}
+                  <span>Start Free Practice</span>
+                  <ArrowRight className="w-4 h-4 text-[#10246f]" />
                 </button>
-              ))}
-            </div>
 
-            <div className={`feedback ${selectedAnswer === question.answer ? 'success' : selectedAnswer ? 'error' : ''}`}>
-              {selectedAnswer === question.answer && (
-                <>
-                  <span className="feedback-icon">✓</span>
-                  <span>Correct!</span>
-                  <span className="xp">⭐ +10 XP · Total {xp} XP</span>
-                </>
-              )}
-              {selectedAnswer && selectedAnswer !== question.answer && (
-                <span>Try again — the correct answer is {question.answer}.</span>
-              )}
-            </div>
-
-            <button className="next-btn" onClick={nextQuestion}>
-              Next Question&nbsp; →
-            </button>
-
-            <button
-              onClick={resetDemo}
-              style={{
-                display: 'block',
-                margin: '10px auto 0',
-                border: 0,
-                background: 'transparent',
-                color: '#7383ad',
-                fontSize: 11,
-                cursor: 'pointer',
-              }}
-            >
-              Reset demo
-            </button>
-          </div>
-
-          {/* ---------------- HERO PHOTO ---------------- */}
-          <div className="hero-photo">
-            <img 
-              src="/assets/hero-student.jpg" 
-              alt="Child practicing mathematics" 
-            />
-          </div>
-        </section>
-
-        {/* ---------------- FEATURES ---------------- */}
-        <section className="feature-strip" aria-label="P for Pencil benefits">
-          <div className="feature">
-            <span className="feature-icon game"><UiIcon kind="game" size={24} /></span>
-            <div><strong>Interactive Practice</strong><span>Engaging and adaptive</span></div>
-          </div>
-          <div className="feature">
-            <span className="feature-icon bolt"><UiIcon kind="bolt" size={23} /></span>
-            <div><strong>Instant Feedback</strong><span>Learn from mistakes</span></div>
-          </div>
-          <div className="feature">
-            <span className="feature-icon chart"><UiIcon kind="chart" size={24} /></span>
-            <div><strong>Track Progress</strong><span>See real growth</span></div>
-          </div>
-          <div className="feature">
-            <span className="feature-icon shield"><UiIcon kind="shield" size={24} /></span>
-            <div><strong>Safe &amp; Ad-free</strong><span>A trusted learning space</span></div>
-          </div>
-        </section>
-
-        {/* ---------------- GRADES ---------------- */}
-        <section className="section" id="grades">
-          <h2 className="section-title">Choose a Grade</h2>
-          <div className="grades">
-            {gradesList.map((grade) => (
-              <button
-                key={grade.label}
-                className="grade"
-                style={{ background: grade.accent }}
-                onClick={() => handleGradeClick(grade)}
-              >
-                <span className="grade-icon"><GradeIcon icon={grade.icon} /></span>
-                <span className="grade-name">{grade.label}</span>
-              </button>
-            ))}
-          </div>
-        </section>
-
-        {/* ---------------- LEARNING BENEFITS ---------------- */}
-        <section className="benefits-section" aria-label="Why families choose P for Pencil">
-          <div className="benefits-grid">
-            <article className="benefit">
-              <span className="benefit-icon"><UiIcon kind="target" size={29} /></span>
-              <div>
-                <h3>Build Confidence</h3>
-                <p>Give children small wins, useful feedback and practice that helps them feel ready for the next challenge.</p>
+                <button
+                  onClick={() => scrollToSection('interactive-demo')}
+                  className="px-6 py-3.5 rounded-full bg-white hover:bg-slate-50 text-[#10246f] border border-[#e1e6f1] hover:border-blue-300 font-bold text-sm sm:text-base transition-colors cursor-pointer flex items-center gap-2 shadow-xs"
+                >
+                  <Play className="w-4 h-4 text-blue-600 fill-blue-600" />
+                  <span>Try Demo Challenge</span>
+                </button>
               </div>
-            </article>
 
-            <article className="benefit">
-              <span className="benefit-icon"><UiIcon kind="smile" size={29} /></span>
-              <div>
-                <h3>Make Math Enjoyable</h3>
-                <p>Turn everyday practice into a positive learning experience with interactive questions and playful progress.</p>
+              {/* Trust Indicators */}
+              <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center gap-6 text-xs text-slate-600 font-medium">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>Curriculum Aligned (US, UK, CBSE, Singapore)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span>100% Safe, COPPA Compliant & Ad-Free</span>
+                </div>
               </div>
-            </article>
 
-            <article className="benefit">
-              <span className="benefit-icon"><UiIcon kind="sun" size={29} /></span>
-              <div>
-                <h3>Prepare for a Brighter Tomorrow</h3>
-                <p>Build strong foundations that support confident learners from Preschool through Grade 6.</p>
+            </div>
+
+            {/* Right Column: Live Interactive Math Card */}
+            <div className="lg:col-span-5" id="interactive-demo">
+              <div className="bg-white rounded-3xl border-2 border-[#e1e6f1] shadow-xl p-6 sm:p-7 space-y-5 relative">
+                
+                {/* Header of the Live Card */}
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-xs font-bold text-slate-700">{activeDemo.grade}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
+                    <Coins className="w-3.5 h-3.5 text-amber-500" />
+                    <span>+{demoScore} XP</span>
+                  </div>
+                </div>
+
+                {/* Question Prompt */}
+                <div className="text-center py-2 space-y-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full">
+                    Question {demoIndex + 1} of {interactiveDemoChallenges.length}
+                  </span>
+                  <h3 className="text-2xl sm:text-3xl font-black text-[#10246f] pt-1">
+                    {activeDemo.question}
+                  </h3>
+                </div>
+
+                {/* Visual Hint Toggle */}
+                {showHint && (
+                  <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-900 animate-in fade-in flex items-center gap-2">
+                    <span className="text-base">💡</span>
+                    <span>{activeDemo.visualHint}</span>
+                  </div>
+                )}
+
+                {/* Multiple Choice Grid */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  {activeDemo.options.map((option) => {
+                    const isSelected = selectedDemoAnswer === option;
+                    const isCorrect = isSelected && option === activeDemo.answer;
+                    const isWrong = isSelected && option !== activeDemo.answer;
+
+                    return (
+                      <button
+                        key={option}
+                        onClick={() => handleSelectDemoOption(option)}
+                        disabled={selectedDemoAnswer !== null}
+                        className={`h-12 rounded-xl text-base sm:text-lg font-bold border transition-all cursor-pointer flex items-center justify-center ${
+                          isCorrect 
+                            ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm scale-102 font-black' 
+                            : isWrong 
+                            ? 'bg-rose-50 border-rose-400 text-rose-700' 
+                            : selectedDemoAnswer && option === activeDemo.answer
+                            ? 'bg-emerald-50/70 border-emerald-300 text-emerald-700'
+                            : 'bg-white border-slate-200 text-[#10246f] hover:border-blue-400 hover:bg-blue-50/50'
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Answer Feedback Banner */}
+                <div className="min-h-[44px] flex items-center justify-center text-center">
+                  {selectedDemoAnswer === activeDemo.answer ? (
+                    <div className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full flex items-center gap-1.5 animate-in zoom-in-95">
+                      <Check className="w-4 h-4 text-emerald-600" />
+                      <span>Brilliant! {activeDemo.explanation}</span>
+                    </div>
+                  ) : selectedDemoAnswer ? (
+                    <div className="text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-full flex items-center gap-1.5 animate-in fade-in">
+                      <span>Correct answer is <strong>{activeDemo.answer}</strong></span>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowHint(!showHint)}
+                      className="text-xs text-slate-500 hover:text-blue-600 flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>💡 Need a hint? Click to reveal</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Next & Reset Bar */}
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                  <button
+                    onClick={handleResetDemo}
+                    className="text-xs font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Reset</span>
+                  </button>
+
+                  <button
+                    onClick={handleNextDemoQuestion}
+                    className="px-4 py-2 rounded-full bg-[#1a56db] hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>Next Challenge</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
               </div>
-            </article>
-          </div>
-        </section>
-
-        {/* ---------------- PARENT / SCHOOL ---------------- */}
-        <section className="section audience-grid" id="parents">
-          <article className="audience-card parent-card">
-            <div className="audience-kicker">FOR PARENTS</div>
-            <h2 className="audience-title">Support your child's progress</h2>
-            <p className="audience-copy">
-              See progress. Build confidence. Help them reach their potential.
-            </p>
-            <button 
-              className="small-cta" 
-              onClick={() => onOpenAuthModal({ screen: 'register', role: 'parent' })}
-            >
-              Learn More&nbsp; →
-            </button>
-            <img 
-              className="parent-photo" 
-              src="/assets/parent-child.jpg" 
-              alt="Parent supporting a child learning" 
-            />
-          </article>
-
-          <article className="audience-card school-card" id="schools">
-            <div className="audience-kicker">FOR SCHOOLS</div>
-            <h2 className="audience-title">Engage more learners</h2>
-            <p className="audience-copy">
-              Simple setup. Real results. Support every student's journey.
-            </p>
-            <button 
-              className="small-cta" 
-              onClick={() => onOpenAuthModal({ screen: 'register', role: 'school' })}
-            >
-              Learn More&nbsp; →
-            </button>
-
-            <div className="progress-widget">
-              <strong>Class Progress</strong>
-              <div className="progress-row"><span>Grade 3</span><div className="bar green"><span /></div></div>
-              <div className="progress-row"><span>Grade 4</span><div className="bar blue"><span /></div></div>
-              <div className="progress-row"><span>Grade 5</span><div className="bar purple"><span /></div></div>
             </div>
-          </article>
-        </section>
 
-        {/* ---------------- PRICING BANNER ---------------- */}
-        <section className="section" id="pricing" style={{ paddingTop: 5 }}>
-          <div 
-            onClick={() => onOpenPricing()}
-            style={{
-              borderRadius: 18,
-              padding: '22px 25px',
-              background: '#f6f9ff',
-              color: '#536ba4',
-              textAlign: 'center',
-              fontSize: 13,
-              cursor: 'pointer'
-            }}
-          >
-            Looking for School & Family Membership plans? <strong style={{ color: '#168bea', textDecoration: 'underline' }}>View Pricing & Plans →</strong>
-          </div>
-        </section>
-      </main>
-
-      {/* ---------------- FOOTER ---------------- */}
-      <footer className="footer" id="help">
-        <div className="footer-grid">
-          <div>
-            <img 
-              className="footer-logo" 
-              src="/assets/pforpencil-logo.png" 
-              alt="P for Pencil" 
-              onError={(e) => {
-                e.currentTarget.src = '/assets/logo.png';
-              }}
-            />
-            <div style={{ color: '#6879a6', fontSize: 12 }}>
-              Practice Today. Brighter Tomorrows.
-            </div>
-          </div>
-
-          <div>
-            <h4>About</h4>
-            <button className="link-btn" onClick={() => scrollTo('about')}>Our Story</button>
-            <button className="link-btn" onClick={() => scrollTo('about')}>Our Approach</button>
-            <button className="link-btn" onClick={() => alert('Contact us at support@pforpencil.com')}>Contact Us</button>
-          </div>
-
-          <div>
-            <h4>For Parents</h4>
-            <button className="link-btn" onClick={() => onOpenAuthModal({ screen: 'signin', role: 'parent' })}>Overview</button>
-            <button className="link-btn" onClick={() => onOpenAuthModal({ screen: 'signin', role: 'parent' })}>Progress Tracking</button>
-            <button className="link-btn" onClick={() => alert('Safety: Child-safe, COPPA compliant learning environment.')}>Safety</button>
-          </div>
-
-          <div>
-            <h4>For Schools</h4>
-            <button className="link-btn" onClick={() => onOpenAuthModal({ screen: 'signin', role: 'school' })}>Overview</button>
-            <button className="link-btn" onClick={() => onOpenAuthModal({ screen: 'register', role: 'school' })}>Get Started</button>
-            <button className="link-btn" onClick={() => alert('Sales inquiry: schools@pforpencil.com')}>Contact Sales</button>
-          </div>
-
-          <div>
-            <h4>Support</h4>
-            <button className="link-btn" onClick={onOpenRegionModal}>Curriculum Standards</button>
-            <button className="link-btn" onClick={onOpenSupabaseModal}>Database Hub (Supabase)</button>
-            <button className="link-btn" onClick={() => alert('FAQ: Find answers to common setup questions.')}>FAQ</button>
-            <button className="link-btn" onClick={() => alert('Privacy Policy: All student data is secure and protected.')}>Privacy Policy</button>
-            <button className="link-btn" onClick={() => alert('Terms of Service: pforpencil.com/terms')}>Terms of Service</button>
           </div>
         </div>
+      </section>
 
-        <div className="footer-bottom">
-          © 2026 P for Pencil. All rights reserved.
+      {/* ========================================================================= */}
+      {/* 2. FOUR PORTAL GATEWAYS */}
+      {/* ========================================================================= */}
+      <section className="py-14 bg-white border-b border-[#e1e6f1]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-2xl mx-auto mb-10 space-y-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#1a56db]">
+              Dedicated Portals
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black text-[#10246f]">
+              Designed for every member of the learning team
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            
+            {/* For Students */}
+            <div 
+              onClick={() => {
+                const s = allUsers.find(u => u.role === 'student');
+                if (s) onSelectRoleUser(s);
+                else onOpenAuthModal({ screen: 'signin', role: 'student' });
+              }}
+              className="p-6 rounded-2xl bg-blue-50/50 border border-blue-200 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between space-y-4"
+            >
+              <div>
+                <div className="w-12 h-12 rounded-xl bg-white border border-blue-200 flex items-center justify-center text-blue-600 mb-4 group-hover:scale-105 transition-transform shadow-xs">
+                  <GraduationCap className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-bold text-[#10246f]">For Students</h3>
+                <p className="text-xs text-[#59627a] mt-1.5 leading-relaxed">
+                  Interactive question challenges, streak fires, coins, ID card, audio read-aloud and fun leaderboard ranks.
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 group-hover:translate-x-1 transition-transform">
+                <span>Enter Student Arena</span>
+                <ChevronRight className="w-4 h-4" />
+              </span>
+            </div>
+
+            {/* For Teachers */}
+            <div 
+              onClick={() => onOpenAuthModal({ screen: 'signin', role: 'teacher' })}
+              className="p-6 rounded-2xl bg-rose-50/50 border border-rose-200 hover:border-rose-400 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between space-y-4"
+            >
+              <div>
+                <div className="w-12 h-12 rounded-xl bg-white border border-rose-200 flex items-center justify-center text-rose-600 mb-4 group-hover:scale-105 transition-transform shadow-xs">
+                  <BookOpen className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-bold text-[#10246f]">For Teachers</h3>
+                <p className="text-xs text-[#59627a] mt-1.5 leading-relaxed">
+                  Master question bank, skill categorization, classroom assignment creation and auto-generated report cards.
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-600 group-hover:translate-x-1 transition-transform">
+                <span>Teacher Workspace</span>
+                <ChevronRight className="w-4 h-4" />
+              </span>
+            </div>
+
+            {/* For Parents */}
+            <div 
+              onClick={() => onOpenAuthModal({ screen: 'signin', role: 'parent' })}
+              className="p-6 rounded-2xl bg-amber-50/50 border border-amber-200 hover:border-amber-400 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between space-y-4"
+            >
+              <div>
+                <div className="w-12 h-12 rounded-xl bg-white border border-amber-200 flex items-center justify-center text-amber-600 mb-4 group-hover:scale-105 transition-transform shadow-xs">
+                  <HeartHandshake className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-bold text-[#10246f]">For Parents</h3>
+                <p className="text-xs text-[#59627a] mt-1.5 leading-relaxed">
+                  Daily practice tracking, accuracy insights, pin-protected child safety, and celebrating milestone badges.
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 group-hover:translate-x-1 transition-transform">
+                <span>Parent Dashboard</span>
+                <ChevronRight className="w-4 h-4" />
+              </span>
+            </div>
+
+            {/* For Schools */}
+            <div 
+              onClick={() => onOpenAuthModal({ screen: 'register', role: 'school' })}
+              className="p-6 rounded-2xl bg-emerald-50/50 border border-emerald-200 hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between space-y-4"
+            >
+              <div>
+                <div className="w-12 h-12 rounded-xl bg-white border border-emerald-200 flex items-center justify-center text-emerald-600 mb-4 group-hover:scale-105 transition-transform shadow-xs">
+                  <School className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-bold text-[#10246f]">For Schools</h3>
+                <p className="text-xs text-[#59627a] mt-1.5 leading-relaxed">
+                  Whole-grade curriculum standards alignment, multi-class roster administration, and bulk student onboarding.
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 group-hover:translate-x-1 transition-transform">
+                <span>School Administration</span>
+                <ChevronRight className="w-4 h-4" />
+              </span>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 3. INTERACTIVE GRADE PATHWAY EXPLORER */}
+      {/* ========================================================================= */}
+      <section className="py-16 bg-[#f8faff] border-b border-[#e1e6f1]" id="grades">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+          
+          <div className="text-center space-y-2 max-w-2xl mx-auto">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#1a56db]">
+              Structured Grade Roadmap
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black text-[#10246f]">
+              Targeted Math for Foundation to Grade 6
+            </h2>
+            <p className="text-xs sm:text-sm text-[#59627a]">
+              Select a grade level below to explore core competencies, focus areas, and sample practice problems.
+            </p>
+          </div>
+
+          {/* Grade Selector Pills / Tabs */}
+          <div className="flex flex-wrap items-center justify-center gap-2 p-1.5 bg-white border border-slate-200 rounded-2xl max-w-3xl mx-auto shadow-xs">
+            {gradesData.map((grade) => {
+              const isActive = grade.id === selectedGradeId;
+              return (
+                <button
+                  key={grade.id}
+                  onClick={() => {
+                    setSelectedGradeId(grade.id);
+                    sounds.playCorrect();
+                  }}
+                  className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                    isActive 
+                      ? 'bg-[#10246f] text-white shadow-sm' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <span>{grade.name.split(' (')[0]}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Active Grade Deep Dive Card */}
+          <div className="bg-white rounded-3xl border-2 border-[#e1e6f1] p-6 sm:p-8 shadow-sm max-w-4xl mx-auto space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${activeGrade.badgeBg} ${activeGrade.badgeText}`}>
+                    {activeGrade.age}
+                  </span>
+                  <span className="text-xs font-bold text-slate-400">·</span>
+                  <span className="text-xs font-bold text-slate-600">Curriculum Standard</span>
+                </div>
+                <h3 className="text-2xl font-black text-[#10246f]">{activeGrade.name}</h3>
+              </div>
+
+              <button
+                onClick={() => launchPracticeForGrade(activeGrade)}
+                className="px-6 py-3 rounded-full bg-[#1a56db] hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shrink-0"
+              >
+                <span>Jump into {activeGrade.name.split(' (')[0]}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Focus & Key Competencies */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Core Learning Focus
+                </h4>
+                <p className="text-sm text-[#10246f] leading-relaxed font-medium">
+                  {activeGrade.focus}
+                </p>
+
+                <div className="pt-2">
+                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                      Sample Challenge
+                    </span>
+                    <p className="text-sm font-bold text-[#10246f]">
+                      {activeGrade.sampleQuestion}
+                    </p>
+                    <p className="text-xs text-emerald-700 font-semibold pt-1">
+                      ✓ Answer: {activeGrade.sampleAnswer}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Key Math Competencies
+                </h4>
+                <div className="space-y-2">
+                  {activeGrade.skills.map((skill, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                      <div className="w-5 h-5 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0">
+                        <Check className="w-3 h-3" />
+                      </div>
+                      <span>{skill}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 4. CURRICULUM TOPICS SHOWCASE */}
+      {/* ========================================================================= */}
+      <section className="py-16 bg-white border-b border-[#e1e6f1]" id="topics">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+          
+          <div className="text-center space-y-2 max-w-2xl mx-auto">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">
+              Mastery Strands
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black text-[#10246f]">
+              Comprehensive Mathematical Strands
+            </h2>
+            <p className="text-xs sm:text-sm text-[#59627a]">
+              Every concept is built on concrete visual scaffolding and interactive practice questions.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {topicCards.map((topic) => {
+              const IconComponent = topic.icon;
+              return (
+                <div 
+                  key={topic.title}
+                  className="p-6 rounded-2xl border border-[#e1e6f1] bg-white hover:border-blue-400 hover:shadow-md transition-all space-y-4 flex flex-col justify-between"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className={`w-12 h-12 rounded-2xl ${topic.iconBg} flex items-center justify-center ${topic.iconColor} border border-slate-100`}>
+                        <IconComponent className="w-6 h-6" />
+                      </div>
+                      <span className="text-xs font-bold text-slate-500 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-200">
+                        {topic.skillsCount}
+                      </span>
+                    </div>
+
+                    <h3 className="text-lg font-bold text-[#10246f]">
+                      {topic.title}
+                    </h3>
+                    <p className="text-xs text-[#59627a] leading-relaxed">
+                      {topic.subtitle}
+                    </p>
+
+                    <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                      {topic.highlights.map((h, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs text-slate-600 font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                          <span>{h}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => onOpenAuthModal({ screen: 'signin', role: 'student' })}
+                    className="w-full py-2.5 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-600 text-[#10246f] text-xs font-bold border border-slate-200 transition-colors cursor-pointer text-center"
+                  >
+                    Practice {topic.title}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 5. WHY P FOR PENCIL WORKS */}
+      {/* ========================================================================= */}
+      <section className="py-16 bg-[#f8faff] border-b border-[#e1e6f1]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+          
+          <div className="text-center space-y-2 max-w-2xl mx-auto">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#1a56db]">
+              Proven Methodology
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black text-[#10246f]">
+              Why children thrive with P for Pencil
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {learningPillars.map((pillar) => {
+              const PillarIcon = pillar.icon;
+              return (
+                <div 
+                  key={pillar.title}
+                  className="p-6 rounded-2xl bg-white border border-[#e1e6f1] shadow-xs space-y-3"
+                >
+                  <div className={`w-10 h-10 rounded-xl ${pillar.bg} ${pillar.color} flex items-center justify-center`}>
+                    <PillarIcon className="w-5 h-5" />
+                  </div>
+                  <h4 className="text-base font-bold text-[#10246f]">
+                    {pillar.title}
+                  </h4>
+                  <p className="text-xs text-[#59627a] leading-relaxed">
+                    {pillar.description}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 6. CALL TO ACTION BANNER */}
+      {/* ========================================================================= */}
+      <section className="py-16 bg-white">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="p-8 sm:p-12 rounded-3xl bg-[#10246f] text-white text-center space-y-6 shadow-xl relative overflow-hidden">
+            
+            {/* Background sparkle accents */}
+            <div className="absolute top-4 left-6 text-2xl opacity-40">✨</div>
+            <div className="absolute bottom-4 right-8 text-2xl opacity-40">🌟</div>
+
+            <div className="relative z-10 max-w-2xl mx-auto space-y-4">
+              <span className="inline-block text-xs font-bold uppercase tracking-wider text-[#ffbf32]">
+                Start Today · Free Access
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-white leading-tight">
+                Give every child the confidence to excel in math.
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-200 max-w-lg mx-auto">
+                Join students, teachers, and parents transforming daily math practice with joyful mastery.
+              </p>
+              <div className="pt-2 flex flex-wrap justify-center gap-3">
+                <button
+                  onClick={() => onOpenAuthModal({ screen: 'register', role: 'student' })}
+                  className="px-8 py-3.5 rounded-full bg-[#ffbf32] hover:bg-[#f59e0b] text-[#10246f] font-black text-sm shadow-md transition-all transform hover:scale-102 cursor-pointer"
+                >
+                  Get Started Free
+                </button>
+                <button
+                  onClick={onOpenPricing}
+                  className="px-6 py-3.5 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-sm border border-white/20 transition-colors cursor-pointer"
+                >
+                  View Membership Plans
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 7. CLEAN FOOTER */}
+      {/* ========================================================================= */}
+      <footer className="bg-[#f8faff] border-t border-[#e1e6f1] py-12 text-[#59627a]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-8 mb-10">
+            
+            {/* Brand column */}
+            <div className="md:col-span-2 space-y-3">
+              <PforPencilLogo size="md" showSubtitle={true} />
+              <p className="text-xs text-[#59627a] max-w-sm pt-2 leading-relaxed">
+                Structured math practice designed to build deep foundational understanding and lasting learning confidence for primary students.
+              </p>
+            </div>
+
+            {/* Column: Platform */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#10246f]">Platform</h4>
+              <ul className="space-y-1.5 text-xs">
+                <li><button onClick={() => scrollToSection('grades')} className="hover:text-[#10246f] cursor-pointer">Grade Standards</button></li>
+                <li><button onClick={() => scrollToSection('topics')} className="hover:text-[#10246f] cursor-pointer">Curriculum Strands</button></li>
+                <li><button onClick={onOpenPricing} className="hover:text-[#10246f] cursor-pointer">Pricing Plans</button></li>
+                <li><button onClick={onOpenRegionModal} className="hover:text-[#10246f] cursor-pointer">Country & Region Scope</button></li>
+              </ul>
+            </div>
+
+            {/* Column: Portals */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#10246f]">Portals</h4>
+              <ul className="space-y-1.5 text-xs">
+                <li><button onClick={() => onOpenAuthModal({ screen: 'signin', role: 'student' })} className="hover:text-[#10246f] cursor-pointer">Student Practice</button></li>
+                <li><button onClick={() => onOpenAuthModal({ screen: 'signin', role: 'teacher' })} className="hover:text-[#10246f] cursor-pointer">Teacher Workspace</button></li>
+                <li><button onClick={() => onOpenAuthModal({ screen: 'signin', role: 'parent' })} className="hover:text-[#10246f] cursor-pointer">Parent Hub</button></li>
+                <li><button onClick={() => onOpenAuthModal({ screen: 'signin', role: 'school' })} className="hover:text-[#10246f] cursor-pointer">School Admin</button></li>
+              </ul>
+            </div>
+
+            {/* Column: Compliance */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#10246f]">Trust & Database</h4>
+              <ul className="space-y-1.5 text-xs">
+                <li><button onClick={onOpenSupabaseModal} className="hover:text-[#10246f] cursor-pointer font-semibold text-emerald-700">Supabase Database Hub</button></li>
+                <li><span className="text-xs text-slate-500">100% Ad-Free & Kid-Safe</span></li>
+                <li><span className="text-xs text-slate-500">COPPA & Privacy Compliant</span></li>
+              </ul>
+            </div>
+
+          </div>
+
+          <div className="pt-6 border-t border-[#e1e6f1] flex flex-col sm:flex-row items-center justify-between text-xs text-[#59627a] gap-3">
+            <span>© 2026 P for Pencil. All rights reserved.</span>
+            <span className="font-semibold text-[#10246f]">Small Steps. A Brighter Tomorrow.</span>
+          </div>
         </div>
       </footer>
 
-      {/* Discreet floating tester sandbox button in bottom-right corner for portal testing */}
-      <aside className="fixed bottom-3 right-3 z-50 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-stone-200 p-2 flex items-center gap-1.5 text-xs font-bold text-stone-700">
-        <span className="text-[10px] text-stone-400 font-extrabold uppercase tracking-wider pl-1">🎭 Portal:</span>
+      {/* Floating tester sandbox button */}
+      <aside className="fixed bottom-3 right-3 z-50 bg-white rounded-2xl shadow-lg border border-[#e1e6f1] p-2 flex items-center gap-1.5 text-xs font-bold text-[#10246f]">
+        <span className="text-[10px] text-[#59627a] font-extrabold uppercase tracking-wider pl-1">🎭 Portal:</span>
         {allUsers.filter((u) => ['student', 'parent', 'teacher', 'school', 'admin'].includes(u.role)).slice(0, 5).map((user) => (
           <button
             key={user.id}
@@ -1586,7 +996,7 @@ export default function PForPencilHomePage({
             className={`px-2 py-0.5 rounded-lg transition-all capitalize cursor-pointer text-[11px] ${
               currentUser.id === user.id 
                 ? 'bg-[#10246f] text-white shadow-2xs font-black' 
-                : 'hover:bg-stone-100 text-stone-600'
+                : 'hover:bg-[#f8faff] text-[#59627a]'
             }`}
           >
             {user.role}
@@ -1594,13 +1004,14 @@ export default function PForPencilHomePage({
         ))}
         <button
           onClick={onOpenSupabaseModal}
-          className="px-2 py-0.5 rounded-lg hover:bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold transition-colors cursor-pointer text-[11px] flex items-center gap-1"
+          className="px-2 py-0.5 rounded-lg hover:bg-[#ecfdf5] text-[#16c47f] border border-[#a7f3d0] font-bold transition-colors cursor-pointer text-[11px] flex items-center gap-1"
           title="Open Supabase Database Hub to test connection and live data sync"
         >
           <span>🗄️</span>
           <span>DB Hub</span>
         </button>
       </aside>
+
     </div>
   );
 }

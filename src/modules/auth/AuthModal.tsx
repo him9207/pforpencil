@@ -38,6 +38,7 @@ import { fetchUsersFromSupabase, isSupabaseConfigured, syncUserToSupabase } from
 import { useBodyScrollLock } from '../../utils/useBodyScrollLock';
 import OtpVerificationView from './OtpVerificationView';
 import { dispatchOtpEmail, checkEmailServiceStatus } from '../../utils/emailService';
+import PforPencilLogo from '../../common/PforPencilLogo';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -572,14 +573,9 @@ export default function AuthModal({
         {/* Modal Header */}
         <div className="p-5 border-b border-[#e1e6f1] flex items-center justify-between bg-[#f8faff] shrink-0">
           <div className="flex items-center gap-3">
-            <img 
-              src="/assets/pforpencil-logo.png" 
-              alt="P for Pencil" 
-              className="h-8 w-auto object-contain"
-              onError={(e) => { e.currentTarget.src = '/assets/pforpencil-logo.svg'; }}
-            />
+            <PforPencilLogo size="sm" />
             <div>
-              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#eef4ff] text-[#10246f] text-[10px] font-bold uppercase tracking-wider mb-0.5">
+              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-wider mb-0.5">
                 <Sparkles className="w-3 h-3 text-blue-600" />
                 <span>Authentication Center</span>
               </div>

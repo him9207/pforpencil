@@ -312,12 +312,132 @@ export function convertActivityToInteractiveSteps(
 
   // Otherwise, automatically transform all linked question IDs from the Master Question Bank into game steps!
   const targetIds = activity.questionIds || [];
-  const matchedQuestions = targetIds
+  let matchedQuestions = targetIds
     .map(id => allQuestions.find(q => q.id === id))
     .filter((q): q is Question => Boolean(q));
 
+  // If no explicit ID match, find matching questions from the same grade/subject
+  if (matchedQuestions.length === 0 && allQuestions.length > 0) {
+    matchedQuestions = allQuestions.filter(q => 
+      (activity.grade ? q.grade?.toLowerCase() === activity.grade.toLowerCase() : true) &&
+      (activity.subject ? q.subject?.toLowerCase() === activity.subject.toLowerCase() : true)
+    ).slice(0, 5);
+
+    // If still none, fallback to any available questions from the question bank
+    if (matchedQuestions.length === 0) {
+      matchedQuestions = allQuestions.slice(0, 5);
+    }
+  }
+
+  // If still empty (e.g. empty Question Bank), generate dynamic fun fallback questions based on activity
   if (matchedQuestions.length === 0) {
-    return [];
+    const isMath = activity.subject?.toLowerCase().includes('math') || activity.title.toLowerCase().includes('count') || activity.title.toLowerCase().includes('number');
+    const isScience = activity.subject?.toLowerCase().includes('science') || activity.title.toLowerCase().includes('animal') || activity.title.toLowerCase().includes('plant');
+    
+    const dynamicQs: Question[] = isMath ? [
+      {
+        id: `DYN_${activity.id}_1`,
+        grade: activity.grade || 'Preschool',
+        subject: 'Mathematics',
+        category: 'Foundations',
+        skill: 'Counting Fun',
+        explanation: 'Count each star carefully: 1, 2, 3!',
+        difficulty: 'Easy',
+        type: 'multiple_choice',
+        prompt: 'How many stars do you see? ⭐ ⭐ ⭐',
+        options: ['2', '3', '4', '5'],
+        correctIndex: 1,
+        points: 20
+      },
+      {
+        id: `DYN_${activity.id}_2`,
+        grade: activity.grade || 'Preschool',
+        subject: 'Mathematics',
+        category: 'Foundations',
+        skill: 'Adding Objects',
+        explanation: '2 apples plus 2 apples equals 4 apples!',
+        difficulty: 'Easy',
+        type: 'multiple_choice',
+        prompt: 'What is 2 + 2? 🍎🍎 + 🍎🍎',
+        options: ['3', '4', '5', '6'],
+        correctIndex: 1,
+        points: 20
+      },
+      {
+        id: `DYN_${activity.id}_3`,
+        grade: activity.grade || 'Preschool',
+        subject: 'Mathematics',
+        category: 'Foundations',
+        skill: 'Shapes',
+        explanation: 'A triangle has 3 sides and 3 corners.',
+        difficulty: 'Easy',
+        type: 'multiple_choice',
+        prompt: 'Which shape has 3 sides and 3 corners?',
+        options: ['Circle', 'Triangle', 'Square', 'Rectangle'],
+        correctIndex: 1,
+        points: 20
+      }
+    ] : isScience ? [
+      {
+        id: `DYN_${activity.id}_1`,
+        grade: activity.grade || 'Preschool',
+        subject: 'Science',
+        category: 'Living Things',
+        skill: 'Animal Habitats',
+        explanation: 'Fish live in water such as oceans and rivers.',
+        difficulty: 'Easy',
+        type: 'multiple_choice',
+        prompt: 'Where does a friendly clownfish swim and live?',
+        options: ['In the Desert', 'In the Ocean', 'In a Tree', 'In the Clouds'],
+        correctIndex: 1,
+        points: 20
+      },
+      {
+        id: `DYN_${activity.id}_2`,
+        grade: activity.grade || 'Preschool',
+        subject: 'Science',
+        category: 'Living Things',
+        skill: 'Plant Needs',
+        explanation: 'Plants use sunlight and water to grow!',
+        difficulty: 'Easy',
+        type: 'multiple_choice',
+        prompt: 'What do green plants need to grow big and strong?',
+        options: ['Candy & Soda', 'Sunlight & Water', 'Toys & Blocks', 'Bed & Pillow'],
+        correctIndex: 1,
+        points: 20
+      }
+    ] : [
+      {
+        id: `DYN_${activity.id}_1`,
+        grade: activity.grade || 'Preschool',
+        subject: 'English',
+        category: 'Phonics',
+        skill: 'Letter Sounds',
+        explanation: 'Apple begins with the letter A.',
+        difficulty: 'Easy',
+        type: 'multiple_choice',
+        prompt: 'Which letter does the word "Apple" 🍎 start with?',
+        options: ['Letter B', 'Letter A', 'Letter C', 'Letter D'],
+        correctIndex: 1,
+        points: 20
+      },
+      {
+        id: `DYN_${activity.id}_2`,
+        grade: activity.grade || 'Preschool',
+        subject: 'English',
+        category: 'Phonics',
+        skill: 'Rhyming Words',
+        explanation: 'Cat and Hat have the same ending sound: -at.',
+        difficulty: 'Easy',
+        type: 'multiple_choice',
+        prompt: 'Which word rhymes with "CAT" 🐱?',
+        options: ['DOG', 'HAT', 'SUN', 'CUP'],
+        correctIndex: 1,
+        points: 20
+      }
+    ];
+
+    matchedQuestions = dynamicQs;
   }
 
   return matchedQuestions.map((q, idx) => ({

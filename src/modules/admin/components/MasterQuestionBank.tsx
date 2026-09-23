@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BookOpen, ChevronRight, FolderPlus, HelpCircle, Layers3, Plus, Search, Trash2, X, Globe2, ToggleLeft, ToggleRight, Eye, Sparkles, Check, CheckSquare, Square, Filter, FileSpreadsheet, Send, ArrowRight, Edit3 } from 'lucide-react';
+import { BookOpen, ChevronRight, FolderPlus, HelpCircle, Layers3, Plus, Search, Trash2, X, Globe2, ToggleLeft, ToggleRight, Eye, Sparkles, Check, CheckSquare, Square, Filter, FileSpreadsheet, Send, ArrowRight, Edit3, AlertTriangle } from 'lucide-react';
 import { Question, CurriculumGrade, CurriculumSubject, QuestionType } from '../../../types';
 import QuestionBankModal from './QuestionBankModal';
 import QuestionPreviewModal from './QuestionPreviewModal';
 import QuestionEditModal from './QuestionEditModal';
 import { loadCurriculumMaster } from '../../../data/curriculumMasterData';
-import { CategoryMasterRecord, SkillMasterRecord, loadQuestionBankMasters, saveQuestionBankMasters } from '../../../data/questionBankMasterData';
+import { CategoryMasterRecord, SkillMasterRecord, QuestionBankMasterData, loadQuestionBankMasters, saveQuestionBankMasters } from '../../../data/questionBankMasterData';
 import { MASTER_CATEGORY_SKILL_CATALOG } from '../../../utils/questionExcelHelper';
 
 interface Props {
@@ -105,6 +105,8 @@ export default function MasterQuestionBank({
   const [showCreator, setShowCreator] = useState(false);
   const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [showSkillForm, setShowSkillForm] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<CategoryMasterRecord | null>(null);
+  const [skillToDelete, setSkillToDelete] = useState<SkillMasterRecord | null>(null);
   const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [newCategory, setNewCategory] = useState('');
@@ -346,6 +348,98 @@ export default function MasterQuestionBank({
     return { ...p, skills: nextSkills };
   });
 
+  // Calculate cascading impact for Category Deletion
+  const categoryDeletionImpact = useMemo(() => {
+    if (!categoryToDelete) return { skills: [], questions: [] };
+    const targetCatId = categoryToDelete.id;
+    const targetCatName = categoryToDelete.name.trim().toLowerCase();
+
+    // 1. Linked child skills
+    const linkedSkills = masters.skills.filter(s =>
+      s.categoryId === targetCatId ||
+      (categoryToDelete.gradeId && s.gradeId === categoryToDelete.gradeId && s.categoryId === targetCatId)
+    );
+    const linkedSkillIds = new Set(linkedSkills.map(s => s.id));
+    const linkedSkillNames = new Set(linkedSkills.map(s => s.name.trim().toLowerCase()));
+
+    // 2. Linked questions to be deleted
+    const linkedQuestions = questions.filter(q => {
+      const catMatch = q.categoryId === targetCatId || q.category?.trim().toLowerCase() === targetCatName;
+      const skillMatch = (q.skillId && linkedSkillIds.has(q.skillId)) || (q.skill && linkedSkillNames.has(q.skill.trim().toLowerCase()));
+      const gradeMatch = !q.gradeId || q.gradeId === categoryToDelete.gradeId || (selectedGrade && q.grade?.toLowerCase() === selectedGrade.name.toLowerCase());
+      return (catMatch || skillMatch) && gradeMatch;
+    });
+
+    return { skills: linkedSkills, questions: linkedQuestions };
+  }, [categoryToDelete, masters.skills, questions, selectedGrade]);
+
+  // Calculate cascading impact for Skill Deletion
+  const skillDeletionImpact = useMemo(() => {
+    if (!skillToDelete) return { questions: [] };
+    const targetSkillId = skillToDelete.id;
+    const targetSkillName = skillToDelete.name.trim().toLowerCase();
+
+    const linkedQuestions = questions.filter(q => {
+      const skillMatch = q.skillId === targetSkillId || q.skill?.trim().toLowerCase() === targetSkillName;
+      const gradeMatch = !q.gradeId || q.gradeId === skillToDelete.gradeId || (selectedGrade && q.grade?.toLowerCase() === selectedGrade.name.toLowerCase());
+      return skillMatch && gradeMatch;
+    });
+
+    return { questions: linkedQuestions };
+  }, [skillToDelete, questions, selectedGrade]);
+
+  // Execute Cascading Category Deletion
+  const handleConfirmDeleteCategory = () => {
+    if (!categoryToDelete) return;
+    const { skills: linkedSkills, questions: linkedQuestions } = categoryDeletionImpact;
+
+    // 1. Delete all cascading questions
+    if (onDeleteQuestion && linkedQuestions.length > 0) {
+      linkedQuestions.forEach(q => onDeleteQuestion(q.id));
+    }
+
+    // 2. Remove skills & category from master records
+    const skillIdsToRemove = new Set(linkedSkills.map(s => s.id));
+    const nextMasters: QuestionBankMasterData = {
+      categories: masters.categories.filter(c => c.id !== categoryToDelete.id),
+      skills: masters.skills.filter(s => s.categoryId !== categoryToDelete.id && !skillIdsToRemove.has(s.id))
+    };
+
+    setMasters(nextMasters);
+    saveQuestionBankMasters(nextMasters);
+    window.dispatchEvent(new CustomEvent('pforpencil_master_data_updated', { detail: { type: 'category_deleted', id: categoryToDelete.id } }));
+
+    onSuccessMessage?.(`Permanently deleted category "${categoryToDelete.name}", ${linkedSkills.length} skill(s), and ${linkedQuestions.length} question(s).`);
+    setCategoryToDelete(null);
+    setSelectedCategoryId(null);
+    setSelectedSkillId(null);
+  };
+
+  // Execute Cascading Skill Deletion
+  const handleConfirmDeleteSkill = () => {
+    if (!skillToDelete) return;
+    const { questions: linkedQuestions } = skillDeletionImpact;
+
+    // 1. Delete all linked questions
+    if (onDeleteQuestion && linkedQuestions.length > 0) {
+      linkedQuestions.forEach(q => onDeleteQuestion(q.id));
+    }
+
+    // 2. Remove skill from master records
+    const nextMasters: QuestionBankMasterData = {
+      categories: masters.categories,
+      skills: masters.skills.filter(s => s.id !== skillToDelete.id)
+    };
+
+    setMasters(nextMasters);
+    saveQuestionBankMasters(nextMasters);
+    window.dispatchEvent(new CustomEvent('pforpencil_master_data_updated', { detail: { type: 'skill_deleted', id: skillToDelete.id } }));
+
+    onSuccessMessage?.(`Permanently deleted skill "${skillToDelete.name}" and ${linkedQuestions.length} question(s).`);
+    setSkillToDelete(null);
+    setSelectedSkillId(null);
+  };
+
   const handleCountry = (id: string) => {
     setCountryId(id);
     const r = curriculumMaster.regions.find(x => x.active && x.countryId === id);
@@ -582,19 +676,31 @@ export default function MasterQuestionBank({
               </select>
 
               {selectedCategory && (
-                <button
-                  type="button"
-                  onClick={() => toggleCategory(selectedCategory.id)}
-                  title={selectedCategory.active ? 'Category is Active. Click to deactivate.' : 'Category is Inactive. Click to activate.'}
-                  className={`p-1.5 rounded-lg border text-xs font-bold flex items-center gap-1 shrink-0 cursor-pointer transition ${
-                    selectedCategory.active
-                      ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
-                      : 'border-amber-300 bg-amber-50 text-amber-800'
-                  }`}
-                >
-                  {selectedCategory.active ? <ToggleRight className="w-4 h-4 text-emerald-600" /> : <ToggleLeft className="w-4 h-4 text-amber-600" />}
-                  <span className="text-[10px]">{selectedCategory.active ? 'Active' : 'Inactive'}</span>
-                </button>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => toggleCategory(selectedCategory.id)}
+                    title={selectedCategory.active ? 'Category is Active. Click to deactivate.' : 'Category is Inactive. Click to activate.'}
+                    className={`p-1.5 rounded-lg border text-xs font-bold flex items-center gap-1 cursor-pointer transition ${
+                      selectedCategory.active
+                        ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                        : 'border-amber-300 bg-amber-50 text-amber-800'
+                    }`}
+                  >
+                    {selectedCategory.active ? <ToggleRight className="w-4 h-4 text-emerald-600" /> : <ToggleLeft className="w-4 h-4 text-amber-600" />}
+                    <span className="text-[10px]">{selectedCategory.active ? 'Active' : 'Inactive'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCategoryToDelete(selectedCategory)}
+                    title={`Delete category "${selectedCategory.name}" and all child skills and questions`}
+                    className="p-1.5 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 hover:border-red-300 text-red-700 text-xs font-bold flex items-center gap-1 cursor-pointer transition shadow-2xs"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                    <span className="text-[10px] hidden sm:inline">Delete</span>
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -635,19 +741,31 @@ export default function MasterQuestionBank({
               </select>
 
               {selectedSkill && (
-                <button
-                  type="button"
-                  onClick={() => toggleSkill(selectedSkill.id)}
-                  title={selectedSkill.active ? 'Skill is Active. Click to deactivate.' : 'Skill is Inactive. Click to activate.'}
-                  className={`p-1.5 rounded-lg border text-xs font-bold flex items-center gap-1 shrink-0 cursor-pointer transition ${
-                    selectedSkill.active
-                      ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
-                      : 'border-amber-300 bg-amber-50 text-amber-800'
-                  }`}
-                >
-                  {selectedSkill.active ? <ToggleRight className="w-4 h-4 text-emerald-600" /> : <ToggleLeft className="w-4 h-4 text-amber-600" />}
-                  <span className="text-[10px]">{selectedSkill.active ? 'Active' : 'Inactive'}</span>
-                </button>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => toggleSkill(selectedSkill.id)}
+                    title={selectedSkill.active ? 'Skill is Active. Click to deactivate.' : 'Skill is Inactive. Click to activate.'}
+                    className={`p-1.5 rounded-lg border text-xs font-bold flex items-center gap-1 shrink-0 cursor-pointer transition ${
+                      selectedSkill.active
+                        ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                        : 'border-amber-300 bg-amber-50 text-amber-800'
+                    }`}
+                  >
+                    {selectedSkill.active ? <ToggleRight className="w-4 h-4 text-emerald-600" /> : <ToggleLeft className="w-4 h-4 text-amber-600" />}
+                    <span className="text-[10px]">{selectedSkill.active ? 'Active' : 'Inactive'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSkillToDelete(selectedSkill)}
+                    title={`Delete skill "${selectedSkill.name}" and all linked questions`}
+                    className="p-1.5 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 hover:border-red-300 text-red-700 text-xs font-bold flex items-center gap-1 cursor-pointer transition shadow-2xs"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                    <span className="text-[10px] hidden sm:inline">Delete</span>
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -1082,6 +1200,135 @@ export default function MasterQuestionBank({
           setShowCreator(false);
         }}
       />
+
+      {/* Category Deletion Confirmation Modal */}
+      {categoryToDelete && (
+        <div className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-start gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-black text-[#10246f] text-base sm:text-lg">Delete Category & Contents?</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Grade: <strong>{selectedGrade?.name}</strong> · Subject: <strong>{selectedSubject?.name}</strong>
+                </p>
+              </div>
+              <button
+                onClick={() => setCategoryToDelete(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 bg-rose-50 rounded-2xl border border-rose-200 text-xs text-rose-950 space-y-2.5">
+              <p className="font-semibold">
+                Are you sure you want to permanently delete category <span className="underline font-black text-rose-700">"{categoryToDelete.name}"</span>?
+              </p>
+              <div className="bg-white rounded-xl p-3 space-y-1.5 text-[11px] text-slate-700 border border-rose-100 shadow-2xs">
+                <p className="font-bold text-slate-800 flex items-center gap-1.5">
+                  <span>💥 Cascading deletion impact:</span>
+                </p>
+                <p className="flex items-center gap-2 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                  <strong>{categoryDeletionImpact.skills.length}</strong> linked Skill(s)
+                  {categoryDeletionImpact.skills.length > 0 && (
+                    <span className="text-slate-500 truncate max-w-[200px]">({categoryDeletionImpact.skills.map(s => s.name).join(', ')})</span>
+                  )}
+                </p>
+                <p className="flex items-center gap-2 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                  <strong>{categoryDeletionImpact.questions.length}</strong> linked Question(s)
+                </p>
+              </div>
+              <p className="text-[11px] text-rose-600 font-bold flex items-center gap-1">
+                <span>⚠️</span> This action is permanent and cannot be undone.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setCategoryToDelete(null)}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteCategory}
+                className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md transition"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Yes, Delete Category & All Data</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Skill Deletion Confirmation Modal */}
+      {skillToDelete && (
+        <div className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-start gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-black text-[#10246f] text-base sm:text-lg">Delete Skill & Questions?</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Category: <strong>{selectedCategory?.name}</strong> · Grade: <strong>{selectedGrade?.name}</strong>
+                </p>
+              </div>
+              <button
+                onClick={() => setSkillToDelete(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 bg-rose-50 rounded-2xl border border-rose-200 text-xs text-rose-950 space-y-2.5">
+              <p className="font-semibold">
+                Are you sure you want to permanently delete skill <span className="underline font-black text-rose-700">"{skillToDelete.name}"</span>?
+              </p>
+              <div className="bg-white rounded-xl p-3 space-y-1.5 text-[11px] text-slate-700 border border-rose-100 shadow-2xs">
+                <p className="font-bold text-slate-800 flex items-center gap-1.5">
+                  <span>💥 Cascading deletion impact:</span>
+                </p>
+                <p className="flex items-center gap-2 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                  <strong>{skillDeletionImpact.questions.length}</strong> linked Question(s) will be permanently deleted.
+                </p>
+              </div>
+              <p className="text-[11px] text-rose-600 font-bold flex items-center gap-1">
+                <span>⚠️</span> This action is permanent and cannot be undone.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setSkillToDelete(null)}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteSkill}
+                className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md transition"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Yes, Delete Skill & Questions</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Check, Volume2, RotateCcw } from 'lucide-react';
 import { Question } from '../../types';
 import InteractiveQuestionCard from './InteractiveQuestionCard';
+import { ClipartText } from '../../common/ClipartRenderer';
 
 interface Props {
   question: Question;
@@ -29,6 +30,7 @@ export default function QuestionRenderer({
   const [userOrderedList, setUserOrderedList] = useState<string[]>([]);
   const [userBuckets, setUserBuckets] = useState<Record<string, string[]>>({});
   const [tappedObjectIds, setTappedObjectIds] = useState<string[]>([]);
+  const [multiSelected, setMultiSelected] = useState<number[]>([]);
 
   // Reset when question changes
   useEffect(() => {
@@ -45,6 +47,7 @@ export default function QuestionRenderer({
     setUserOrderedList(question.orderSequence ? [...question.orderSequence] : question.options ? [...question.options] : []);
     setUserBuckets({});
     setTappedObjectIds([]);
+    setMultiSelected([]);
   };
 
   const normalized = (v: string) => v.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -75,6 +78,10 @@ export default function QuestionRenderer({
         const userItems = userBuckets[b.bucketName] || [];
         return b.items.length === userItems.length && b.items.every((it) => userItems.includes(it));
       });
+    } else if (type === 'multiple_choice' && question.correctIndices && question.correctIndices.length > 0) {
+      const targetIndices = question.correctIndices.slice().sort((a, b) => a - b);
+      const userSorted = multiSelected.slice().sort((a, b) => a - b);
+      correct = targetIndices.length === userSorted.length && targetIndices.every((val, i) => val === userSorted[i]);
     } else {
       const answerIndex = idx !== undefined ? idx : selected;
       correct = answerIndex === question.correctIndex;
@@ -106,8 +113,11 @@ export default function QuestionRenderer({
     if (type === 'sorting') {
       return Object.values(userBuckets).some((arr) => arr.length > 0);
     }
+    if (type === 'multiple_choice') {
+      return multiSelected.length > 0 || selected !== null;
+    }
     return selected !== null;
-  }, [submitted, question.type, textAnswer, tappedObjectIds, userDragPlacements, userMatchPairs, userOrderedList, userBuckets, selected]);
+  }, [submitted, question.type, textAnswer, tappedObjectIds, userDragPlacements, userMatchPairs, userOrderedList, userBuckets, selected, multiSelected]);
 
   const readAloud = () => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -151,7 +161,7 @@ export default function QuestionRenderer({
         {/* Prompt Header */}
         <div className="flex items-start gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-stone-200">
           <h2 className="flex-1 text-lg sm:text-xl md:text-2xl font-black text-stone-900 leading-snug">
-            {question.prompt}
+            <ClipartText text={question.prompt} imageSize="md" />
           </h2>
           <button 
             type="button" 
@@ -168,9 +178,15 @@ export default function QuestionRenderer({
           question={question}
           isSubmitted={submitted}
           selectedOption={selected}
+          multiSelected={multiSelected}
+          onToggleMultiSelected={(idx) => {
+            setMultiSelected((prev) =>
+              prev.includes(idx) ? prev.filter((x) => x !== idx) : [...prev, idx]
+            );
+          }}
           onSelectOption={(idx) => {
             setSelected(idx);
-            if (['true_false', 'radio_single'].includes(question.type || '')) {
+            if (['true_false', 'radio_single', 'single_choice'].includes(question.type || '')) {
               check(idx);
             }
           }}
@@ -195,7 +211,7 @@ export default function QuestionRenderer({
         />
 
         {/* Action button */}
-        {interactive && !submitted && !['true_false', 'radio_single'].includes(question.type || '') && (
+        {interactive && !submitted && !['true_false', 'radio_single', 'single_choice'].includes(question.type || '') && (
           <div className="flex justify-center pt-2">
             <button 
               type="button" 

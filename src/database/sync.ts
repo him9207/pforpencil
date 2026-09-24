@@ -597,6 +597,25 @@ export async function syncSkillMastersBulkToSupabase(skills: SkillMasterRecord[]
 /**
  * 3j. Bulk Sync Questions to Supabase
  */
+export function serializeQuestionOptions(q: Question): string[] {
+  if (q.type === 'drag_and_drop' && q.dragItems && q.dragItems.length > 0) {
+    return q.dragItems.map(d => `${d.item} -> ${d.target}`);
+  }
+  if (q.type === 'match_making' && q.matchPairs && q.matchPairs.length > 0) {
+    return q.matchPairs.map(p => `${p.left} -> ${p.right}`);
+  }
+  if (q.type === 'sorting' && q.sortBuckets && q.sortBuckets.length > 0) {
+    return q.sortBuckets.map(b => `${b.bucketName}: ${b.items.join(', ')}`);
+  }
+  if (q.type === 'ordering' && q.orderSequence && q.orderSequence.length > 0) {
+    return q.orderSequence;
+  }
+  if ((q.type === 'open_box' || q.type === 'fill_blank') && q.openBoxAnswer) {
+    return [q.openBoxAnswer, ...(q.options || []).filter(o => o !== q.openBoxAnswer)];
+  }
+  return q.options && q.options.length > 0 ? q.options : [];
+}
+
 export async function syncQuestionsBulkToSupabase(questions: Question[]): Promise<SyncResult> {
   if (!isSupabaseConfigured()) return { success: false, message: 'Supabase not configured' };
   try {
@@ -608,7 +627,7 @@ export async function syncQuestionsBulkToSupabase(questions: Question[]): Promis
       skill: q.skill || q.category,
       question_type: q.type || 'multiple_choice',
       prompt: q.prompt,
-      options: q.options || [],
+      options: serializeQuestionOptions(q),
       correct_index: q.correctIndex || 0,
       explanation: q.explanation || null,
       hint: q.hint || null,
@@ -707,28 +726,88 @@ export async function fetchQuestionsFromSupabase(): Promise<{
       return { success: true, questions: [] };
     }
 
-    const mappedQuestions: Question[] = res.map((r: any) => ({
-      id: r.id,
-      grade: r.grade,
-      subject: r.subject,
-      category: r.category,
-      skill: r.skill || r.category,
-      type: r.question_type || 'multiple_choice',
-      prompt: r.prompt,
-      options: Array.isArray(r.options) ? r.options : typeof r.options === 'string' ? JSON.parse(r.options) : [],
-      correctIndex: typeof r.correct_index === 'number' ? r.correct_index : 0,
-      explanation: r.explanation || undefined,
-      hint: r.hint || undefined,
-      points: typeof r.points === 'number' ? r.points : 10,
-      difficulty: r.difficulty || 'Medium',
-      country: r.country || 'Global',
-      state: r.state || 'All States',
-      curriculum: r.curriculum || undefined,
-      mediaUrl: r.media_url || undefined,
-      visualClipart: r.visual_clipart || undefined,
-      schoolId: r.school_id || undefined,
-      status: (r.status === 'Draft' ? 'Draft' : r.status === 'Archived' ? 'Archived' : 'Published')
-    }));
+    const mappedQuestions: Question[] = res.map((r: any) => {
+      const optionsArr: string[] = Array.isArray(r.options)
+        ? r.options
+        : typeof r.options === 'string'
+        ? (function() {
+            try { return JSON.parse(r.options); } catch { return []; }
+          })()
+        : [];
+      const qType = r.question_type || 'multiple_choice';
+
+      let dragItems: any = undefined;
+      let matchPairs: any = undefined;
+      let orderSequence: any = undefined;
+      let sortBuckets: any = undefined;
+
+      if (qType === 'drag_and_drop' && optionsArr.length > 0) {
+        dragItems = optionsArr.map((opt, i) => {
+          let parts: string[] = [];
+          if (opt.includes('->')) parts = opt.split('->');
+          else if (opt.includes('→')) parts = opt.split('→');
+          else if (opt.includes('➔')) parts = opt.split('➔');
+          else if (opt.includes('=>')) parts = opt.split('=>');
+          else if (opt.includes(':')) parts = opt.split(':');
+          else if (opt.includes('=')) parts = opt.split('=');
+          else parts = [opt, `Target ${i + 1}`];
+          return { item: (parts[0] || '').trim(), target: (parts[1] || '').trim() || 'Target Zone' };
+        }).filter(d => Boolean(d.item));
+      } else if (qType === 'match_making' && optionsArr.length > 0) {
+        matchPairs = optionsArr.map((opt, i) => {
+          let parts: string[] = [];
+          if (opt.includes('->')) parts = opt.split('->');
+          else if (opt.includes('→')) parts = opt.split('→');
+          else if (opt.includes('➔')) parts = opt.split('➔');
+          else if (opt.includes('=>')) parts = opt.split('=>');
+          else if (opt.includes(':')) parts = opt.split(':');
+          else if (opt.includes('=')) parts = opt.split('=');
+          else parts = [opt, `Match ${i + 1}`];
+          return { left: (parts[0] || '').trim(), right: (parts[1] || '').trim() || `Match ${i + 1}` };
+        }).filter(p => Boolean(p.left));
+      } else if (qType === 'ordering' && optionsArr.length > 0) {
+        orderSequence = optionsArr;
+      } else if (qType === 'sorting' && optionsArr.length > 0) {
+        sortBuckets = optionsArr.map((opt) => {
+          let parts: string[] = [];
+          if (opt.includes(':')) parts = opt.split(':');
+          else if (opt.includes('->')) parts = opt.split('->');
+          else if (opt.includes('→')) parts = opt.split('→');
+          else if (opt.includes('=')) parts = opt.split('=');
+          else parts = [opt, ''];
+          const bucketName = (parts[0] || '').trim() || 'Bucket';
+          const items = parts[1] ? parts[1].split(',').map((x: string) => x.trim()).filter(Boolean) : [];
+          return { bucketName, items };
+        }).filter(b => b.items.length > 0);
+      }
+
+      return {
+        id: r.id,
+        grade: r.grade,
+        subject: r.subject,
+        category: r.category,
+        skill: r.skill || r.category,
+        type: qType,
+        prompt: r.prompt,
+        options: optionsArr,
+        correctIndex: typeof r.correct_index === 'number' ? r.correct_index : 0,
+        explanation: r.explanation || undefined,
+        hint: r.hint || undefined,
+        points: typeof r.points === 'number' ? r.points : 10,
+        difficulty: r.difficulty || 'Medium',
+        country: r.country || 'Global',
+        state: r.state || 'All States',
+        curriculum: r.curriculum || undefined,
+        mediaUrl: r.media_url || undefined,
+        visualClipart: r.visual_clipart || undefined,
+        schoolId: r.school_id || undefined,
+        status: (r.status === 'Draft' ? 'Draft' : r.status === 'Archived' ? 'Archived' : 'Published'),
+        dragItems,
+        matchPairs,
+        orderSequence,
+        sortBuckets
+      };
+    });
 
     return { success: true, questions: mappedQuestions };
   } catch (err: any) {
@@ -1650,7 +1729,7 @@ export async function seedInitialDataToSupabase(
     skill: q.skill || q.category,
     question_type: q.type || 'multiple_choice',
     prompt: q.prompt,
-    options: q.options || [],
+    options: serializeQuestionOptions(q),
     correct_index: q.correctIndex || 0,
     explanation: q.explanation || null,
     hint: q.hint || null,

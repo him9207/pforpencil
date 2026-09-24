@@ -15,6 +15,10 @@ const PORT = 3000;
 
 app.use(express.json());
 
+// Explicitly serve static assets from public folder
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/clipart', express.static(path.join(__dirname, 'public', 'clipart')));
+
 // Lazy-initialize Resend client
 function getResendClient(): Resend | null {
   const apiKey = process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY;

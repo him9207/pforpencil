@@ -761,20 +761,84 @@ export default function StudentPortal({
       const target = parseInt(currentQ.openBoxAnswer || currentQ.options[0] || '4', 10);
       isCorrect = tappedObjectIds.length === target;
     } else if (qType === 'drag_and_drop') {
-      const dragTargets = currentQ.dragItems || [];
-      isCorrect = dragTargets.length > 0 && dragTargets.every((d) => userDragPlacements[d.item] === d.target);
+      let dragTargets = currentQ.dragItems || [];
+      if (dragTargets.length === 0 && currentQ.options && currentQ.options.length > 0) {
+        dragTargets = currentQ.options
+          .map((opt, i) => {
+            let parts: string[] = [];
+            if (opt.includes('->')) parts = opt.split('->');
+            else if (opt.includes('→')) parts = opt.split('→');
+            else if (opt.includes('➔')) parts = opt.split('➔');
+            else if (opt.includes('=>')) parts = opt.split('=>');
+            else if (opt.includes(':')) parts = opt.split(':');
+            else if (opt.includes('=')) parts = opt.split('=');
+            else parts = [opt, `Target Zone ${i + 1}`];
+            return { item: (parts[0] || '').trim(), target: (parts[1] || '').trim() || 'Target Zone' };
+          })
+          .filter((d) => Boolean(d.item) && !d.item.toLowerCase().includes('completed'));
+      }
+      isCorrect =
+        dragTargets.length > 0 &&
+        dragTargets.every(
+          (d) => (userDragPlacements[d.item] || '').trim().toLowerCase() === d.target.trim().toLowerCase()
+        );
     } else if (qType === 'match_making') {
-      const expectedPairs = currentQ.matchPairs || [];
-      isCorrect = expectedPairs.length > 0 && expectedPairs.every((p) => userMatchPairs[p.left] === p.right);
+      let expectedPairs = currentQ.matchPairs || [];
+      if (expectedPairs.length === 0 && currentQ.options && currentQ.options.length > 0) {
+        expectedPairs = currentQ.options
+          .map((opt, i) => {
+            let parts: string[] = [];
+            if (opt.includes('->')) parts = opt.split('->');
+            else if (opt.includes('→')) parts = opt.split('→');
+            else if (opt.includes('➔')) parts = opt.split('➔');
+            else if (opt.includes('=>')) parts = opt.split('=>');
+            else if (opt.includes(':')) parts = opt.split(':');
+            else if (opt.includes('=')) parts = opt.split('=');
+            else parts = [opt, `Match ${i + 1}`];
+            return { left: (parts[0] || '').trim(), right: (parts[1] || '').trim() || `Match ${i + 1}` };
+          })
+          .filter((p) => Boolean(p.left) && !p.left.toLowerCase().includes('completed'));
+      }
+      isCorrect =
+        expectedPairs.length > 0 &&
+        expectedPairs.every(
+          (p) => (userMatchPairs[p.left] || '').trim().toLowerCase() === p.right.trim().toLowerCase()
+        );
     } else if (qType === 'ordering') {
-      const expectedOrder = currentQ.orderSequence || currentQ.options || [];
-      isCorrect = expectedOrder.length > 0 && userOrderedList.join(',') === expectedOrder.join(',');
+      const expectedOrder =
+        currentQ.orderSequence && currentQ.orderSequence.length > 0
+          ? currentQ.orderSequence
+          : currentQ.options || [];
+      isCorrect =
+        expectedOrder.length > 0 &&
+        userOrderedList.map((s) => s.trim().toLowerCase()).join(',') ===
+          expectedOrder.map((s) => s.trim().toLowerCase()).join(',');
     } else if (qType === 'sorting') {
-      const expectedBuckets = currentQ.sortBuckets || [];
-      isCorrect = expectedBuckets.length > 0 && expectedBuckets.every((b) => {
-        const userItems = userBuckets[b.bucketName] || [];
-        return b.items.length === userItems.length && b.items.every((it) => userItems.includes(it));
-      });
+      let expectedBuckets = currentQ.sortBuckets || [];
+      if (expectedBuckets.length === 0 && currentQ.options && currentQ.options.length > 0) {
+        expectedBuckets = currentQ.options
+          .map((opt, i) => {
+            let parts: string[] = [];
+            if (opt.includes(':')) parts = opt.split(':');
+            else if (opt.includes('->')) parts = opt.split('->');
+            else if (opt.includes('→')) parts = opt.split('→');
+            else if (opt.includes('=')) parts = opt.split('=');
+            else parts = [`Category ${i + 1}`, opt];
+            const bucketName = (parts[0] || '').trim() || `Category ${i + 1}`;
+            const items = parts[1] ? parts[1].split(',').map((x) => x.trim()).filter(Boolean) : [];
+            return { bucketName, items };
+          })
+          .filter((b) => b.items.length > 0 && !b.bucketName.toLowerCase().includes('completed'));
+      }
+      isCorrect =
+        expectedBuckets.length > 0 &&
+        expectedBuckets.every((b) => {
+          const userItems = userBuckets[b.bucketName] || [];
+          return (
+            b.items.length === userItems.length &&
+            b.items.every((it) => userItems.some((ui) => ui.trim().toLowerCase() === it.trim().toLowerCase()))
+          );
+        });
     } else {
       if (selectedOption === null) return;
       isCorrect = selectedOption === currentQ.correctIndex;
@@ -1440,11 +1504,11 @@ export default function StudentPortal({
 
                 {/* Media / Clipart Illustration if present */}
                 {currentQ.mediaUrl && (
-                  <div className="flex justify-center p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                  <div className="flex justify-center p-4 sm:p-6 bg-slate-50/80 rounded-3xl border border-slate-200 shadow-xs">
                     <img 
                       src={currentQ.mediaUrl} 
                       alt="Question Illustration" 
-                      className="max-h-48 rounded-xl object-contain shadow-2xs"
+                      className="max-h-64 sm:max-h-80 w-auto rounded-2xl object-contain shadow-2xs"
                     />
                   </div>
                 )}

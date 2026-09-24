@@ -489,14 +489,14 @@ export default function PForPencilHomePage({
 
                 {/* Multiple Choice Grid */}
                 <div className="grid grid-cols-2 gap-2.5">
-                  {activeDemo.options.map((option) => {
+                  {activeDemo.options.map((option, optIdx) => {
                     const isSelected = selectedDemoAnswer === option;
                     const isCorrect = isSelected && option === activeDemo.answer;
                     const isWrong = isSelected && option !== activeDemo.answer;
 
                     return (
                       <button
-                        key={option}
+                        key={`${option}-${optIdx}`}
                         onClick={() => handleSelectDemoOption(option)}
                         disabled={selectedDemoAnswer !== null}
                         className={`h-12 rounded-xl text-base sm:text-lg font-bold border transition-all cursor-pointer flex items-center justify-center ${

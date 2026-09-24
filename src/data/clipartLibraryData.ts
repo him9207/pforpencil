@@ -6,13 +6,14 @@ export interface ClipartItem {
   category: 'Fruits & Food' | 'Shapes & Geometry' | 'Animals & Nature' | 'Objects & School' | 'Numbers & Counters' | 'Vehicles & Transport';
   defaultAnimation: 'bounce' | 'pulse' | 'spin' | 'pop' | 'float';
   keywords: string[];
+  vectorPath?: string;
 }
 
 export const CLIPART_LIBRARY: ClipartItem[] = [
   // Fruits & Food
-  { id: 'apple', code: 'CLIP_APPLE', name: 'Red Apple', emoji: '🍎', category: 'Fruits & Food', defaultAnimation: 'bounce', keywords: ['apple', 'fruit', 'red'] },
-  { id: 'green_apple', code: 'CLIP_GREEN_APPLE', name: 'Green Apple', emoji: '🍏', category: 'Fruits & Food', defaultAnimation: 'bounce', keywords: ['green apple', 'fruit'] },
-  { id: 'banana', code: 'CLIP_BANANA', name: 'Yellow Banana', emoji: '🍌', category: 'Fruits & Food', defaultAnimation: 'bounce', keywords: ['banana', 'fruit', 'yellow'] },
+  { id: 'apple', code: 'CLIP_APPLE', name: 'Red Apple', emoji: '🍎', category: 'Fruits & Food', defaultAnimation: 'bounce', keywords: ['apple', 'fruit', 'red'], vectorPath: '/clipart/fruits/apple.svg' },
+  { id: 'green_apple', code: 'CLIP_GREEN_APPLE', name: 'Green Apple', emoji: '🍏', category: 'Fruits & Food', defaultAnimation: 'bounce', keywords: ['green apple', 'fruit'], vectorPath: '/clipart/fruits/apple.svg' },
+  { id: 'banana', code: 'CLIP_BANANA', name: 'Yellow Banana', emoji: '🍌', category: 'Fruits & Food', defaultAnimation: 'bounce', keywords: ['banana', 'fruit', 'yellow'], vectorPath: '/clipart/fruits/banana.svg' },
   { id: 'cookie', code: 'CLIP_COOKIE', name: 'Chocolate Cookie', emoji: '🍪', category: 'Fruits & Food', defaultAnimation: 'bounce', keywords: ['cookie', 'biscuit', 'snack'] },
   { id: 'strawberry', code: 'CLIP_STRAWBERRY', name: 'Sweet Strawberry', emoji: '🍓', category: 'Fruits & Food', defaultAnimation: 'bounce', keywords: ['strawberry', 'berry', 'fruit'] },
   { id: 'orange', code: 'CLIP_ORANGE', name: 'Juicy Orange', emoji: '🍊', category: 'Fruits & Food', defaultAnimation: 'bounce', keywords: ['orange', 'citrus', 'fruit'] },
@@ -21,11 +22,11 @@ export const CLIPART_LIBRARY: ClipartItem[] = [
   { id: 'cupcake', code: 'CLIP_CUPCAKE', name: 'Sweet Cupcake', emoji: '🧁', category: 'Fruits & Food', defaultAnimation: 'bounce', keywords: ['cupcake', 'cake', 'dessert'] },
   { id: 'pizza', code: 'CLIP_PIZZA', name: 'Pizza Slice', emoji: '🍕', category: 'Fruits & Food', defaultAnimation: 'bounce', keywords: ['pizza', 'fraction', 'slice'] },
   { id: 'icecream', code: 'CLIP_ICECREAM', name: 'Ice Cream Cone', emoji: '🍦', category: 'Fruits & Food', defaultAnimation: 'bounce', keywords: ['ice cream', 'cone', 'cold'] },
-  { id: 'carrot', code: 'CLIP_CARROT', name: 'Crunchy Carrot', emoji: '🥕', category: 'Fruits & Food', defaultAnimation: 'bounce', keywords: ['carrot', 'vegetable'] },
+  { id: 'carrot', code: 'CLIP_CARROT', name: 'Crunchy Carrot', emoji: '🥕', category: 'Fruits & Food', defaultAnimation: 'bounce', keywords: ['carrot', 'vegetable'], vectorPath: '/clipart/vegetables/carrot.svg' },
 
   // Shapes & Geometry
-  { id: 'star', code: 'CLIP_STAR', name: 'Golden Star', emoji: '⭐', category: 'Shapes & Geometry', defaultAnimation: 'pulse', keywords: ['star', 'yellow', 'gold', 'shape'] },
-  { id: 'sparkles', code: 'CLIP_SPARKLES', name: 'Glitter Sparkles', emoji: '✨', category: 'Shapes & Geometry', defaultAnimation: 'pulse', keywords: ['sparkle', 'shine', 'star'] },
+  { id: 'star', code: 'CLIP_STAR', name: 'Golden Star', emoji: '⭐', category: 'Shapes & Geometry', defaultAnimation: 'pulse', keywords: ['star', 'yellow', 'gold', 'shape'], vectorPath: '/clipart/shapes/star.svg' },
+  { id: 'sparkles', code: 'CLIP_SPARKLES', name: 'Glitter Sparkles', emoji: '✨', category: 'Shapes & Geometry', defaultAnimation: 'pulse', keywords: ['sparkle', 'shine', 'star'], vectorPath: '/clipart/shapes/star.svg' },
   { id: 'circle_red', code: 'CLIP_CIRCLE_RED', name: 'Red Circle', emoji: '🔴', category: 'Shapes & Geometry', defaultAnimation: 'pop', keywords: ['circle', 'red circle', 'round'] },
   { id: 'circle_blue', code: 'CLIP_CIRCLE_BLUE', name: 'Blue Circle', emoji: '🔵', category: 'Shapes & Geometry', defaultAnimation: 'pop', keywords: ['blue circle', 'round'] },
   { id: 'triangle', code: 'CLIP_TRIANGLE', name: 'Orange Triangle', emoji: '🔺', category: 'Shapes & Geometry', defaultAnimation: 'pop', keywords: ['triangle', 'delta', '3 sides'] },
@@ -35,8 +36,9 @@ export const CLIPART_LIBRARY: ClipartItem[] = [
   { id: 'heart', code: 'CLIP_HEART', name: 'Red Heart', emoji: '❤️', category: 'Shapes & Geometry', defaultAnimation: 'pulse', keywords: ['heart', 'love', 'red'] },
 
   // Animals & Nature
+  { id: 'monkey', code: 'CLIP_MONKEY', name: 'Playful Monkey', emoji: '🐒', category: 'Animals & Nature', defaultAnimation: 'bounce', keywords: ['monkey', 'ape', 'chimp'], vectorPath: '/clipart/animals/monkey.svg' },
+  { id: 'dog', code: 'CLIP_DOG', name: 'Puppy Dog', emoji: '🐶', category: 'Animals & Nature', defaultAnimation: 'bounce', keywords: ['dog', 'puppy', 'woof', 'pet'], vectorPath: '/clipart/animals/puppy.svg' },
   { id: 'cat', code: 'CLIP_CAT', name: 'Playful Kitten', emoji: '🐱', category: 'Animals & Nature', defaultAnimation: 'bounce', keywords: ['cat', 'kitten', 'meow', 'pet'] },
-  { id: 'dog', code: 'CLIP_DOG', name: 'Puppy Dog', emoji: '🐶', category: 'Animals & Nature', defaultAnimation: 'bounce', keywords: ['dog', 'puppy', 'woof', 'pet'] },
   { id: 'bunny', code: 'CLIP_BUNNY', name: 'Fluffy Bunny', emoji: '🐰', category: 'Animals & Nature', defaultAnimation: 'bounce', keywords: ['rabbit', 'bunny', 'hare'] },
   { id: 'bear', code: 'CLIP_BEAR', name: 'Teddy Bear', emoji: '🐻', category: 'Animals & Nature', defaultAnimation: 'bounce', keywords: ['bear', 'teddy'] },
   { id: 'duck', code: 'CLIP_DUCK', name: 'Yellow Duckling', emoji: '🦆', category: 'Animals & Nature', defaultAnimation: 'bounce', keywords: ['duck', 'bird', 'pond'] },
@@ -106,46 +108,53 @@ export function resolveClipartString(ref: string | undefined, count: number = 1)
   badge: string;
   animation: 'bounce' | 'pulse' | 'spin' | 'pop' | 'float';
   item?: ClipartItem;
+  imageUrl?: string;
 } {
   if (!ref || !ref.trim()) {
     return {
       emoji: '🍎',
       badge: '🍎',
-      animation: 'bounce'
+      animation: 'bounce',
+      imageUrl: '/clipart/fruits/apple.svg'
     };
   }
 
-  // Check if multiple references are pipe separated (e.g. apple|banana|star)
-  if (ref.includes('|')) {
-    const tokens = ref.split('|').map(t => t.trim()).filter(Boolean);
-    const resolvedTokens = tokens.map(t => {
+  const raw = ref.trim();
+  // Check if multiple references are pipe or comma separated (e.g. apple|banana|star or monkey, banana, banana)
+  if (raw.includes('|') || raw.includes(',')) {
+    const tokens = raw.split(/[,|]/).map(t => t.trim().replace(/^\[|\]$/g, '')).filter(Boolean);
+    const resolvedBadges = tokens.map(t => {
       const match = lookupClipart(t);
-      return match ? match.emoji : t;
+      return match ? (match.vectorPath || match.emoji) : t;
     });
+    const firstMatch = lookupClipart(tokens[0]);
     return {
-      emoji: resolvedTokens[0] || '🍎',
-      badge: resolvedTokens.join(' '),
-      animation: 'bounce'
+      emoji: firstMatch?.emoji || '🍎',
+      badge: resolvedBadges.join(', '),
+      animation: firstMatch?.defaultAnimation || 'bounce',
+      imageUrl: firstMatch?.vectorPath
     };
   }
 
-  const match = lookupClipart(ref);
+  const cleanRef = raw.replace(/^\[|\]$/g, '');
+  const match = lookupClipart(cleanRef);
+  const repeatCount = Math.max(1, Math.min(20, count || 1));
+
   if (match) {
-    const repeatCount = Math.max(1, Math.min(20, count || 1));
-    const badge = Array(repeatCount).fill(match.emoji).join(' ');
+    const targetRef = match.vectorPath || match.emoji;
+    const badge = Array(repeatCount).fill(targetRef).join(', ');
     return {
       emoji: match.emoji,
       badge,
       animation: match.defaultAnimation,
-      item: match
+      item: match,
+      imageUrl: match.vectorPath
     };
   }
 
   // Fallback: If it's raw text/emoji
-  const repeatCount = Math.max(1, Math.min(20, count || 1));
-  const cleanRef = ref.trim();
   const isEmoji = /\p{Extended_Pictographic}/u.test(cleanRef);
-  const badge = isEmoji ? Array(repeatCount).fill(cleanRef).join(' ') : cleanRef;
+  const badge = Array(repeatCount).fill(cleanRef).join(isEmoji ? ' ' : ', ');
 
   return {
     emoji: cleanRef,

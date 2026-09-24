@@ -33,13 +33,15 @@ import {
   Lock,
   Unlock,
   Building2,
-  Globe
+  Globe,
+  FileSpreadsheet
 } from 'lucide-react';
 import { sounds } from '../../utils/audio';
 import { getNextQuestionId } from '../../utils/idAndUsernameGenerator';
 import { COUNTRIES, COUNTRY_STATE_MAP, COUNTRY_CURRICULUM_MAP } from '../../data/curriculumData';
 import { loadQuestionBankMasters } from '../../data/questionBankMasterData';
 import QuestionBankModal from '../admin/components/QuestionBankModal';
+import QuestionEditModal from '../admin/components/QuestionEditModal';
 import InteractiveActivityModal from '../admin/components/InteractiveActivityModal';
 
 interface ContentManagerPortalProps {
@@ -99,27 +101,9 @@ export default function ContentManagerPortal({
   const [showQuestionBankModal, setShowQuestionBankModal] = useState(false);
   const [showInteractiveActivityModal, setShowInteractiveActivityModal] = useState(false);
 
-  // Edit Question Modal State
-  const [showEditQuestionModal, setShowEditQuestionModal] = useState(false);
-  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
-  const [formCountry, setFormCountry] = useState<string>('India');
-  const [formState, setFormState] = useState<string>('Central / All India');
-  const [formCurriculum, setFormCurriculum] = useState<string>('CBSE');
-  const [formSubject, setFormSubject] = useState<Subject>('Mathematics');
-  const [formGrade, setFormGrade] = useState<GradeLevel>('Grade 3');
-  const [formCategory, setFormCategory] = useState('Numbers & Operations');
-  const [formSkill, setFormSkill] = useState('Multiplication');
-  const [formPrompt, setFormPrompt] = useState('');
-  const [formClipart, setFormClipart] = useState('');
-  const [opt0, setOpt0] = useState('');
-  const [opt1, setOpt1] = useState('');
-  const [opt2, setOpt2] = useState('');
-  const [opt3, setOpt3] = useState('');
-  const [correctIdx, setCorrectIdx] = useState(0);
-  const [formExplanation, setFormExplanation] = useState('');
-  const [formHint, setFormHint] = useState('');
-  const [formPoints, setFormPoints] = useState(25);
-  const [formDifficulty, setFormDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>('Easy');
+  // Master Standardized Question Editor State (Unifies Create, Edit, and Bulk Load across all 12 types)
+  const [isCreatingQuestion, setIsCreatingQuestion] = useState(false);
+  const [selectedEditQuestion, setSelectedEditQuestion] = useState<Question | null>(null);
 
   // Edit Activity Modal State
   const [showEditActivityModal, setShowEditActivityModal] = useState(false);
@@ -169,63 +153,6 @@ export default function ContentManagerPortal({
 
     return matchesType && matchesGrade && matchesSubject && matchesSearch;
   });
-
-  const handleOpenEditQuestion = (q: Question) => {
-    sounds.click();
-    setEditingQuestionId(q.id);
-    setFormCountry(q.country || 'India');
-    setFormState(q.state || 'Central / All India');
-    setFormCurriculum(q.curriculum || 'CBSE');
-    setFormSubject(q.subject);
-    setFormGrade(q.grade);
-    setFormCategory(q.category);
-    setFormSkill(q.skill);
-    setFormPrompt(q.prompt);
-    setFormClipart(q.visualClipart || '');
-    setOpt0(q.options[0] || '');
-    setOpt1(q.options[1] || '');
-    setOpt2(q.options[2] || '');
-    setOpt3(q.options[3] || '');
-    setCorrectIdx(q.correctIndex);
-    setFormExplanation(q.explanation || '');
-    setFormHint(q.hint || '');
-    setFormPoints(q.points);
-    setFormDifficulty(q.difficulty);
-    setShowEditQuestionModal(true);
-  };
-
-  const handleSaveEditQuestion = (e: FormEvent) => {
-    e.preventDefault();
-    if (!formPrompt.trim() || !opt0.trim() || !opt1.trim() || !editingQuestionId) return;
-
-    const updatedQuestion: Question = {
-      id: editingQuestionId,
-      country: formCountry,
-      state: formState,
-      curriculum: formCurriculum,
-      subject: formSubject,
-      grade: formGrade,
-      category: formCategory.trim() || 'Numbers & Operations',
-      skill: formSkill.trim() || 'Core Skills',
-      difficulty: formDifficulty,
-      points: Number(formPoints) || 20,
-      prompt: formPrompt.trim(),
-      visualClipart: formClipart.trim() || undefined,
-      options: [opt0.trim(), opt1.trim(), opt2.trim(), opt3.trim()].filter(Boolean),
-      correctIndex: correctIdx,
-      explanation: formExplanation.trim() || 'Correct answer verified.',
-      hint: formHint.trim() || undefined,
-      type: 'multiple_choice'
-    };
-
-    sounds.playCorrect();
-    if (onEditQuestion) {
-      onEditQuestion(updatedQuestion);
-    }
-    setShowEditQuestionModal(false);
-    setNotification(`Updated question ${editingQuestionId} successfully!`);
-    setTimeout(() => setNotification(''), 4000);
-  };
 
   const handleOpenEditActivity = (act: Activity) => {
     sounds.click();
@@ -332,16 +259,30 @@ export default function ContentManagerPortal({
           </div>
 
           {activeTab === 'questions' ? (
-            <button
-              onClick={() => {
-                sounds.click();
-                setShowQuestionBankModal(true);
-              }}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 text-xs font-black transition-all shadow-xs cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>New Question</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  sounds.click();
+                  setShowQuestionBankModal(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                title="Bulk load questions via Excel workbook / CSV or generate batch drills"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                <span>Bulk Load (Excel / CSV)</span>
+              </button>
+              <button
+                onClick={() => {
+                  sounds.click();
+                  setIsCreatingQuestion(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 text-xs font-black transition-all shadow-xs cursor-pointer"
+                title="Create a new question using the Master Question Editor"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ New Question</span>
+              </button>
+            </div>
           ) : (
             <button
               onClick={() => {
@@ -573,7 +514,10 @@ export default function ContentManagerPortal({
 
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={() => handleOpenEditQuestion(q)}
+                      onClick={() => {
+                        sounds.click();
+                        setSelectedEditQuestion(q);
+                      }}
                       className="px-2.5 py-1 rounded-lg text-xs font-bold text-stone-700 hover:bg-stone-100 cursor-pointer transition flex items-center gap-1"
                     >
                       <Edit3 className="w-3 h-3" />
@@ -849,233 +793,45 @@ export default function ContentManagerPortal({
       />
 
       {/* ========================================================================= */}
-      {/* MODAL 1: EDIT QUESTION MODAL (MODERN THEME) */}
+      {/* MASTER STANDARDIZED QUESTION EDITOR: CREATE NEW QUESTION */}
       {/* ========================================================================= */}
-      {showEditQuestionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-xl w-full p-6 space-y-4 text-xs my-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-stone-100">
-              <h3 className="text-base font-black text-stone-900 flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-blue-600" />
-                <span>Edit Question: {editingQuestionId}</span>
-              </h3>
-              <button 
-                onClick={() => setShowEditQuestionModal(false)} 
-                className="text-stone-400 hover:text-stone-900 cursor-pointer p-1"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      {isCreatingQuestion && (
+        <QuestionEditModal
+          isOpen={isCreatingQuestion}
+          mode="create"
+          question={null}
+          onClose={() => setIsCreatingQuestion(false)}
+          onSave={(newQ) => {
+            onAddQuestion(newQ);
+            setNotification(`Created question ${newQ.id} successfully!`);
+            setTimeout(() => setNotification(''), 4000);
+            setIsCreatingQuestion(false);
+          }}
+          availableGrades={activeCurriculumGrades}
+          availableSubjects={allSubjects}
+          existingQuestions={questions}
+        />
+      )}
 
-            <form onSubmit={handleSaveEditQuestion} className="space-y-3.5">
-              {/* Regional Jurisdiction Selection */}
-              <div className="p-3 bg-stone-50 border border-stone-200 rounded-2xl space-y-2">
-                <div className="text-[10px] font-bold text-stone-500 uppercase flex items-center gap-1">
-                  <Globe className="w-3 h-3 text-blue-600" />
-                  <span>Curriculum Jurisdiction & Region</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <div>
-                    <label className="block text-[9px] font-bold text-stone-500 mb-0.5">Country</label>
-                    <select
-                      value={formCountry}
-                      onChange={(e) => {
-                        const newC = e.target.value;
-                        setFormCountry(newC);
-                        const states = COUNTRY_STATE_MAP[newC] || ['All Regions'];
-                        setFormState(states[0] || 'All Regions');
-                        const currs = COUNTRY_CURRICULUM_MAP[newC] || ['Standard / Global'];
-                        setFormCurriculum(currs[0] || 'Standard / Global');
-                      }}
-                      className="w-full p-1.5 rounded-xl border border-stone-200 bg-white font-bold text-xs"
-                    >
-                      {COUNTRIES.map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[9px] font-bold text-stone-500 mb-0.5">State / Region</label>
-                    <select
-                      value={formState}
-                      onChange={(e) => setFormState(e.target.value)}
-                      className="w-full p-1.5 rounded-xl border border-stone-200 bg-white font-bold text-xs"
-                    >
-                      {(COUNTRY_STATE_MAP[formCountry] || ['All Regions']).map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[9px] font-bold text-stone-500 mb-0.5">Curriculum</label>
-                    <select
-                      value={formCurriculum}
-                      onChange={(e) => setFormCurriculum(e.target.value)}
-                      className="w-full p-1.5 rounded-xl border border-stone-200 bg-white font-bold text-xs"
-                    >
-                      {(COUNTRY_CURRICULUM_MAP[formCountry] || ['Standard / Global']).map((curr) => (
-                        <option key={curr} value={curr}>{curr}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold text-stone-600 uppercase mb-1">Subject</label>
-                  <select
-                    value={formSubject}
-                    onChange={(e) => setFormSubject(e.target.value as Subject)}
-                    className="w-full p-2 rounded-xl border border-stone-200 text-xs font-bold"
-                  >
-                    {allSubjects.map(sub => (
-                      <option key={sub} value={sub}>{sub}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-stone-600 uppercase mb-1">Grade Level</label>
-                  <select
-                    value={formGrade}
-                    onChange={(e) => setFormGrade(e.target.value as GradeLevel)}
-                    className="w-full p-2 rounded-xl border border-stone-200 text-xs font-bold"
-                  >
-                    {activeCurriculumGrades.map(g => (
-                      <option key={g} value={g}>{g}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold text-stone-600 uppercase mb-1">Category / Domain</label>
-                  <input
-                    type="text"
-                    value={formCategory}
-                    onChange={(e) => setFormCategory(e.target.value)}
-                    className="w-full p-2 rounded-xl border border-stone-200 text-xs"
-                    placeholder="e.g. Numbers & Operations"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-stone-600 uppercase mb-1">Skill Specific Standard</label>
-                  <input
-                    type="text"
-                    value={formSkill}
-                    onChange={(e) => setFormSkill(e.target.value)}
-                    className="w-full p-2 rounded-xl border border-stone-200 text-xs"
-                    placeholder="e.g. Multiplication Mastery"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-stone-600 uppercase mb-1">Question Prompt</label>
-                <textarea
-                  value={formPrompt}
-                  onChange={(e) => setFormPrompt(e.target.value)}
-                  rows={2}
-                  className="w-full p-2 rounded-xl border border-stone-200 text-xs font-medium"
-                  placeholder="Enter clear, kid-friendly question instructions..."
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-stone-600 uppercase mb-1">
-                  Visual Clipart / Icons (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={formClipart}
-                  onChange={(e) => setFormClipart(e.target.value)}
-                  className="w-full p-2 rounded-xl border border-stone-200 text-xs"
-                  placeholder="e.g. 🍎 🍎 🍎 + 🍎 🍎"
-                />
-              </div>
-
-              {/* 4 Choices */}
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-stone-600 uppercase">
-                  Multiple Choice Options & Select Correct
-                </label>
-                {[
-                  { val: opt0, set: setOpt0, idx: 0, label: 'Option A' },
-                  { val: opt1, set: setOpt1, idx: 1, label: 'Option B' },
-                  { val: opt2, set: setOpt2, idx: 2, label: 'Option C' },
-                  { val: opt3, set: setOpt3, idx: 3, label: 'Option D' },
-                ].map((item) => (
-                  <div key={item.idx} className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="correctChoice"
-                      checked={correctIdx === item.idx}
-                      onChange={() => setCorrectIdx(item.idx)}
-                      className="cursor-pointer"
-                    />
-                    <span className="font-mono font-bold text-stone-400 w-16">{item.label}:</span>
-                    <input
-                      type="text"
-                      value={item.val}
-                      onChange={(e) => item.set(e.target.value)}
-                      placeholder={`Enter choice text for ${item.label}`}
-                      className="flex-1 p-2 rounded-xl border border-stone-200 text-xs"
-                      required
-                    />
-                  </div>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold text-stone-600 uppercase mb-1">Difficulty</label>
-                  <select
-                    value={formDifficulty}
-                    onChange={(e) => setFormDifficulty(e.target.value as any)}
-                    className="w-full p-2 rounded-xl border border-stone-200 text-xs"
-                  >
-                    <option value="Easy">Easy</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Hard">Hard</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-stone-600 uppercase mb-1">XP Points Value</label>
-                  <input
-                    type="number"
-                    value={formPoints}
-                    onChange={(e) => setFormPoints(Number(e.target.value))}
-                    className="w-full p-2 rounded-xl border border-stone-200 text-xs"
-                    min={5}
-                    max={100}
-                  />
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-stone-100 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowEditQuestionModal(false)}
-                  className="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 font-black cursor-pointer shadow-xs"
-                >
-                  Save Question Changes
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {/* ========================================================================= */}
+      {/* MASTER STANDARDIZED QUESTION EDITOR: EDIT EXISTING QUESTION (100% IDENTICAL) */}
+      {/* ========================================================================= */}
+      {selectedEditQuestion && (
+        <QuestionEditModal
+          isOpen={Boolean(selectedEditQuestion)}
+          mode="edit"
+          question={selectedEditQuestion}
+          onClose={() => setSelectedEditQuestion(null)}
+          onSave={(updatedQ) => {
+            if (onEditQuestion) onEditQuestion(updatedQ);
+            setNotification(`Updated question ${updatedQ.id} successfully!`);
+            setTimeout(() => setNotification(''), 4000);
+            setSelectedEditQuestion(null);
+          }}
+          availableGrades={activeCurriculumGrades}
+          availableSubjects={allSubjects}
+          existingQuestions={questions}
+        />
       )}
 
       {/* ========================================================================= */}

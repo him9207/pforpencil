@@ -561,8 +561,27 @@ export function getCompleteSupabaseSeedSql(
     lines.push('-- 5. Question Bank Seed Data');
     lines.push('INSERT INTO questions (id, grade, subject, category, skill, question_type, prompt, options, correct_index, explanation, hint, points, difficulty, country, state, curriculum, media_url, visual_clipart, school_id, status)');
     lines.push('VALUES');
+    const getNormalizedOptions = (q: Question) => {
+      if (q.type === 'drag_and_drop' && q.dragItems && q.dragItems.length > 0) {
+        return q.dragItems.map(d => `${d.item} -> ${d.target}`);
+      }
+      if (q.type === 'match_making' && q.matchPairs && q.matchPairs.length > 0) {
+        return q.matchPairs.map(p => `${p.left} -> ${p.right}`);
+      }
+      if (q.type === 'sorting' && q.sortBuckets && q.sortBuckets.length > 0) {
+        return q.sortBuckets.map(b => `${b.bucketName}: ${b.items.join(', ')}`);
+      }
+      if (q.type === 'ordering' && q.orderSequence && q.orderSequence.length > 0) {
+        return q.orderSequence;
+      }
+      if ((q.type === 'open_box' || q.type === 'fill_blank') && q.openBoxAnswer) {
+        return [q.openBoxAnswer, ...(q.options || []).filter(o => o !== q.openBoxAnswer)];
+      }
+      return q.options || [];
+    };
+
     const questionVals = questions.map(q => 
-      `  (${sqlStr(q.id)}, ${sqlStr(q.grade)}, ${sqlStr(q.subject)}, ${sqlStr(q.category)}, ${sqlStr(q.skill || q.category)}, ${sqlStr(q.type || 'multiple_choice')}, ${sqlStr(q.prompt)}, ${sqlJson(q.options || [])}, ${sqlNum(q.correctIndex, 0)}, ${sqlStr(q.explanation || null)}, ${sqlStr(q.hint || null)}, ${sqlNum(q.points, 10)}, ${sqlStr(q.difficulty || 'Medium')}, ${sqlStr(q.country || 'Global')}, ${sqlStr(q.state || 'All States')}, ${sqlStr(q.curriculum || null)}, ${sqlStr(q.mediaUrl || null)}, ${sqlStr(q.visualClipart || null)}, ${sqlStr(q.schoolId || null)}, ${sqlStr(q.status || 'approved')})`
+      `  (${sqlStr(q.id)}, ${sqlStr(q.grade)}, ${sqlStr(q.subject)}, ${sqlStr(q.category)}, ${sqlStr(q.skill || q.category)}, ${sqlStr(q.type || 'multiple_choice')}, ${sqlStr(q.prompt)}, ${sqlJson(getNormalizedOptions(q))}, ${sqlNum(q.correctIndex, 0)}, ${sqlStr(q.explanation || null)}, ${sqlStr(q.hint || null)}, ${sqlNum(q.points, 10)}, ${sqlStr(q.difficulty || 'Medium')}, ${sqlStr(q.country || 'Global')}, ${sqlStr(q.state || 'All States')}, ${sqlStr(q.curriculum || null)}, ${sqlStr(q.mediaUrl || null)}, ${sqlStr(q.visualClipart || null)}, ${sqlStr(q.schoolId || null)}, ${sqlStr(q.status || 'approved')})`
     );
     lines.push(questionVals.join(',\n') + '\nON CONFLICT (id) DO UPDATE SET prompt = EXCLUDED.prompt, options = EXCLUDED.options, correct_index = EXCLUDED.correct_index, explanation = EXCLUDED.explanation, points = EXCLUDED.points, difficulty = EXCLUDED.difficulty, country = EXCLUDED.country, state = EXCLUDED.state, curriculum = EXCLUDED.curriculum;\n');
   }

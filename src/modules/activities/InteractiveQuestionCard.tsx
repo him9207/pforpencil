@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { Question } from '../../types';
 import { fixMojibake, resolveVisualEmoji } from '../../utils/visualUtils';
+import { resolveClipartItem, resolveMultipleClipartItems, parseOptionClipart } from '../../data/clipartRegistry';
+import { ClipartImage, ClipartText } from '../../common/ClipartRenderer';
 
 export interface InteractiveQuestionCardProps {
   question: Question;
@@ -37,6 +39,9 @@ export interface InteractiveQuestionCardProps {
   // For tap to count
   tappedObjectIds: string[];
   onToggleTapObject: (id: string) => void;
+  // For multiple choice multi-select
+  multiSelected?: number[];
+  onToggleMultiSelected?: (idx: number) => void;
   // Helper
   onReadAloud?: (text: string) => void;
   // Compact / preview mode
@@ -60,6 +65,8 @@ export default function InteractiveQuestionCard({
   onUpdateBuckets,
   tappedObjectIds,
   onToggleTapObject,
+  multiSelected = [],
+  onToggleMultiSelected,
   onReadAloud,
   compact = false
 }: InteractiveQuestionCardProps) {
@@ -349,6 +356,16 @@ export default function InteractiveQuestionCard({
     };
   }, [activeDrag, isSubmitted]);
 
+  // Reset state when question changes
+  useEffect(() => {
+    setSelectedDragItem(null);
+    setSelectedMatchLeft(null);
+    setSelectedSortItem(null);
+    setSelectedOrderIdx(null);
+    setActiveDrag(null);
+    setHoveredDropId(null);
+  }, [question.id]);
+
   // -------------------------------------------------------------
   // 1. SELECT OBJECTS (TAP TO COUNT)
   // -------------------------------------------------------------
@@ -356,55 +373,130 @@ export default function InteractiveQuestionCard({
     if (question.visualConfig?.objects?.length) {
       return question.visualConfig.objects.flatMap((o) =>
         Array.from({ length: Math.max(1, o.count || 1) }, (_, i) => {
-          const raw = o.emoji || o.label || '🍎';
+          const raw = o.emoji || o.label || '⭐';
           const resolved = resolveVisualEmoji(raw);
           return {
             id: `${o.id}-${i}`,
             label: resolved.label,
-            emoji: resolved.emoji
+            emoji: resolved.emoji,
+            imageUrl: resolved.imageUrl || o.imageUrl
           };
         })
       );
     }
-    const fixedClips = fixMojibake(question.visualClipart || '🍎 🍎 🍎 🍎 🍎 🍎');
-    const clips = fixedClips.split(/\s+/).filter(Boolean);
-    return clips.map((item, i) => {
-      const resolved = resolveVisualEmoji(item);
-      return {
-        id: `clip-${i}`,
-        label: resolved.label,
-        emoji: resolved.emoji
-      };
-    });
+    const fixedClips = fixMojibake(question.visualClipart || '');
+    if (fixedClips.trim()) {
+      const multiResolved = resolveMultipleClipartItems(fixedClips);
+      if (multiResolved && multiResolved.length > 0) {
+        return multiResolved.map((res, i) => ({
+          id: `clip-${i}`,
+          label: res.alt || 'Object',
+          emoji: res.emoji || '⭐',
+          imageUrl: res.src || res.fallbackSrc
+        }));
+      }
+      const clips = fixedClips.split(/\s+/).filter(Boolean);
+      return clips.map((item, i) => {
+        const resolved = resolveVisualEmoji(item);
+        return {
+          id: `clip-${i}`,
+          label: resolved.label,
+          emoji: resolved.emoji,
+          imageUrl: resolved.imageUrl
+        };
+      });
+    }
+
+    // No visual objects or clipart configured - do not generate unwanted default stars
+    return [];
   }, [question]);
 
   // -------------------------------------------------------------
   // 2. MATCH MAKING PAIRS
   // -------------------------------------------------------------
   const matchPairsConfig = useMemo(() => {
-    return question.matchPairs || [
-      { left: '🐒 Monkey', right: '🍌 Banana' },
-      { left: '🐰 Bunny', right: '🥕 Carrot' },
-      { left: '🐶 Puppy', right: '🦴 Bone' }
+    if (question.matchPairs && question.matchPairs.length > 0) {
+      return question.matchPairs;
+    }
+    if (question.options && question.options.length > 0) {
+      const parsed = question.options
+        .map((opt, i) => {
+          if (!opt) return null;
+          let parts: string[] = [];
+          if (opt.includes('->')) parts = opt.split('->');
+          else if (opt.includes('→')) parts = opt.split('→');
+          else if (opt.includes('➔')) parts = opt.split('➔');
+          else if (opt.includes('=>')) parts = opt.split('=>');
+          else if (opt.includes(':')) parts = opt.split(':');
+          else if (opt.includes('=')) parts = opt.split('=');
+          else parts = [opt, `Match ${i + 1}`];
+
+          const left = (parts[0] || '').trim();
+          const right = (parts[1] || '').trim() || `Match ${i + 1}`;
+          return left ? { left, right } : null;
+        })
+        .filter((p): p is { left: string; right: string } => Boolean(p));
+
+      const validParsed = parsed.filter(p => !p.left.toLowerCase().includes('completed'));
+      if (validParsed.length > 0) return validParsed;
+    }
+    return [
+      { left: 'Item A', right: 'Match A' },
+      { left: 'Item B', right: 'Match B' }
     ];
-  }, [question.matchPairs]);
+  }, [question.matchPairs, question.options]);
 
   const leftItems = useMemo(() => matchPairsConfig.map((p) => p.left), [matchPairsConfig]);
   const rightItems = useMemo(() => {
-    // Return deterministic right options
-    return [...matchPairsConfig.map((p) => p.right)].sort();
+    // Return unique deterministic right targets
+    const unique = Array.from(new Set(matchPairsConfig.map((p) => p.right)));
+    return unique.sort();
   }, [matchPairsConfig]);
 
   // -------------------------------------------------------------
   // 3. DRAG & DROP ITEMS
   // -------------------------------------------------------------
   const dragItemsConfig = useMemo(() => {
-    return question.dragItems || [
-      { item: '🐱 Kitten', target: '🐈 Mama Cat' },
-      { item: '🦁 Cub', target: '🦁 Mama Lion' },
-      { item: '🐥 Chick', target: '🐔 Mama Hen' }
+    if (question.dragItems && question.dragItems.length > 0) {
+      return question.dragItems;
+    }
+    if (question.options && question.options.length > 0) {
+      const parsed = question.options
+        .map((opt, i) => {
+          if (!opt) return null;
+          let parts: string[] = [];
+          if (opt.includes('->')) parts = opt.split('->');
+          else if (opt.includes('→')) parts = opt.split('→');
+          else if (opt.includes('➔')) parts = opt.split('➔');
+          else if (opt.includes('=>')) parts = opt.split('=>');
+          else if (opt.includes(':')) parts = opt.split(':');
+          else if (opt.includes('=')) parts = opt.split('=');
+          else parts = [opt, `Target Zone ${i + 1}`];
+
+          const item = (parts[0] || '').trim();
+          const target = (parts[1] || '').trim() || 'Target Zone';
+          return item ? { item, target } : null;
+        })
+        .filter((d): d is { item: string; target: string } => Boolean(d));
+
+      const validParsed = parsed.filter(d => !d.item.toLowerCase().includes('completed'));
+      if (validParsed.length > 0) return validParsed;
+    }
+    return [
+      { item: 'Item 1', target: 'Target Zone A' },
+      { item: 'Item 2', target: 'Target Zone B' }
     ];
-  }, [question.dragItems]);
+  }, [question.dragItems, question.options]);
+
+  const uniqueDragTargets = useMemo(() => {
+    const list: string[] = [];
+    dragItemsConfig.forEach((d) => {
+      if (d.target && !list.includes(d.target)) {
+        list.push(d.target);
+      }
+    });
+    return list.length > 0 ? list : ['Target Zone'];
+  }, [dragItemsConfig]);
 
   const unplacedDragItems = useMemo(() => {
     return dragItemsConfig.filter((d) => !userDragPlacements[d.item]);
@@ -428,11 +520,36 @@ export default function InteractiveQuestionCard({
   // 5. SORTING BUCKETS
   // -------------------------------------------------------------
   const sortBucketsConfig = useMemo(() => {
-    return question.sortBuckets || [
-      { bucketName: '🧺 Fruit Basket', items: ['🍎 Apple', '🍌 Banana', '🍓 Berry'] },
-      { bucketName: '🧸 Toy Box', items: ['🚗 Toy Car', '⚽ Ball', '🎈 Balloon'] }
+    if (question.sortBuckets && question.sortBuckets.length > 0) {
+      return question.sortBuckets;
+    }
+    if (question.options && question.options.length > 0) {
+      const parsed = question.options
+        .map((opt, i) => {
+          if (!opt) return null;
+          let parts: string[] = [];
+          if (opt.includes(':')) parts = opt.split(':');
+          else if (opt.includes('->')) parts = opt.split('->');
+          else if (opt.includes('→')) parts = opt.split('→');
+          else if (opt.includes('=')) parts = opt.split('=');
+          else parts = [`Category ${i + 1}`, opt];
+
+          const bucketName = (parts[0] || '').trim() || `Category ${i + 1}`;
+          const items = parts[1]
+            ? parts[1].split(',').map((x) => x.trim()).filter(Boolean)
+            : [];
+          return items.length > 0 ? { bucketName, items } : null;
+        })
+        .filter((b): b is { bucketName: string; items: string[] } => Boolean(b));
+
+      const validParsed = parsed.filter(b => !b.bucketName.toLowerCase().includes('completed'));
+      if (validParsed.length > 0) return validParsed;
+    }
+    return [
+      { bucketName: 'Category A', items: ['Item 1', 'Item 2'] },
+      { bucketName: 'Category B', items: ['Item 3', 'Item 4'] }
     ];
-  }, [question.sortBuckets]);
+  }, [question.sortBuckets, question.options]);
 
   const allSortItems = useMemo(() => {
     return sortBucketsConfig.flatMap((b) => b.items);
@@ -449,32 +566,43 @@ export default function InteractiveQuestionCard({
   // -------------------------------------------------------------
   return (
     <div className="w-full space-y-5">
-      {/* Question Visual Clipart & Context Banner (if available) */}
-      {(question.visualConfig?.visualInstructions || question.visualClipart) && (
+      {/* Question Visual Instructions Banner - ONLY shown if author explicitly typed visual instructions and not already shown in arena */}
+      {type !== 'select_objects' && Boolean(question.visualConfig?.visualInstructions?.trim()) && (
         <div className="flex flex-wrap items-center justify-between gap-2.5 p-3 rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50/50 to-amber-50 border border-amber-200/80 shadow-2xs">
-          {question.visualConfig?.visualInstructions ? (
-            <div className="inline-flex items-center gap-2 text-amber-900 font-black text-xs sm:text-sm">
-              <Sparkles className="w-4 h-4 text-amber-600 animate-spin shrink-0" />
-              <span>{question.visualConfig.visualInstructions}</span>
-            </div>
-          ) : (
-            <div className="inline-flex items-center gap-1.5 text-amber-950 font-bold text-xs sm:text-sm">
-              <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
-              <span>{question.skill || question.category || 'PforPencil Learning Activity'}</span>
-            </div>
-          )}
-
-          {question.visualClipart && (
-            <div className={`text-xl sm:text-2xl px-3 py-1 bg-white/90 rounded-xl border border-amber-200/60 shadow-2xs tracking-wider select-none font-bold ${
-              question.visualConfig?.animation === 'bounce' ? 'animate-bounce' :
-              question.visualConfig?.animation === 'pulse' ? 'animate-pulse' :
-              question.visualConfig?.animation === 'spin' ? 'animate-spin' : ''
-            }`}>
-              {fixMojibake(question.visualClipart)}
-            </div>
-          )}
+          <div className="inline-flex items-center gap-2 text-amber-900 font-bold text-xs sm:text-sm">
+            <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>{question.visualConfig!.visualInstructions}</span>
+          </div>
         </div>
       )}
+
+      {/* Prominent Visual Clipart Illustration Showcase - only for non-select_objects questions (for select_objects, the items are the interactive buttons in the arena below) */}
+      {type !== 'select_objects' && question.visualClipart && (() => {
+        let items = resolveMultipleClipartItems(question.visualClipart);
+        if (items.length === 0) {
+          const single = resolveClipartItem(question.visualClipart);
+          if (single) items = [single];
+        }
+
+        const anim = (question.visualConfig?.animation || 'bounce') as any;
+
+        return (
+          <div className="w-full max-w-xl mx-auto my-2 text-center animate-in zoom-in-95 duration-200">
+            <div className="inline-flex flex-wrap items-center justify-center gap-2.5 sm:gap-4 py-3 px-5 sm:px-7 bg-gradient-to-b from-amber-50/70 via-white to-orange-50/40 rounded-3xl border-2 border-amber-200/90 shadow-2xs">
+              {items.map((item, idx) => (
+                <div key={item.id || idx} className="flex items-center justify-center p-1">
+                  <ClipartImage
+                    clipart={item}
+                    size="sm"
+                    className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-2xs"
+                    animation={anim}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* -------------------------------------------------------------
           TYPE: SELECT_OBJECTS (TAP TO COUNT)
@@ -482,17 +610,30 @@ export default function InteractiveQuestionCard({
       {type === 'select_objects' && (
         <div className="w-full max-w-xl mx-auto space-y-4">
           <div className="p-4 sm:p-6 rounded-3xl bg-gradient-to-br from-amber-50/80 via-white to-orange-50/60 border-2 border-amber-200/80 shadow-sm text-center">
-            <div className="text-xs sm:text-sm font-black text-amber-900 uppercase tracking-wider mb-2">
-              🍎 Interactive Harvest Orchard
-            </div>
+            {Boolean(question.visualConfig?.visualInstructions?.trim()) && (
+              <div className="text-xs sm:text-sm font-black text-amber-900 uppercase tracking-wider mb-2">
+                🎯 {question.visualConfig!.visualInstructions}
+              </div>
+            )}
             <p className="text-xs sm:text-sm text-stone-600 mb-4 font-bold">
-              Tap the items below to count them into your basket!
+              Tap the items below to count and select them!
             </p>
 
-            <div className="flex flex-wrap justify-center gap-3 sm:gap-4 py-2">
+            {visualObjects.length === 0 ? (
+              <div className="py-6 px-4 text-center rounded-2xl bg-amber-50/50 border-2 border-dashed border-amber-200 my-2">
+                <p className="text-xs font-bold text-stone-600">
+                  No visual objects configured yet.
+                </p>
+                <p className="text-[11px] text-stone-400 mt-1">
+                  Attach clipart from the Clipart Directory to display tap-to-count items.
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-wrap justify-center gap-3.5 sm:gap-5 py-3">
               {visualObjects.map((obj, idx) => {
                 const isTapped = tappedObjectIds.includes(obj.id);
                 const tapOrderIndex = tappedObjectIds.indexOf(obj.id) + 1;
+                const resolvedClipart = resolveClipartItem(obj.imageUrl || obj.emoji || obj.label);
 
                 return (
                   <button
@@ -504,19 +645,41 @@ export default function InteractiveQuestionCard({
                       playPop();
                       onToggleTapObject(obj.id);
                     }}
-                    className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-4xl sm:text-5xl transition-all duration-200 cursor-pointer shadow-xs active:scale-95 ${
+                    className={`relative w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-3xl flex items-center justify-center p-3 transition-all duration-200 cursor-pointer shadow-xs active:scale-95 ${
                       isTapped
-                        ? 'bg-amber-100/90 border-3 border-amber-500 scale-105 shadow-md -translate-y-1'
+                        ? 'bg-amber-100/90 border-4 border-amber-500 scale-105 shadow-md -translate-y-1'
                         : 'bg-white border-2 border-stone-200 hover:border-amber-300 hover:scale-105'
                     }`}
                   >
-                    <span className={`select-none ${
-                      question.visualConfig?.animation === 'pulse' ? 'animate-pulse' :
-                      question.visualConfig?.animation === 'spin' ? 'animate-spin' :
-                      question.visualConfig?.animation === 'none' ? '' : 'animate-bounce'
-                    }`}>{obj.emoji}</span>
+                    {resolvedClipart && resolvedClipart.isImage ? (
+                      <img
+                        src={resolvedClipart.src}
+                        alt={resolvedClipart.alt || obj.label}
+                        className={`w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain select-none pointer-events-none drop-shadow-xs ${
+                          question.visualConfig?.animation === 'pulse' ? 'animate-pulse' :
+                          question.visualConfig?.animation === 'spin' ? 'animate-spin' :
+                          question.visualConfig?.animation === 'none' ? '' : 'animate-bounce'
+                        }`}
+                      />
+                    ) : obj.imageUrl ? (
+                      <img
+                        src={obj.imageUrl}
+                        alt={obj.label}
+                        className={`w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain select-none pointer-events-none drop-shadow-xs ${
+                          question.visualConfig?.animation === 'pulse' ? 'animate-pulse' :
+                          question.visualConfig?.animation === 'spin' ? 'animate-spin' :
+                          question.visualConfig?.animation === 'none' ? '' : 'animate-bounce'
+                        }`}
+                      />
+                    ) : (
+                      <span className={`text-5xl sm:text-6xl md:text-7xl select-none ${
+                        question.visualConfig?.animation === 'pulse' ? 'animate-pulse' :
+                        question.visualConfig?.animation === 'spin' ? 'animate-spin' :
+                        question.visualConfig?.animation === 'none' ? '' : 'animate-bounce'
+                      }`}>{obj.emoji}</span>
+                    )}
                     {isTapped && (
-                      <span className="absolute -top-2.5 -right-2.5 w-7 h-7 rounded-full bg-emerald-500 text-white font-black text-xs flex items-center justify-center shadow-sm border-2 border-white animate-in zoom-in">
+                      <span className="absolute -top-2.5 -right-2.5 w-8 h-8 rounded-full bg-emerald-500 text-white font-black text-sm flex items-center justify-center shadow-sm border-2 border-white animate-in zoom-in">
                         {tapOrderIndex}
                       </span>
                     )}
@@ -524,6 +687,7 @@ export default function InteractiveQuestionCard({
                 );
               })}
             </div>
+            )}
 
             <div className="mt-5 pt-3 border-t border-amber-200/60 flex items-center justify-between px-3">
               <span className="text-xs sm:text-sm font-black text-stone-700">
@@ -586,13 +750,13 @@ export default function InteractiveQuestionCard({
                   <CheckCircle2 className="w-4 h-4" /> All items have been placed in their targets!
                 </div>
               ) : (
-                unplacedDragItems.map((d) => {
+                unplacedDragItems.map((d, dIdx) => {
                   const isSelected = selectedDragItem === d.item;
                   const isCurrentlyDragged = activeDrag?.isDragging && activeDrag.itemId === d.item;
 
                   return (
                     <button
-                      key={d.item}
+                      key={`drag-unplaced-${d.item}-${dIdx}`}
                       type="button"
                       disabled={isSubmitted}
                       draggable={!isSubmitted}
@@ -610,7 +774,7 @@ export default function InteractiveQuestionCard({
                       }`}
                     >
                       <Move className="w-3.5 h-3.5 text-stone-400 shrink-0" />
-                      <span>{d.item}</span>
+                      <ClipartText text={d.item} imageSize="sm" />
                     </button>
                   );
                 })
@@ -619,24 +783,25 @@ export default function InteractiveQuestionCard({
           </div>
 
           {/* Target Zones */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {dragItemsConfig.map((d) => {
-              const placed = Object.entries(userDragPlacements).find(([_, target]) => target === d.target);
-              const placedItem = placed ? placed[0] : null;
-              const isHoveredTarget = activeDrag?.isDragging && hoveredDropId === d.target;
+          <div className={`grid grid-cols-1 ${uniqueDragTargets.length === 2 ? 'sm:grid-cols-2' : uniqueDragTargets.length >= 3 ? 'sm:grid-cols-3' : ''} gap-3`}>
+            {uniqueDragTargets.map((targetName, tIdx) => {
+              const placedItems = Object.entries(userDragPlacements)
+                .filter(([_, target]) => target === targetName)
+                .map(([item]) => item);
+              const isHoveredTarget = activeDrag?.isDragging && hoveredDropId === targetName;
               const isDragActive = activeDrag?.isDragging && activeDrag.type === 'drag_and_drop';
 
               return (
                 <div
-                  key={d.target}
-                  data-drop-zone-id={d.target}
+                  key={`drag-target-${targetName}-${tIdx}`}
+                  data-drop-zone-id={targetName}
                   onDragOver={(e) => {
                     e.preventDefault();
                     e.dataTransfer.dropEffect = 'move';
-                    setHoveredDropId(d.target);
+                    setHoveredDropId(targetName);
                   }}
                   onDragLeave={() => {
-                    if (hoveredDropId === d.target) setHoveredDropId(null);
+                    if (hoveredDropId === targetName) setHoveredDropId(null);
                   }}
                   onDrop={(e) => {
                     e.preventDefault();
@@ -644,20 +809,20 @@ export default function InteractiveQuestionCard({
                     try {
                       const data = JSON.parse(e.dataTransfer.getData('text/plain'));
                       if (data?.type === 'drag_and_drop') {
-                        executeDrop('drag_and_drop', data.itemId, d.target);
+                        executeDrop('drag_and_drop', data.itemId, targetName);
                       }
                     } catch {}
                   }}
                   onClick={() => {
                     if (isSubmitted) return;
                     if (selectedDragItem) {
-                      executeDrop('drag_and_drop', selectedDragItem, d.target);
+                      executeDrop('drag_and_drop', selectedDragItem, targetName);
                     }
                   }}
                   className={`p-4 rounded-3xl border-3 transition-all flex flex-col items-center justify-between min-h-36 text-center cursor-pointer ${
                     isHoveredTarget
                       ? 'bg-sky-100 border-sky-500 ring-4 ring-sky-400 scale-[1.03] shadow-lg'
-                      : placedItem
+                      : placedItems.length > 0
                       ? 'bg-emerald-50/80 border-emerald-400 shadow-sm'
                       : isDragActive
                       ? 'bg-sky-50/60 border-sky-400 border-dashed animate-pulse'
@@ -667,41 +832,46 @@ export default function InteractiveQuestionCard({
                   }`}
                 >
                   <div className="font-black text-sm sm:text-base text-stone-900 mb-2">
-                    {d.target}
+                    <ClipartText text={targetName} imageSize="sm" />
                   </div>
 
-                  {placedItem ? (
-                    <div 
-                      onPointerDown={(e) => {
-                        e.stopPropagation();
-                        startPointerDrag(e, 'drag_and_drop', placedItem, { sourceTarget: d.target });
-                      }}
-                      draggable={!isSubmitted}
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'drag_and_drop', itemId: placedItem }));
-                      }}
-                      className="w-full flex items-center justify-between px-2.5 py-2 rounded-2xl bg-white border-2 border-emerald-400 text-emerald-950 font-black text-xs sm:text-sm shadow-xs cursor-grab active:cursor-grabbing touch-none select-none"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <Move className="w-3 h-3 text-emerald-500 shrink-0" />
-                        <span>{placedItem}</span>
-                      </div>
-                      {!isSubmitted && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
+                  {placedItems.length > 0 ? (
+                    <div className="w-full flex flex-col gap-2">
+                      {placedItems.map((placedItem, pIdx) => (
+                        <div 
+                          key={`placed-${placedItem}-${pIdx}`}
+                          onPointerDown={(e) => {
                             e.stopPropagation();
-                            playPop();
-                            const next = { ...userDragPlacements };
-                            delete next[placedItem];
-                            onUpdateDragPlacements(next);
+                            startPointerDrag(e, 'drag_and_drop', placedItem, { sourceTarget: targetName });
                           }}
-                          className="w-5 h-5 rounded-full hover:bg-rose-100 text-stone-400 hover:text-rose-600 flex items-center justify-center cursor-pointer"
-                          title="Remove"
+                          draggable={!isSubmitted}
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'drag_and_drop', itemId: placedItem }));
+                          }}
+                          className="w-full flex items-center justify-between px-2.5 py-2 rounded-2xl bg-white border-2 border-emerald-400 text-emerald-950 font-black text-xs sm:text-sm shadow-xs cursor-grab active:cursor-grabbing touch-none select-none"
                         >
-                          ✕
-                        </button>
-                      )}
+                          <div className="flex items-center gap-1.5">
+                            <Move className="w-3 h-3 text-emerald-500 shrink-0" />
+                            <ClipartText text={placedItem} imageSize="sm" />
+                          </div>
+                          {!isSubmitted && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                playPop();
+                                const next = { ...userDragPlacements };
+                                delete next[placedItem];
+                                onUpdateDragPlacements(next);
+                              }}
+                              className="w-5 h-5 rounded-full hover:bg-rose-100 text-stone-400 hover:text-rose-600 flex items-center justify-center cursor-pointer"
+                              title="Remove"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   ) : isHoveredTarget ? (
                     <div className="text-xs font-black text-sky-900 bg-sky-200/90 py-2 px-3 rounded-xl animate-bounce border border-sky-300">
@@ -739,16 +909,16 @@ export default function InteractiveQuestionCard({
             {/* Left Column */}
             <div className="space-y-2.5">
               <div className="text-xs font-black text-stone-500 uppercase tracking-wider text-center">
-                Animals / Items
+                Items to Match
               </div>
-              {leftItems.map((left) => {
+              {leftItems.map((left, lIdx) => {
                 const matchedRight = userMatchPairs[left];
                 const isSelected = selectedMatchLeft === left;
                 const isCurrentlyDragged = activeDrag?.isDragging && activeDrag.itemId === left;
 
                 return (
                   <button
-                    key={left}
+                    key={`left-match-${left}-${lIdx}`}
                     type="button"
                     disabled={isSubmitted}
                     draggable={!isSubmitted}
@@ -769,7 +939,7 @@ export default function InteractiveQuestionCard({
                   >
                     <div className="flex items-center gap-1.5">
                       <Move className="w-3 h-3 text-stone-400 shrink-0" />
-                      <span>{left}</span>
+                      <ClipartText text={left} imageSize="sm" />
                     </div>
                     {matchedRight && (
                       <span className="w-5 h-5 rounded-full bg-emerald-500 text-white text-[10px] font-black flex items-center justify-center">
@@ -784,15 +954,16 @@ export default function InteractiveQuestionCard({
             {/* Right Column (Drop Targets) */}
             <div className="space-y-2.5">
               <div className="text-xs font-black text-stone-500 uppercase tracking-wider text-center">
-                Favorite Foods / Matches
+                Matching Pairs
               </div>
-              {rightItems.map((right) => {
-                const matchedLeft = Object.entries(userMatchPairs).find(([_, r]) => r === right)?.[0];
+              {rightItems.map((right, rIdx) => {
+                const matchedLefts = Object.entries(userMatchPairs).filter(([_, r]) => r === right).map(([l]) => l);
+                const hasMatch = matchedLefts.length > 0;
                 const isHoveredTarget = activeDrag?.isDragging && hoveredDropId === right;
 
                 return (
                   <button
-                    key={right}
+                    key={`right-target-${right}-${rIdx}`}
                     type="button"
                     data-drop-zone-id={right}
                     disabled={isSubmitted}
@@ -821,21 +992,21 @@ export default function InteractiveQuestionCard({
                     className={`w-full p-3 sm:p-4 rounded-2xl border-2 text-left font-black text-xs sm:text-sm transition-all cursor-pointer shadow-xs flex items-center justify-between ${
                       isHoveredTarget
                         ? 'bg-purple-100 border-purple-500 ring-4 ring-purple-300 scale-102 shadow-md'
-                        : matchedLeft
+                        : hasMatch
                         ? 'bg-emerald-50 border-emerald-400 text-emerald-950'
                         : selectedMatchLeft || activeDrag?.isDragging
                         ? 'bg-purple-50/60 border-purple-300 hover:bg-purple-100 text-purple-900 border-dashed'
                         : 'bg-white border-stone-200 text-stone-700 opacity-70'
                     }`}
                   >
-                    <span>{right}</span>
+                    <ClipartText text={right} imageSize="sm" />
                     {isHoveredTarget ? (
                       <span className="text-[10px] font-black text-purple-800 bg-purple-200 px-2 py-0.5 rounded-md animate-pulse">
                         Drop to match!
                       </span>
-                    ) : matchedLeft ? (
+                    ) : hasMatch ? (
                       <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-md">
-                        Paired
+                        {matchedLefts.length > 1 ? `${matchedLefts.length} Paired` : 'Paired'}
                       </span>
                     ) : null}
                   </button>
@@ -847,12 +1018,16 @@ export default function InteractiveQuestionCard({
           {/* Formed Matches Summary */}
           {Object.keys(userMatchPairs).length > 0 && (
             <div className="p-3 rounded-2xl bg-stone-50 border border-stone-200 flex flex-wrap gap-2 items-center justify-center">
-              {Object.entries(userMatchPairs).map(([l, r]) => (
+              {Object.entries(userMatchPairs).map(([l, r], idx) => (
                 <div
-                  key={l}
+                  key={`match-pair-${l}-${idx}`}
                   className="px-3 py-1 rounded-xl bg-white border border-stone-300 text-xs font-bold text-stone-800 flex items-center gap-2 shadow-2xs"
                 >
-                  <span>{l} ➔ {r}</span>
+                  <div className="flex items-center gap-1.5">
+                    <ClipartText text={l} imageSize="xs" />
+                    <span className="text-purple-400 font-bold">➔</span>
+                    <ClipartText text={r} imageSize="xs" />
+                  </div>
                   {!isSubmitted && (
                     <button
                       type="button"
@@ -940,7 +1115,7 @@ export default function InteractiveQuestionCard({
                     onPointerDown={(e) => startPointerDrag(e, 'ordering', item, { idx })}
                     className="text-2xl sm:text-3xl font-black text-stone-900 py-2 cursor-grab active:cursor-grabbing touch-none select-none flex items-center gap-1"
                   >
-                    <span>{item}</span>
+                    <ClipartText text={item} imageSize="md" />
                   </button>
 
                   {!isSubmitted && (
@@ -1035,13 +1210,13 @@ export default function InteractiveQuestionCard({
                   <CheckCircle2 className="w-4 h-4" /> All items have been placed into baskets!
                 </div>
               ) : (
-                unplacedSortItems.map((item) => {
+                unplacedSortItems.map((item, sIdx) => {
                   const isSelected = selectedSortItem === item;
                   const isCurrentlyDragged = activeDrag?.isDragging && activeDrag.itemId === item;
 
                   return (
                     <button
-                      key={item}
+                      key={`sort-unplaced-${item}-${sIdx}`}
                       type="button"
                       disabled={isSubmitted}
                       draggable={!isSubmitted}
@@ -1059,7 +1234,7 @@ export default function InteractiveQuestionCard({
                       }`}
                     >
                       <Move className="w-3.5 h-3.5 text-stone-400 shrink-0" />
-                      <span>{item}</span>
+                      <ClipartText text={item} imageSize="sm" />
                     </button>
                   );
                 })
@@ -1069,14 +1244,14 @@ export default function InteractiveQuestionCard({
 
           {/* Buckets */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {sortBucketsConfig.map((bucket) => {
+            {sortBucketsConfig.map((bucket, bIdx) => {
               const bucketItems = userBuckets[bucket.bucketName] || [];
               const isHoveredTarget = activeDrag?.isDragging && hoveredDropId === bucket.bucketName;
               const isDragActive = activeDrag?.isDragging && activeDrag.type === 'sorting';
 
               return (
                 <div
-                  key={bucket.bucketName}
+                  key={`sort-bucket-${bucket.bucketName}-${bIdx}`}
                   data-drop-zone-id={bucket.bucketName}
                   onDragOver={(e) => {
                     e.preventDefault();
@@ -1115,7 +1290,7 @@ export default function InteractiveQuestionCard({
                   <div>
                     <div className="font-black text-base sm:text-lg text-stone-900 mb-2 pb-2 border-b border-stone-200 flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
-                        <span>{bucket.bucketName}</span>
+                        <ClipartText text={bucket.bucketName} imageSize="sm" />
                       </div>
                       <span className="text-xs font-bold text-stone-500 bg-stone-100 px-2 py-0.5 rounded-full">
                         {bucketItems.length} items
@@ -1128,9 +1303,9 @@ export default function InteractiveQuestionCard({
                           Basket is currently empty. Drop items here!
                         </div>
                       ) : (
-                        bucketItems.map((item) => (
+                        bucketItems.map((item, iIdx) => (
                           <div
-                            key={item}
+                            key={`bucket-item-${item}-${iIdx}`}
                             draggable={!isSubmitted}
                             onDragStart={(e) => {
                               e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'sorting', itemId: item, sourceBucket: bucket.bucketName }));
@@ -1142,7 +1317,7 @@ export default function InteractiveQuestionCard({
                             className="px-3 py-1.5 rounded-xl bg-stone-100 border border-stone-300 text-xs font-black text-stone-800 flex items-center gap-2 shadow-2xs cursor-grab active:cursor-grabbing touch-none select-none hover:border-amber-400"
                           >
                             <Move className="w-3 h-3 text-stone-400 shrink-0" />
-                            <span>{item}</span>
+                            <ClipartText text={item} imageSize="xs" />
                             {!isSubmitted && (
                               <button
                                 type="button"
@@ -1192,7 +1367,7 @@ export default function InteractiveQuestionCard({
         <div className="w-full max-w-xl mx-auto space-y-4">
           {/* If the prompt has a blank/fill-in placeholder or math equation, show the focused formula box */}
           {(question.prompt.includes('__') || question.prompt.includes('...') || question.prompt.includes('=')) ? (
-            <div className="bg-amber-50/80 border-2 border-amber-300 rounded-2xl p-3.5 sm:p-4.5 flex flex-wrap items-center justify-center gap-2.5 text-lg sm:text-xl font-black text-stone-900 shadow-2xs">
+            <div className="bg-amber-50/80 border-2 border-amber-300 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-center gap-2.5 text-lg sm:text-xl font-black text-stone-900 shadow-2xs">
               <span className="leading-snug text-center">
                 {question.prompt.includes('__') ? (
                   question.prompt.split('__')[0]
@@ -1206,11 +1381,12 @@ export default function InteractiveQuestionCard({
               <input
                 id="fill-blank-input"
                 type="text"
+                autoComplete="off"
                 disabled={isSubmitted}
                 value={openBoxInput}
                 onChange={(e) => onChangeOpenBoxInput(e.target.value)}
                 placeholder="?"
-                className="w-24 sm:w-32 text-center text-xl sm:text-2xl font-black tracking-wider py-1 px-3 rounded-xl border-3 border-amber-500 focus:outline-none focus:ring-3 focus:ring-amber-300 bg-white text-stone-900 shadow-inner"
+                className="w-28 sm:w-36 text-center text-xl sm:text-2xl font-black tracking-wider py-1.5 px-3 rounded-xl border-3 border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-300 bg-white text-stone-900 shadow-inner"
               />
               {question.prompt.includes('__') && question.prompt.split('__')[1] && (
                 <span>{question.prompt.split('__')[1]}</span>
@@ -1219,76 +1395,28 @@ export default function InteractiveQuestionCard({
                 <span>{question.prompt.split('...')[1]}</span>
               )}
             </div>
-          ) : (!question.options || question.options.length <= 1) ? (
-            <div className="bg-amber-50/60 border border-amber-200 rounded-2xl p-4 text-center space-y-2">
-              <label htmlFor="fill-blank-input" className="block text-xs font-bold text-amber-800 uppercase tracking-wider">
-                Type your answer below:
+          ) : (
+            <div className="bg-amber-50/60 border-2 border-amber-300 rounded-3xl p-5 sm:p-6 text-center space-y-3">
+              <label htmlFor="fill-blank-input" className="block text-xs sm:text-sm font-black text-amber-900 uppercase tracking-wider">
+                ✍️ Type your answer in the box below:
               </label>
-              <input
-                id="fill-blank-input"
-                type="text"
-                disabled={isSubmitted}
-                value={openBoxInput}
-                onChange={(e) => onChangeOpenBoxInput(e.target.value)}
-                placeholder="Enter answer here..."
-                className="w-full max-w-sm mx-auto text-center text-xl font-bold py-2.5 px-4 rounded-xl border-2 border-amber-400 focus:outline-none focus:ring-3 focus:ring-amber-200 bg-white text-stone-900 shadow-xs"
-              />
-            </div>
-          ) : null}
-
-          {/* Quick-Select Options below (if options are provided) */}
-          {question.options && question.options.length > 1 && (
-            <div className="space-y-2">
-              <div className="text-xs font-bold text-stone-500 uppercase tracking-wider text-center">
-                Select your answer:
-              </div>
-              <div className={`grid gap-2.5 ${question.options.length > 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2'}`}>
-                {question.options.map((opt, oIdx) => {
-                  const isSelected = (selectedOption === oIdx) || (openBoxInput.trim().toLowerCase() === opt.trim().toLowerCase() && openBoxInput.trim() !== '');
-                  const targetAnswer = (question.openBoxAnswer || question.options[question.correctIndex] || question.options[0] || '').trim().toLowerCase();
-                  const isTarget = opt.trim().toLowerCase() === targetAnswer;
-
-                  let optClass = 'bg-white border-2 border-stone-200 hover:border-amber-400 hover:bg-amber-50/60 text-stone-800';
-                  if (isSubmitted) {
-                    if (isTarget) {
-                      optClass = 'bg-emerald-50 border-2 border-emerald-500 text-emerald-950 font-black ring-4 ring-emerald-300/50 shadow-md';
-                    } else if (isSelected && !isTarget) {
-                      optClass = 'bg-rose-50 border-2 border-rose-400 text-rose-900';
-                    } else {
-                      optClass = 'bg-stone-50 border-2 border-stone-200 text-stone-400 opacity-50';
-                    }
-                  } else if (isSelected) {
-                    optClass = 'bg-amber-500 border-2 border-amber-600 text-stone-950 font-black shadow-md ring-4 ring-amber-300/50 scale-[1.01]';
-                  }
-
-                  return (
-                    <button
-                      key={oIdx}
-                      type="button"
-                      disabled={isSubmitted}
-                      onClick={() => {
-                        playPop();
-                        onChangeOpenBoxInput(opt);
-                        if (onSelectOption) onSelectOption(oIdx);
-                      }}
-                      className={`py-3 px-4 rounded-xl font-bold text-sm sm:text-base transition-all shadow-2xs active:scale-95 cursor-pointer flex items-center justify-between text-left gap-2 ${optClass}`}
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-stone-100 text-stone-700 text-xs font-black flex items-center justify-center shrink-0 border border-stone-200">
-                          {String.fromCharCode(65 + oIdx)}
-                        </span>
-                        <span>{opt}</span>
-                      </span>
-                      {isSelected && !isSubmitted && <span className="font-black text-amber-950">✓</span>}
-                    </button>
-                  );
-                })}
+              <div className="flex items-center justify-center">
+                <input
+                  id="fill-blank-input"
+                  type="text"
+                  autoComplete="off"
+                  disabled={isSubmitted}
+                  value={openBoxInput}
+                  onChange={(e) => onChangeOpenBoxInput(e.target.value)}
+                  placeholder="Enter answer here..."
+                  className="w-full max-w-sm mx-auto text-center text-xl sm:text-2xl font-black py-3 px-5 rounded-2xl border-3 border-amber-400 focus:outline-none focus:ring-4 focus:ring-amber-200 bg-white text-stone-900 shadow-xs"
+                />
               </div>
             </div>
           )}
 
-          {/* Quick Number Pad ONLY when no options are given and numeric input is needed */}
-          {!isSubmitted && (!question.options || question.options.length <= 1) && (
+          {/* Quick Number Pad to help young students easily tap numbers */}
+          {!isSubmitted && (
             <div className="bg-stone-100 p-3 rounded-2xl border border-stone-200 shadow-inner max-w-sm mx-auto">
               <div className="grid grid-cols-3 gap-1.5">
                 {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'clear', '0', 'backspace'].map((key) => (
@@ -1302,7 +1430,7 @@ export default function InteractiveQuestionCard({
                       } else if (key === 'backspace') {
                         onChangeOpenBoxInput(openBoxInput.slice(0, -1));
                       } else {
-                        if (openBoxInput.length < 8) {
+                        if (openBoxInput.length < 12) {
                           onChangeOpenBoxInput(openBoxInput + key);
                         }
                       }
@@ -1379,7 +1507,8 @@ export default function InteractiveQuestionCard({
           {question.options.map((option, idx) => {
             const isSelected = selectedOption === idx;
             const isCorrectOption = idx === question.correctIndex;
-            const optionClipart = getOptionClipart(option, '🌟');
+            const parsed = parseOptionClipart(option);
+            const optionClipart = !parsed.hasClipart ? getOptionClipart(option, '🌟') : '';
 
             let cardStyle = 'bg-white border-stone-200 hover:border-amber-400 hover:bg-amber-50/40 text-stone-800';
 
@@ -1406,10 +1535,18 @@ export default function InteractiveQuestionCard({
                 }}
                 className={`p-4 sm:p-5 rounded-3xl border-2 text-center transition-all flex flex-col items-center justify-center gap-2.5 cursor-pointer shadow-xs ${cardStyle}`}
               >
-                <div className="text-4xl sm:text-5xl py-1 transform transition-transform hover:scale-110 drop-shadow-xs">
-                  {optionClipart}
+                <div className="py-1 transform transition-transform hover:scale-110 drop-shadow-xs flex items-center justify-center min-h-[52px]">
+                  {parsed.hasClipart && parsed.clipart ? (
+                    <ClipartImage clipart={parsed.clipart} size="lg" />
+                  ) : (
+                    <span className="text-4xl sm:text-5xl">{optionClipart}</span>
+                  )}
                 </div>
-                <span className="font-black text-base sm:text-lg leading-snug">{option}</span>
+                {Boolean(parsed.cleanText) && (
+                  <span className="font-black text-base sm:text-lg leading-snug">
+                    <ClipartText text={parsed.cleanText} imageSize="xs" />
+                  </span>
+                )}
                 {isSubmitted && isCorrectOption && (
                   <span className="text-xs font-black text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full flex items-center gap-1 mt-0.5">
                     <CheckCircle2 className="w-3.5 h-3.5" /> Correct!
@@ -1422,78 +1559,108 @@ export default function InteractiveQuestionCard({
       )}
 
       {/* -------------------------------------------------------------
-          TYPE: MULTIPLE_CHOICE / RADIO_SINGLE / NUMBER_LINE / CLOCK / WORD_PROBLEM / DATA_GRAPH / FALLBACK
+          TYPE: SINGLE_CHOICE / MULTIPLE_CHOICE / RADIO_SINGLE / NUMBER_LINE / CLOCK / WORD_PROBLEM / DATA_GRAPH / FALLBACK
       ------------------------------------------------------------- */}
-      {(['multiple_choice', 'radio_single', 'number_line', 'clock', 'word_problem', 'data_graph', 'interactive'].includes(type) || 
-        (!['select_objects', 'drag_and_drop', 'match_making', 'ordering', 'sorting', 'fill_blank', 'open_box', 'true_false', 'image_choice'].includes(type) && question.options && question.options.length > 0)) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3.5 w-full">
-          {(question.options && question.options.length > 0 ? question.options : ['Option A', 'Option B', 'Option C', 'Option D']).map((option, idx) => {
-            const isSelected = selectedOption === idx;
-            const isCorrectOption = idx === question.correctIndex;
-            const optionClipart = getOptionClipart(option, '');
+      {(['single_choice', 'multiple_choice', 'radio_single', 'number_line', 'clock', 'word_problem', 'data_graph', 'interactive'].includes(type) || 
+        (!['select_objects', 'drag_and_drop', 'match_making', 'ordering', 'sorting', 'fill_blank', 'open_box', 'true_false', 'image_choice'].includes(type) && question.options && question.options.length > 0)) && (() => {
+        const isMultiChoice = type === 'multiple_choice';
 
-            let cardStyle = 'bg-white hover:bg-slate-50 border-[#e1e6f1] hover:border-blue-400 text-[#10246f] shadow-xs';
+        return (
+          <div className="w-full space-y-2">
+            {isMultiChoice && (
+              <div className="text-center text-xs font-bold text-blue-700 bg-blue-50/80 border border-blue-200 py-1.5 px-3 rounded-full max-w-xs mx-auto">
+                ☑️ Select all correct answers:
+              </div>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3.5 w-full">
+              {(question.options && question.options.length > 0 ? question.options : ['Option A', 'Option B', 'Option C', 'Option D']).map((option, idx) => {
+                const isSelected = isMultiChoice
+                  ? multiSelected.includes(idx) || (multiSelected.length === 0 && selectedOption === idx)
+                  : selectedOption === idx;
 
-            if (isSubmitted) {
-              if (isCorrectOption) {
-                cardStyle = 'bg-emerald-50 border-emerald-500 text-emerald-900 font-bold ring-2 ring-emerald-200 shadow-sm';
-              } else if (isSelected && !isCorrectOption) {
-                cardStyle = 'bg-rose-50 border-rose-400 text-rose-900 ring-2 ring-rose-200';
-              } else {
-                cardStyle = 'bg-slate-50 border-slate-200 text-slate-400 opacity-50';
-              }
-            } else if (isSelected) {
-              cardStyle = 'bg-blue-50/80 border-blue-600 text-[#10246f] font-bold ring-2 ring-blue-200 shadow-sm scale-[1.01]';
-            }
+                const isCorrectOption = isMultiChoice && question.correctIndices && question.correctIndices.length > 0
+                  ? question.correctIndices.includes(idx)
+                  : idx === question.correctIndex;
 
-            return (
-              <button
-                key={idx}
-                id={`option-btn-${idx}`}
-                disabled={isSubmitted}
-                onClick={() => {
-                  playPop();
-                  onSelectOption(idx);
-                }}
-                className={`p-3.5 sm:p-4 rounded-2xl border-2 text-left transition-all flex items-center justify-between cursor-pointer ${cardStyle}`}
-              >
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <span
-                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm shrink-0 border transition-colors ${
-                      isSelected
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                        : isSubmitted && isCorrectOption
-                        ? 'bg-emerald-600 text-white border-emerald-600'
-                        : 'bg-slate-100 text-slate-600 border-slate-200'
-                    }`}
+                const parsed = parseOptionClipart(option);
+                const optionClipart = !parsed.hasClipart ? getOptionClipart(option, '') : '';
+
+                let cardStyle = 'bg-white hover:bg-slate-50 border-[#e1e6f1] hover:border-blue-400 text-[#10246f] shadow-xs';
+
+                if (isSubmitted) {
+                  if (isCorrectOption) {
+                    cardStyle = 'bg-emerald-50 border-emerald-500 text-emerald-900 font-bold ring-2 ring-emerald-200 shadow-sm';
+                  } else if (isSelected && !isCorrectOption) {
+                    cardStyle = 'bg-rose-50 border-rose-400 text-rose-900 ring-2 ring-rose-200';
+                  } else {
+                    cardStyle = 'bg-slate-50 border-slate-200 text-slate-400 opacity-50';
+                  }
+                } else if (isSelected) {
+                  cardStyle = 'bg-blue-50/80 border-blue-600 text-[#10246f] font-bold ring-2 ring-blue-200 shadow-sm scale-[1.01]';
+                }
+
+                return (
+                  <button
+                    key={idx}
+                    id={`option-btn-${idx}`}
+                    type="button"
+                    disabled={isSubmitted}
+                    onClick={() => {
+                      playPop();
+                      if (isMultiChoice && onToggleMultiSelected) {
+                        onToggleMultiSelected(idx);
+                      } else {
+                        onSelectOption(idx);
+                      }
+                    }}
+                    className={`p-3.5 sm:p-4 rounded-2xl border-2 text-left transition-all flex items-center justify-between cursor-pointer ${cardStyle}`}
                   >
-                    {String.fromCharCode(65 + idx)}
-                  </span>
-                  
-                  {optionClipart && !option.includes(optionClipart) && (
-                    <span className="text-xl sm:text-2xl shrink-0 drop-shadow-xs">
-                      {optionClipart}
-                    </span>
-                  )}
+                    <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                      {/* Checkbox square for multi-choice, round radio badge for single choice */}
+                      <span
+                        className={`w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center font-bold text-xs sm:text-sm shrink-0 border transition-colors ${
+                          isMultiChoice ? 'rounded-xl' : 'rounded-full'
+                        } ${
+                          isSelected
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                            : isSubmitted && isCorrectOption
+                            ? 'bg-emerald-600 text-white border-emerald-600'
+                            : 'bg-slate-100 text-slate-600 border-slate-200'
+                        }`}
+                      >
+                        {isSelected && isMultiChoice ? '✓' : String.fromCharCode(65 + idx)}
+                      </span>
+                      
+                      {parsed.hasClipart && parsed.clipart ? (
+                        <ClipartImage clipart={parsed.clipart} size="md" className="shrink-0 drop-shadow-2xs" />
+                      ) : optionClipart && !option.includes(optionClipart) ? (
+                        <span className="text-2xl sm:text-3xl shrink-0 drop-shadow-xs">
+                          {optionClipart}
+                        </span>
+                      ) : null}
 
-                  <span className="font-bold text-sm sm:text-base text-[#10246f] break-words leading-snug">
-                    {option}
-                  </span>
-                </div>
+                      {Boolean(parsed.cleanText) && (
+                        <span className="font-bold text-sm sm:text-base text-[#10246f] break-words leading-snug">
+                          <ClipartText text={parsed.cleanText} imageSize="xs" />
+                        </span>
+                      )}
+                    </div>
 
-                {isSubmitted && isCorrectOption && (
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 ml-2" />
-                )}
-                {isSubmitted && isSelected && !isCorrectOption && (
-                  <span className="w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center text-xs font-bold shrink-0 ml-2">
-                    ✕
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
+                    {isSubmitted && isCorrectOption && (
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 ml-2" />
+                    )}
+                    {isSubmitted && isSelected && !isCorrectOption && (
+                      <span className="w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center text-xs font-bold shrink-0 ml-2">
+                        ✕
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* -------------------------------------------------------------
           FLOATING DRAG PREVIEW (FOLLOWS CURSOR / TOUCH POINTER)

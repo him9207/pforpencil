@@ -1,5 +1,7 @@
+import { resolveClipartItem } from '../data/clipartRegistry';
+
 // Helper to sanitize text, clean garbled unicode (mojibake like ðŸŽ or Ã©),
-// and convert friendly English word names into high-resolution colorful emojis.
+// and convert friendly English word names into high-resolution colorful emojis or vector clipart.
 
 const EMOJI_MAP: Record<string, string> = {
   // Fruits & food
@@ -103,26 +105,32 @@ export function fixMojibake(str: string): string {
  * Users can type simple words like "apple|apple|apple" or emojis "🍎|🍎|🍎"
  * and both work seamlessly!
  */
-export function resolveVisualEmoji(item: string): { label: string; emoji: string } {
-  if (!item) return { label: 'item', emoji: '🍎' };
+export function resolveVisualEmoji(item: string): { label: string; emoji: string; imageUrl?: string } {
+  if (!item) return { label: 'item', emoji: '🍎', imageUrl: '/clipart/fruits/apple.svg' };
   const cleaned = fixMojibake(item).trim();
   const normalizedKey = cleaned.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  // Check clipart registry for crisp vector SVG
+  const clipart = resolveClipartItem(cleaned);
+  const imageUrl = clipart?.isImage ? clipart.src : undefined;
 
   if (EMOJI_MAP[normalizedKey]) {
     return {
       label: cleaned,
-      emoji: EMOJI_MAP[normalizedKey]
+      emoji: EMOJI_MAP[normalizedKey],
+      imageUrl
     };
   }
 
   // If already emoji or special symbol, keep it
   return {
     label: cleaned,
-    emoji: cleaned
+    emoji: cleaned,
+    imageUrl
   };
 }
 
-export function parseVisualObjectsString(raw: string): { id: string; label: string; emoji: string }[] {
+export function parseVisualObjectsString(raw: string): { id: string; label: string; emoji: string; imageUrl?: string }[] {
   if (!raw || !raw.trim()) return [];
   const fixed = fixMojibake(raw);
   // Support pipe `|`, comma `,`, or multiple spaces as delimiters
@@ -132,16 +140,19 @@ export function parseVisualObjectsString(raw: string): { id: string; label: stri
     ? fixed.split(',')
     : fixed.split(/\s+/);
 
-  return tokens
-    .map((token, i) => {
-      const trimmed = token.trim();
-      if (!trimmed) return null;
-      const { label, emoji } = resolveVisualEmoji(trimmed);
-      return {
+  const results: { id: string; label: string; emoji: string; imageUrl?: string }[] = [];
+  tokens.forEach((token, i) => {
+    const trimmed = token.trim();
+    if (!trimmed) return;
+    const resolved = resolveVisualEmoji(trimmed);
+    if (resolved && resolved.label) {
+      results.push({
         id: `obj-${i + 1}`,
-        label,
-        emoji
-      };
-    })
-    .filter((x): x is { id: string; label: string; emoji: string } => Boolean(x && x.label));
+        label: resolved.label,
+        emoji: resolved.emoji,
+        imageUrl: resolved.imageUrl
+      });
+    }
+  });
+  return results;
 }

@@ -64,6 +64,7 @@ export interface CurriculumSubject {
 
 export type QuestionType =
   | 'multiple_choice'
+  | 'single_choice'
   | 'radio_single'
   | 'fill_blank'
   | 'open_box'
@@ -126,6 +127,7 @@ export interface Question {
   prompt: string;
   options: string[];
   correctIndex: number;
+  correctIndices?: number[]; // For multiple_choice questions with 1 or more correct answers
   explanation: string;
   hint?: string;
   points: number;

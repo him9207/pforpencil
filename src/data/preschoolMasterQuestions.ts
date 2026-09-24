@@ -209,7 +209,7 @@ export const PRESCHOOL_QUESTIONS: Question[] = [
     points: 25,
     difficulty: 'Easy',
     status: 'Published',
-    visualClipart: '🍎 🍎 🍎 🍎 🍎 🍎',
+    visualClipart: '/clipart/fruits/apple.svg',
     visualConfig: {
       enabled: true,
       template: 'picture_counting',
@@ -219,7 +219,7 @@ export const PRESCHOOL_QUESTIONS: Question[] = [
       background: 'playful',
       autoPlay: true,
       objects: [
-        { id: 'app1', label: 'apple', emoji: '🍎', count: 6 }
+        { id: 'app1', label: 'apple', emoji: '🍎', count: 6, imageUrl: '/clipart/fruits/apple.svg' }
       ]
     },
     explanation: 'Yum! You counted and gathered exactly 4 delicious red apples! 🍎🍎🍎🍎',
@@ -297,7 +297,7 @@ export const PRESCHOOL_QUESTIONS: Question[] = [
       { left: '🐰 Fluffy Bunny', right: '🥕 Crunchy Carrot' },
       { left: '🐶 Happy Puppy', right: '🦴 Yummy Bone' }
     ],
-    options: ['Match completed'],
+    options: ['🐒 Playful Monkey -> 🍌 Sweet Banana', '🐰 Fluffy Bunny -> 🥕 Crunchy Carrot', '🐶 Happy Puppy -> 🦴 Yummy Bone'],
     correctIndex: 0,
     points: 30,
     difficulty: 'Medium',
@@ -382,7 +382,7 @@ export const PRESCHOOL_QUESTIONS: Question[] = [
       { bucketName: '🧺 Fruit Basket', items: ['🍎 Apple', '🍌 Banana', '🍓 Strawberry'] },
       { bucketName: '🧸 Toy Box', items: ['🚗 Toy Car', '⚽ Play Ball', '🎈 Balloon'] }
     ],
-    options: ['Sort completed'],
+    options: ['🧺 Fruit Basket: 🍎 Apple, 🍌 Banana, 🍓 Strawberry', '🧸 Toy Box: 🚗 Toy Car, ⚽ Play Ball, 🎈 Balloon'],
     correctIndex: 0,
     points: 30,
     difficulty: 'Medium',

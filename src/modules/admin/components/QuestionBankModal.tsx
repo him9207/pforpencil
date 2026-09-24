@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Question, Subject, GradeLevel, QuestionType, CurriculumGrade, CurriculumSubject, VisualQuestionConfig, VisualQuestionTemplate, VisualAnimation } from '../../../types';
-import { X, HelpCircle, Sparkles, Check, Plus, AlertCircle, Download, Upload, FileSpreadsheet, Eye, Globe, Trash2, Palette, Search, Edit3, Copy } from 'lucide-react';
+import { X, HelpCircle, Sparkles, Check, Plus, AlertCircle, Download, Upload, FileSpreadsheet, Eye, Globe, Trash2, Palette, Search, Edit3, Copy, BookOpen } from 'lucide-react';
 import { sounds } from '../../../utils/audio';
 import { getNextQuestionId } from '../../../utils/idAndUsernameGenerator';
 import { loadCurriculumMaster } from '../../../data/curriculumMasterData';
@@ -10,11 +10,14 @@ import { generateQuestionMasterExcel, parseQuestionExcelFile, MASTER_CATEGORY_SK
 import { CLIPART_LIBRARY } from '../../../data/clipartLibraryData';
 import QuestionPreviewModal from './QuestionPreviewModal';
 import QuestionEditModal from './QuestionEditModal';
+import { ClipartImage } from '../../../common/ClipartRenderer';
+import { resolveMultipleClipartItems, parseOptionClipart } from '../../../data/clipartRegistry';
 
 interface Props {
   isOpen: boolean; onClose: () => void; availableGrades: string[]; availableSubjects: string[]; questions?: Question[];
   onAddQuestion: (q: Question) => void; onAddBatchQuestions?: (q: Question[]) => void;
   nextQuestionId?: string;
+  initialMode?: 'single'|'batch'|'csv_upload'|'clipart_library';
   initialGrade?: string; initialSubject?: string; initialCategory?: string; initialSkill?: string;
   initialCountryId?: string; initialRegionId?: string; initialCurriculumId?: string;
   categoryMasters?: CategoryMasterRecord[]; skillMasters?: SkillMasterRecord[];
@@ -33,10 +36,34 @@ const typeLabel = (q: Question) => TYPES.find(t => t.value === q.type)?.label ||
 const csvEscape=(v:any)=>{const s=String(v??'');return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s;};
 const parseCsv=(text:string)=>{const rows:string[][]=[];let row:string[]=[];let cell='';let quote=false;for(let i=0;i<text.length;i++){const ch=text[i];if(ch==='"'){if(quote&&text[i+1]==='"'){cell+='"';i++;}else quote=!quote;}else if(ch===','&&!quote){row.push(cell.trim());cell='';}else if((ch==='\n'||ch==='\r')&&!quote){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(cell.trim());cell='';if(row.some(x=>x!==''))rows.push(row);row=[];}else cell+=ch;}row.push(cell.trim());if(row.some(x=>x!==''))rows.push(row);return rows;};
 
-export default function QuestionBankModal({isOpen,onClose,availableGrades,availableSubjects,questions=[],onAddQuestion,onAddBatchQuestions,initialGrade,initialSubject,initialCategory,initialSkill,initialCountryId,initialRegionId,initialCurriculumId,categoryMasters=[],skillMasters=[],grades=[],subjects=[]}:Props){
+export default function QuestionBankModal({
+  isOpen,
+  onClose,
+  availableGrades,
+  availableSubjects,
+  questions=[],
+  onAddQuestion,
+  onAddBatchQuestions,
+  initialMode,
+  initialGrade,
+  initialSubject,
+  initialCategory,
+  initialSkill,
+  initialCountryId,
+  initialRegionId,
+  initialCurriculumId,
+  categoryMasters=[],
+  skillMasters=[],
+  grades=[],
+  subjects=[]
+}: Props){
   const cm=loadCurriculumMaster();
   const countries=cm.countries.filter(x=>x.active).sort((a,b)=>a.displayOrder-b.displayOrder);
-  const [mode,setMode]=useState<'single'|'batch'|'csv_upload'|'clipart_library'>('single');
+  const [mode,setMode]=useState<'single'|'batch'|'csv_upload'|'clipart_library'>(initialMode || 'csv_upload');
+
+  useEffect(() => {
+    if (initialMode) setMode(initialMode);
+  }, [initialMode, isOpen]);
   
   // Standardized Curriculum List with country and regional indicators
   const allCurricula = useMemo(() => {
@@ -661,28 +688,47 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
 
       if (type === 'drag_and_drop') {
         dragItems = opts.map((opt, i) => {
-          const parts = opt.split('->').map(s => s.trim());
+          let parts: string[] = [];
+          if (opt.includes('->')) parts = opt.split('->');
+          else if (opt.includes('→')) parts = opt.split('→');
+          else if (opt.includes('➔')) parts = opt.split('➔');
+          else if (opt.includes('=>')) parts = opt.split('=>');
+          else if (opt.includes(':')) parts = opt.split(':');
+          else if (opt.includes('=')) parts = opt.split('=');
+          else parts = [opt, `Target Zone ${i + 1}`];
           return {
-            item: parts[0] || `Item ${i + 1}`,
-            target: parts[1] || 'Target Zone'
+            item: (parts[0] || '').trim() || `Item ${i + 1}`,
+            target: (parts[1] || '').trim() || 'Target Zone'
           };
         });
       } else if (type === 'match_making') {
-        matchPairs = opts.map(opt => {
-          const parts = opt.split('->').map(s => s.trim());
+        matchPairs = opts.map((opt, i) => {
+          let parts: string[] = [];
+          if (opt.includes('->')) parts = opt.split('->');
+          else if (opt.includes('→')) parts = opt.split('→');
+          else if (opt.includes('➔')) parts = opt.split('➔');
+          else if (opt.includes('=>')) parts = opt.split('=>');
+          else if (opt.includes(':')) parts = opt.split(':');
+          else if (opt.includes('=')) parts = opt.split('=');
+          else parts = [opt, `Match ${i + 1}`];
           return {
-            left: parts[0] || 'Item A',
-            right: parts[1] || 'Match A'
+            left: (parts[0] || '').trim() || `Item ${i + 1}`,
+            right: (parts[1] || '').trim() || `Match ${i + 1}`
           };
         });
       } else if (type === 'ordering') {
         orderSequence = opts.length > 0 ? opts : ['1', '2', '3', '4'];
       } else if (type === 'sorting') {
-        sortBuckets = opts.map(opt => {
-          const parts = opt.split(':').map(s => s.trim());
+        sortBuckets = opts.map((opt, i) => {
+          let parts: string[] = [];
+          if (opt.includes(':')) parts = opt.split(':');
+          else if (opt.includes('->')) parts = opt.split('->');
+          else if (opt.includes('→')) parts = opt.split('→');
+          else if (opt.includes('=')) parts = opt.split('=');
+          else parts = [`Category ${i + 1}`, opt];
           return {
-            bucketName: parts[0] || 'Bucket',
-            items: parts[1] ? parts[1].split(',').map(x => x.trim()) : ['Item 1', 'Item 2']
+            bucketName: (parts[0] || '').trim() || `Category ${i + 1}`,
+            items: parts[1] ? parts[1].split(',').map((x: string) => x.trim()).filter(Boolean) : ['Item 1', 'Item 2']
           };
         });
       } else if (type === 'open_box' || type === 'fill_blank') {
@@ -993,8 +1039,53 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
     return matchCat && matchSearch;
   });
 
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 backdrop-blur-sm p-4"><div className="bg-white rounded-3xl shadow-2xl border border-stone-200 max-w-5xl w-full my-4 overflow-hidden flex flex-col max-h-[94vh]"><div className="bg-stone-900 text-white p-5 flex items-center justify-between"><div><h2 className="text-lg font-bold">Master Question Bank Creator</h2><p className="text-xs text-stone-300">Single create, batch generate, Excel workbook upload, and Clipart library all use the same master hierarchy and visual engine.</p></div><button onClick={onClose}><X className="w-5 h-5"/></button></div><div className="bg-stone-100 px-6 py-2.5 border-b flex flex-wrap gap-2 text-xs font-bold"><button onClick={()=>setMode('single')} className={`px-3 py-1.5 rounded-xl ${mode==='single'?'bg-white shadow-xs':'text-stone-600'}`}>Single Interactive Question</button><button onClick={()=>setMode('batch')} className={`px-3 py-1.5 rounded-xl ${mode==='batch'?'bg-white shadow-xs':'text-stone-600'}`}><Sparkles className="inline w-3.5 h-3.5 text-amber-500 mr-1"/>Batch Multi-Question Generator</button><button onClick={()=>setMode('csv_upload')} className={`px-3 py-1.5 rounded-xl ${mode==='csv_upload'?'bg-white shadow-xs':'text-stone-600'}`}><FileSpreadsheet className="inline w-3.5 h-3.5 text-emerald-600 mr-1"/>Excel Bulk Upload & Master Template</button><button onClick={()=>setMode('clipart_library')} className={`px-3 py-1.5 rounded-xl ${mode==='clipart_library'?'bg-white shadow-xs':'text-stone-600'}`}><Palette className="inline w-3.5 h-3.5 text-indigo-600 mr-1"/>Clipart & Visual Library ({CLIPART_LIBRARY.length})</button></div><div className="p-6 overflow-y-auto flex-1 text-stone-800 text-xs">
-    {mode==='single'&&<form onSubmit={saveSingle} className="space-y-4">
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 backdrop-blur-sm p-4"><div className="bg-white rounded-3xl shadow-2xl border border-stone-200 max-w-5xl w-full my-4 overflow-hidden flex flex-col max-h-[94vh]"><div className="bg-stone-900 text-white p-5 flex items-center justify-between"><div><h2 className="text-lg font-bold">Master Question Bank Creator</h2><p className="text-xs text-stone-300">Single create, batch generate, Excel workbook upload, and Clipart library all use the same master hierarchy and visual engine.</p></div><button onClick={onClose}><X className="w-5 h-5"/></button></div><div className="bg-stone-100 px-6 py-2.5 border-b flex flex-wrap gap-2 text-xs font-bold"><button onClick={()=>setMode('single')} className={`px-3 py-1.5 rounded-xl ${mode==='single'?'bg-white shadow-xs':'text-stone-600'}`}><BookOpen className="inline w-3.5 h-3.5 text-blue-600 mr-1"/>Single Question (Standard Master Layout)</button><button onClick={()=>setMode('batch')} className={`px-3 py-1.5 rounded-xl ${mode==='batch'?'bg-white shadow-xs':'text-stone-600'}`}><Sparkles className="inline w-3.5 h-3.5 text-amber-500 mr-1"/>Batch Multi-Question Generator</button><button onClick={()=>setMode('csv_upload')} className={`px-3 py-1.5 rounded-xl ${mode==='csv_upload'?'bg-white shadow-xs':'text-stone-600'}`}><FileSpreadsheet className="inline w-3.5 h-3.5 text-emerald-600 mr-1"/>Excel Bulk Upload & Master Template</button><button onClick={()=>setMode('clipart_library')} className={`px-3 py-1.5 rounded-xl ${mode==='clipart_library'?'bg-white shadow-xs':'text-stone-600'}`}><Palette className="inline w-3.5 h-3.5 text-indigo-600 mr-1"/>Clipart & Visual Library ({CLIPART_LIBRARY.length})</button></div><div className="p-6 overflow-y-auto flex-1 text-stone-800 text-xs">
+    {mode==='single' && (
+      <>
+        <div className="p-8 text-center space-y-4 max-w-lg mx-auto my-12 bg-stone-50 rounded-3xl border border-stone-200 shadow-xs">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-inner">
+            <BookOpen className="w-7 h-7" />
+          </div>
+          <h3 className="text-base font-black text-stone-900">Standard Master Question Editor Active</h3>
+          <p className="text-xs text-stone-600 leading-relaxed">
+            The unified master question layout is open with all 12 standard question types, categorized clipart families (Shapes, Colors, Animals, Fruits, Vegetables, Alphabet, Numbers, Star, Coin, etc.), hints, explanations, and instant live preview.
+          </p>
+          <div className="pt-2 flex justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setMode('csv_upload')}
+              className="px-4 py-2 rounded-xl bg-stone-200 hover:bg-stone-300 text-stone-800 font-bold text-xs cursor-pointer transition"
+            >
+              Switch to Excel / CSV Bulk Loader
+            </button>
+          </div>
+        </div>
+
+        <QuestionEditModal
+          isOpen={true}
+          mode="create"
+          question={null}
+          onClose={() => setMode('csv_upload')}
+          onSave={(newQ) => {
+            onAddQuestion(newQ);
+            onClose();
+          }}
+          initialGrade={selectedGrade?.name || (grade as string)}
+          initialSubject={selectedSubject?.name || (subject as string)}
+          initialCategory={selectedCategory?.name}
+          initialSkill={selectedSkill?.name}
+          initialCountryId={countryId}
+          initialRegionId={regionId}
+          initialCurriculumId={curriculumId}
+          categoryMasters={categoryMasters}
+          skillMasters={skillMasters}
+          availableGrades={availableGrades}
+          availableSubjects={availableSubjects}
+          existingQuestions={questions}
+        />
+      </>
+    )}
+    {false && <form onSubmit={saveSingle} className="space-y-4">
       {hierarchyBlock}
       <div className="grid grid-cols-2 gap-3">
         <label className="font-semibold">Difficulty
@@ -1620,11 +1711,11 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
                 <input type="checkbox" checked={visualAutoPlay} onChange={e=>setVisualAutoPlay(e.target.checked)}/> Auto-play animation/audio
               </label>
             </div>
-            <div className="p-3 rounded-xl bg-white border border-amber-200 flex items-center justify-center min-h-20">
+            <div className="p-4 rounded-xl bg-white border border-amber-200 flex items-center justify-center min-h-24">
               <div className="text-center">
                 <div className="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">Live visual preview</div>
-                <div className="text-3xl">{visualObjects||visualClipart||'🍎 🍎 🍎'}</div>
-                <div className="text-[10px] text-stone-600 mt-1 font-medium">{visualInstructions||'Your visual question will appear here.'}</div>
+                <div className="text-5xl sm:text-6xl py-2 tracking-wider select-none leading-none">{visualObjects||visualClipart||'🍎 🍎 🍎'}</div>
+                <div className="text-xs text-stone-600 mt-1 font-medium">{visualInstructions||'Your visual question will appear here.'}</div>
               </div>
             </div>
           </div>
@@ -1724,11 +1815,32 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
                       <span className="text-[10px] text-stone-500 font-semibold bg-stone-100 px-1.5 py-0.5 rounded">
                         {typeLabel(q)}
                       </span>
-                      {q.visualClipart && (
-                        <span className="text-xs px-1.5 py-0.5 bg-amber-50 border border-amber-200 rounded">
-                          {q.visualClipart}
-                        </span>
-                      )}
+                      {Boolean(q.visualClipart || q.visualConfig?.objects?.length) && (() => {
+                        const rawVal = q.visualClipart || (q.visualConfig?.objects?.map(o => o.emoji || o.label).join(', ')) || '';
+                        const items = resolveMultipleClipartItems(rawVal);
+                        if (items.length > 0) {
+                          return (
+                            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50/90 border border-amber-200 text-amber-950 font-bold text-[10px] shadow-2xs">
+                              <span className="text-amber-700 uppercase tracking-wide">Clipart:</span>
+                              <div className="flex items-center gap-1">
+                                {items.slice(0, 5).map((item, cIdx) => (
+                                  <ClipartImage key={item.id || cIdx} clipart={item} size="xs" className="w-3.5 h-3.5 object-contain" />
+                                ))}
+                                {items.length > 5 && (
+                                  <span className="text-[9px] font-black text-amber-800 bg-amber-100 px-1 rounded-xs">
+                                    +{items.length - 5}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        }
+                        return (
+                          <span className="text-xs px-2 py-0.5 bg-amber-50 border border-amber-200 rounded-lg font-bold select-none text-amber-900" title="Question Clipart">
+                            {rawVal}
+                          </span>
+                        );
+                      })()}
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
@@ -1783,6 +1895,7 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
                     {q.options.map((opt, optIdx) => {
                       const isCorrect = q.correctIndex === optIdx;
+                      const parsed = parseOptionClipart(opt || '');
                       return (
                         <div
                           key={optIdx}
@@ -1795,7 +1908,14 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
                           <span className="font-mono text-[10px] text-stone-400">
                             {String.fromCharCode(65 + optIdx)}:
                           </span>
-                          <span className="truncate">{opt || '(empty)'}</span>
+                          {parsed.hasClipart && parsed.clipart ? (
+                            <span className="inline-flex items-center gap-1 min-w-0">
+                              <ClipartImage clipart={parsed.clipart} size="xs" className="w-4 h-4 shrink-0 object-contain" />
+                              {Boolean(parsed.cleanText) && <span className="truncate">{parsed.cleanText}</span>}
+                            </span>
+                          ) : (
+                            <span className="truncate">{opt || '(empty)'}</span>
+                          )}
                           {isCorrect && <Check className="w-3 h-3 text-emerald-600 ml-auto shrink-0"/>}
                         </div>
                       );
@@ -1931,7 +2051,7 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
                     {typeLabel(q)}
                   </span>
                   {q.visualClipart && (
-                    <span className="text-xs px-1.5 py-0.5 bg-amber-50 border border-amber-200 rounded">
+                    <span className="text-base px-2 py-0.5 bg-amber-50 border border-amber-200 rounded-lg font-bold select-none" title="Question Clipart">
                       {q.visualClipart}
                     </span>
                   )}

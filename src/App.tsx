@@ -147,16 +147,27 @@ export default function App() {
 
   const [questions, setQuestions] = useState<Question[]>(() => {
     try {
-      // Clear legacy/temp storage keys containing stale or incorrectly populated questions
+      // Clear legacy storage keys to ensure a completely fresh start as requested
       localStorage.removeItem('pforpencil_question_bank_v1');
       localStorage.removeItem('pforpencil_question_bank_v2');
       localStorage.removeItem('funlearn_question_bank_v3');
       localStorage.removeItem('pforpencil_question_bank_masters_v1');
       localStorage.removeItem('pforpencil_question_bank_masters_v2');
       localStorage.removeItem('funlearn_question_bank_masters_v3');
+      const saved = localStorage.getItem('pforpencil_fresh_questions_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
     } catch {}
-    return sanitizeQuestionBank(INITIAL_QUESTIONS).questions;
+    return []; // Fresh start with 0 questions
   });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('pforpencil_fresh_questions_v1', JSON.stringify(questions));
+    } catch {}
+  }, [questions]);
   // Questions synchronize directly with Supabase via syncQuestionToSupabase / fetchQuestionsFromSupabase
   // Interactive Activities use their own normalized database store.
   // The Activity[] state is the hydrated UI view; Question Bank storage remains separate.

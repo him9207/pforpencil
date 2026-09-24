@@ -1270,7 +1270,8 @@ export async function parseQuestionExcelFile(file: File, context: ExcelParseCont
     const colOptC = findCol('Option C', 'Choice C', 'C');
     const colOptD = findCol('Option D', 'Choice D', 'D');
     const colCorrect = findCol('Correct Answer', 'Answer', 'Correct Choice', 'Correct');
-    const colClipartRef = findCol('Clipart Reference', 'Visual Objects', 'Clipart Code', 'Clipart Name', 'Emoji / Clipart');
+    const colClipartRef = findCol('Clipart Reference', 'Visual Objects', 'Clipart Code', 'Clipart Name', 'Emoji / Clipart', 'Visual Clipart', 'Clipart');
+    const colMedia = findCol('Media URL', 'Image URL', 'Image', 'Media');
     const colCount = findCol('Visual Count', 'Count', 'Object Count');
     const colAnimation = findCol('Visual Animation', 'Animation');
     const colTemplate = findCol('Visual Template', 'Template');
@@ -1437,6 +1438,7 @@ export async function parseQuestionExcelFile(file: File, context: ExcelParseCont
       // Build visual config if clipart reference is provided
       let visualClipart: string | undefined = undefined;
       let visualConfig: any = undefined;
+      let mediaUrl: string | undefined = getVal(colMedia) || undefined;
 
       if (clipartRef) {
         const resolved = resolveClipartString(clipartRef, countNum);
@@ -1456,10 +1458,15 @@ export async function parseQuestionExcelFile(file: File, context: ExcelParseCont
               id: 'obj-1',
               label: matchedItem?.name || clipartRef,
               emoji: resolved.emoji,
+              imageUrl: resolved.imageUrl || matchedItem?.vectorPath,
               count: countNum
             }
           ]
         };
+
+        if (!mediaUrl && resolved.imageUrl) {
+          mediaUrl = resolved.imageUrl;
+        }
       }
 
       // Specialized question type configurations
@@ -1471,28 +1478,47 @@ export async function parseQuestionExcelFile(file: File, context: ExcelParseCont
 
       if (type === 'drag_and_drop') {
         dragItems = options.map((opt, i) => {
-          const parts = opt.split('->').map(s => s.trim());
+          let parts: string[] = [];
+          if (opt.includes('->')) parts = opt.split('->');
+          else if (opt.includes('→')) parts = opt.split('→');
+          else if (opt.includes('➔')) parts = opt.split('➔');
+          else if (opt.includes('=>')) parts = opt.split('=>');
+          else if (opt.includes(':')) parts = opt.split(':');
+          else if (opt.includes('=')) parts = opt.split('=');
+          else parts = [opt, `Target Zone ${i + 1}`];
           return {
-            item: parts[0] || `Item ${i + 1}`,
-            target: parts[1] || 'Target Zone'
+            item: (parts[0] || '').trim() || `Item ${i + 1}`,
+            target: (parts[1] || '').trim() || 'Target Zone'
           };
         });
       } else if (type === 'match_making') {
-        matchPairs = options.map(opt => {
-          const parts = opt.split('->').map(s => s.trim());
+        matchPairs = options.map((opt, i) => {
+          let parts: string[] = [];
+          if (opt.includes('->')) parts = opt.split('->');
+          else if (opt.includes('→')) parts = opt.split('→');
+          else if (opt.includes('➔')) parts = opt.split('➔');
+          else if (opt.includes('=>')) parts = opt.split('=>');
+          else if (opt.includes(':')) parts = opt.split(':');
+          else if (opt.includes('=')) parts = opt.split('=');
+          else parts = [opt, `Match ${i + 1}`];
           return {
-            left: parts[0] || 'Item A',
-            right: parts[1] || 'Match A'
+            left: (parts[0] || '').trim() || `Item ${i + 1}`,
+            right: (parts[1] || '').trim() || `Match ${i + 1}`
           };
         });
       } else if (type === 'ordering') {
         orderSequence = options.length > 0 ? options : ['1', '2', '3', '4'];
       } else if (type === 'sorting') {
-        sortBuckets = options.map(opt => {
-          const parts = opt.split(':').map(s => s.trim());
+        sortBuckets = options.map((opt, i) => {
+          let parts: string[] = [];
+          if (opt.includes(':')) parts = opt.split(':');
+          else if (opt.includes('->')) parts = opt.split('->');
+          else if (opt.includes('→')) parts = opt.split('→');
+          else if (opt.includes('=')) parts = opt.split('=');
+          else parts = [`Category ${i + 1}`, opt];
           return {
-            bucketName: parts[0] || 'Bucket',
-            items: parts[1] ? parts[1].split(',').map(x => x.trim()) : ['Item 1', 'Item 2']
+            bucketName: (parts[0] || '').trim() || `Category ${i + 1}`,
+            items: parts[1] ? parts[1].split(',').map(x => x.trim()).filter(Boolean) : ['Item 1', 'Item 2']
           };
         });
       } else if (type === 'open_box' || type === 'fill_blank') {
@@ -1533,6 +1559,7 @@ export async function parseQuestionExcelFile(file: File, context: ExcelParseCont
         hint,
         points: difficulty === 'Hard' ? 30 : difficulty === 'Medium' ? 20 : 10,
         status,
+        mediaUrl,
         visualClipart,
         visualConfig,
         dragItems,

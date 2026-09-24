@@ -463,20 +463,26 @@ export function sanitizeQuestionBank<T extends { id: string; grade?: string; sub
 ): { questions: T[]; idMap: Record<string, string> } {
   const normalized: T[] = [];
   const idMap: Record<string, string> = {};
+  const seenIds = new Set<string>();
 
   (rawQuestions || []).forEach((q) => {
     if (!q) return;
     const cleanSubject = q.subject || 'Mathematics';
     const cleanGrade = q.grade || 'Grade 1';
 
-    const canonicalId = getNextQuestionId(cleanGrade, normalized, 0, cleanSubject);
+    let targetId = (q.id && String(q.id).trim().length > 0) ? String(q.id).trim() : '';
+    if (!targetId || seenIds.has(targetId)) {
+      targetId = getNextQuestionId(cleanGrade, normalized, 0, cleanSubject);
+    }
+
+    seenIds.add(targetId);
     if (q.id) {
-      idMap[q.id] = canonicalId;
+      idMap[q.id] = targetId;
     }
 
     normalized.push({
       ...q,
-      id: canonicalId,
+      id: targetId,
       subject: cleanSubject,
       grade: cleanGrade
     });

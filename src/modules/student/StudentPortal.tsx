@@ -1393,10 +1393,11 @@ export default function StudentPortal({
             </div>
           </header>
 
-          {/* 2. MAIN CENTERED QUESTION ARENA (Clean, Professional, No Clutter) */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col justify-center max-w-3xl w-full mx-auto min-h-0">
+          {/* 2. MAIN CENTERED QUESTION ARENA (Clean, Professional, No Overlap) */}
+          <div className="flex-1 overflow-y-auto w-full px-4 sm:px-6 py-6 sm:py-8 min-h-0">
+            <div className="max-w-3xl w-full mx-auto pb-16">
             {!quizFinished && currentQ ? (
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6 flex flex-col my-auto">
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6 flex flex-col">
                 
                 {/* Topic & Difficulty Chips */}
                 <div className="flex flex-wrap items-center gap-2">
@@ -1574,7 +1575,7 @@ export default function StudentPortal({
               </div>
             ) : (
               /* 3. ACTIVITY RESULTS SUMMARY (CLEAN CELEBRATORY CARD) */
-              <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-10 shadow-xl text-center space-y-6 max-w-lg mx-auto w-full my-auto animate-in zoom-in-95 duration-200">
+              <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-10 shadow-xl text-center space-y-6 max-w-lg mx-auto w-full my-6 animate-in zoom-in-95 duration-200">
                 <div className="w-20 h-20 rounded-3xl bg-amber-100 text-amber-600 flex items-center justify-center text-4xl shadow-sm mx-auto border border-amber-200">
                   🏆
                 </div>
@@ -1632,6 +1633,7 @@ export default function StudentPortal({
                 </div>
               </div>
             )}
+            </div>
           </div>
 
         </div>

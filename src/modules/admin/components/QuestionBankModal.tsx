@@ -83,11 +83,11 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
   const [isCustomSkill, setIsCustomSkill] = useState(false);
   const [customSkillText, setCustomSkillText] = useState('');
 
-  // Comprehensive Category Options: Master Records + Standard Catalog Taxonomy (Never Empty)
+  // Comprehensive Category Options: Master Records strictly scoped to Curriculum, Subject, Grade
   const categoryOptions = useMemo(() => {
     const list: Array<{ id: string; code: string; name: string }> = [];
 
-    // 1. Custom master categories matching current curriculum, subject, grade
+    // Custom master categories matching current curriculum, subject, grade
     const custom = categoryMasters.filter(c => c.active && (
       (!curriculumId || c.curriculumId === curriculumId) &&
       c.subjectId === (selectedSubject?.id || '') &&
@@ -99,36 +99,8 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
       }
     });
 
-    // 2. Standard master catalog taxonomy matching subject and grade
-    const subCode = selectedSubject?.id || (subject.toLowerCase().includes('sci') ? 'SUB_SCI' : subject.toLowerCase().includes('eng') ? 'SUB_ENG' : subject.toLowerCase().includes('art') ? 'SUB_ART' : 'SUB_MTH');
-    MASTER_CATEGORY_SKILL_CATALOG.forEach(item => {
-      const matchSubject = !item.subject || item.subject === subCode || (subCode === 'SUB_MTH' && item.subject === 'SUB_MTH');
-      const matchGrade = !item.grades || item.grades.includes(grade) || grade === 'Grade 1';
-      if (matchSubject && matchGrade) {
-        if (!list.some(x => x.name.trim().toLowerCase() === item.catName.trim().toLowerCase() || x.code === item.catCode)) {
-          list.push({ id: item.catCode, code: item.catCode, name: item.catName });
-        }
-      }
-    });
-
-    // 3. Fallback standard subjects categories to ensure it is always populated
-    if (list.length === 0) {
-      if (subject.toLowerCase().includes('math')) {
-        list.push({ id: 'CAT-NUM', code: 'CAT-NUM', name: 'Numbers & Quantities' });
-        list.push({ id: 'CAT-ADD', code: 'CAT-ADD', name: 'Addition & Subtraction' });
-        list.push({ id: 'CAT-GEO', code: 'CAT-GEO', name: 'Geometry & Shapes' });
-      } else if (subject.toLowerCase().includes('sci')) {
-        list.push({ id: 'CAT-SCI', code: 'CAT-SCI', name: 'Living Things & Nature' });
-        list.push({ id: 'CAT-BIO', code: 'CAT-BIO', name: 'Animals & Habitats' });
-      } else if (subject.toLowerCase().includes('eng')) {
-        list.push({ id: 'CAT-ENG', code: 'CAT-ENG', name: 'English & Phonics' });
-      } else {
-        list.push({ id: 'CAT-ART', code: 'CAT-ART', name: 'Art & Creativity' });
-      }
-    }
-
     return list;
-  }, [categoryMasters, curriculumId, selectedSubject, selectedGrade, grade, subject]);
+  }, [categoryMasters, curriculumId, selectedSubject, selectedGrade]);
 
   const [categoryId, setCategoryId] = useState('');
 
@@ -141,39 +113,19 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
       || categoryOptions[0];
   }, [isCustomCategory, customCategoryText, categoryOptions, categoryId, initialCategory]);
 
-  // Comprehensive Skill Options: Master Skills + Standard Catalog Skills (Never Empty)
+  // Comprehensive Skill Options: Master Skills strictly matching selectedCategory and grade
   const skillOptions = useMemo(() => {
     const list: Array<{ id: string; code: string; name: string; curriculumReference?: string }> = [];
 
     if (!selectedCategory) return list;
 
-    // 1. Custom master skills
+    // Custom master skills strictly belonging to this category and grade
     const custom = skillMasters.filter(s => s.active && s.categoryId === selectedCategory.id && s.gradeId === (selectedGrade?.id || ''));
     custom.forEach(s => {
       if (!list.some(x => x.name.trim().toLowerCase() === s.name.trim().toLowerCase())) {
         list.push({ id: s.id, code: s.code || `SK-${s.id}`, name: s.name, curriculumReference: s.curriculumReference });
       }
     });
-
-    // 2. Standard catalog skills for this category
-    const catNameLower = (selectedCategory.name || '').trim().toLowerCase();
-    const catCode = selectedCategory.code || '';
-    MASTER_CATEGORY_SKILL_CATALOG.forEach(item => {
-      if (item.catCode === catCode || item.catName.trim().toLowerCase() === catNameLower) {
-        if (!list.some(x => x.name.trim().toLowerCase() === item.skName.trim().toLowerCase() || x.code === item.skCode)) {
-          list.push({ id: item.skCode, code: item.skCode, name: item.skName });
-        }
-      }
-    });
-
-    // 3. Fallback standard skill if none matched
-    if (list.length === 0) {
-      list.push({
-        id: `SK-${selectedCategory.code || 'GEN'}-01`,
-        code: `SK-${selectedCategory.code || 'GEN'}-01`,
-        name: `${selectedCategory.name} Core Skills`
-      });
-    }
 
     return list;
   }, [skillMasters, selectedCategory, selectedGrade]);
@@ -973,8 +925,10 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
                 setCategoryId(e.target.value);
                 setSkillId('');
               }}
-              className="w-full p-2 rounded-xl border border-stone-200 bg-white text-stone-800 text-xs font-semibold focus:ring-2 focus:ring-[#10246f]"
+              disabled={!categoryOptions.length}
+              className="w-full p-2 rounded-xl border border-stone-200 bg-white text-stone-800 text-xs font-semibold focus:ring-2 focus:ring-[#10246f] disabled:bg-stone-100"
             >
+              {!categoryOptions.length && <option value="">No categories available (click + Custom Topic)</option>}
               {categoryOptions.map(c => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -1015,8 +969,10 @@ export default function QuestionBankModal({isOpen,onClose,availableGrades,availa
             <select
               value={selectedSkill?.id || ''}
               onChange={e => setSkillId(e.target.value)}
-              className="w-full p-2 rounded-xl border border-stone-200 bg-white text-stone-800 text-xs font-semibold focus:ring-2 focus:ring-[#10246f]"
+              disabled={!skillOptions.length}
+              className="w-full p-2 rounded-xl border border-stone-200 bg-white text-stone-800 text-xs font-semibold focus:ring-2 focus:ring-[#10246f] disabled:bg-stone-100"
             >
+              {!skillOptions.length && <option value="">No skills available (click + Custom Skill)</option>}
               {skillOptions.map(s => (
                 <option key={s.id} value={s.id}>
                   {s.name}

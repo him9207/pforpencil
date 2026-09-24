@@ -360,7 +360,7 @@ export async function syncQuestionToSupabase(q: Question): Promise<SyncResult> {
         media_url: q.mediaUrl || null,
         visual_clipart: q.visualClipart || null,
         school_id: q.schoolId || null,
-        status: q.status || 'approved'
+        status: q.status || 'Published'
       }
     });
     return { success: true, data: result };
@@ -620,7 +620,7 @@ export async function syncQuestionsBulkToSupabase(questions: Question[]): Promis
       media_url: q.mediaUrl || null,
       visual_clipart: q.visualClipart || null,
       school_id: q.schoolId || null,
-      status: q.status || 'approved'
+      status: q.status || 'Published'
     }));
 
     for (let i = 0; i < payload.length; i += 100) {
@@ -632,6 +632,54 @@ export async function syncQuestionsBulkToSupabase(questions: Question[]): Promis
       });
     }
     return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message };
+  }
+}
+
+/**
+ * Delete Question from Supabase
+ */
+export async function deleteQuestionFromSupabase(questionId: string): Promise<SyncResult> {
+  if (!isSupabaseConfigured()) return { success: false, message: 'Supabase not configured' };
+  try {
+    await supabaseRestFetch('questions', {
+      method: 'DELETE',
+      params: { id: `eq.${questionId}` }
+    });
+    return { success: true, message: `Question ${questionId} deleted` };
+  } catch (err: any) {
+    return { success: false, error: err?.message };
+  }
+}
+
+/**
+ * Delete Category Master from Supabase
+ */
+export async function deleteCategoryMasterFromSupabase(categoryId: string): Promise<SyncResult> {
+  if (!isSupabaseConfigured()) return { success: false, message: 'Supabase not configured' };
+  try {
+    await supabaseRestFetch('category_masters', {
+      method: 'DELETE',
+      params: { id: `eq.${categoryId}` }
+    });
+    return { success: true, message: `Category ${categoryId} deleted` };
+  } catch (err: any) {
+    return { success: false, error: err?.message };
+  }
+}
+
+/**
+ * Delete Skill Master from Supabase
+ */
+export async function deleteSkillMasterFromSupabase(skillId: string): Promise<SyncResult> {
+  if (!isSupabaseConfigured()) return { success: false, message: 'Supabase not configured' };
+  try {
+    await supabaseRestFetch('skill_masters', {
+      method: 'DELETE',
+      params: { id: `eq.${skillId}` }
+    });
+    return { success: true, message: `Skill ${skillId} deleted` };
   } catch (err: any) {
     return { success: false, error: err?.message };
   }
@@ -679,7 +727,7 @@ export async function fetchQuestionsFromSupabase(): Promise<{
       mediaUrl: r.media_url || undefined,
       visualClipart: r.visual_clipart || undefined,
       schoolId: r.school_id || undefined,
-      status: r.status || 'approved'
+      status: (r.status === 'Draft' ? 'Draft' : r.status === 'Archived' ? 'Archived' : 'Published')
     }));
 
     return { success: true, questions: mappedQuestions };
@@ -1614,7 +1662,7 @@ export async function seedInitialDataToSupabase(
     media_url: q.mediaUrl || null,
     visual_clipart: q.visualClipart || null,
     school_id: q.schoolId || null,
-    status: q.status || 'approved'
+    status: q.status || 'Published'
   }));
   const questionReport = await seedTableRows('questions', 'Questions (Question Bank)', questionRows, 30);
   tableReports.push(questionReport);
@@ -1796,5 +1844,154 @@ export async function seedInitialDataToSupabase(
     message: isOverallSuccess
       ? `Successfully populated ${totalRowsInserted} rows across ${successTables} Supabase tables!`
       : 'Failed to populate Supabase tables. Please make sure the SQL schema has been executed first.'
+  };
+}
+
+/**
+ * 13. Complete Question Bank Purge: Deletes all rows in questions, skill_masters, category_masters
+ */
+export async function purgeAllQuestionBankDataFromSupabase(): Promise<SyncResult> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, message: 'Supabase credentials not configured.' };
+  }
+
+  const errors: string[] = [];
+  
+  // 1. Delete all questions
+  try {
+    // Attempt wildcard delete first
+    await supabaseRestFetch('questions', {
+      method: 'DELETE',
+      params: { id: 'not.is.null' }
+    });
+  } catch {
+    try {
+      // Fallback: fetch IDs and delete in batches
+      const rows = await supabaseRestFetch('questions', {
+        method: 'GET',
+        params: { select: 'id', limit: '5000' }
+      });
+      if (Array.isArray(rows) && rows.length > 0) {
+        for (const row of rows) {
+          if (row.id) {
+            await supabaseRestFetch('questions', {
+              method: 'DELETE',
+              params: { id: `eq.${row.id}` }
+            }).catch(() => {});
+          }
+        }
+      }
+    } catch (e: any) {
+      errors.push(`questions: ${e?.message || 'failed'}`);
+    }
+  }
+
+  // 2. Delete all skill_masters
+  try {
+    await supabaseRestFetch('skill_masters', {
+      method: 'DELETE',
+      params: { id: 'not.is.null' }
+    });
+  } catch {
+    try {
+      const rows = await supabaseRestFetch('skill_masters', {
+        method: 'GET',
+        params: { select: 'id', limit: '5000' }
+      });
+      if (Array.isArray(rows) && rows.length > 0) {
+        for (const row of rows) {
+          if (row.id) {
+            await supabaseRestFetch('skill_masters', {
+              method: 'DELETE',
+              params: { id: `eq.${row.id}` }
+            }).catch(() => {});
+          }
+        }
+      }
+    } catch (e: any) {
+      errors.push(`skill_masters: ${e?.message || 'failed'}`);
+    }
+  }
+
+  // 3. Delete all category_masters
+  try {
+    await supabaseRestFetch('category_masters', {
+      method: 'DELETE',
+      params: { id: 'not.is.null' }
+    });
+  } catch {
+    try {
+      const rows = await supabaseRestFetch('category_masters', {
+        method: 'GET',
+        params: { select: 'id', limit: '5000' }
+      });
+      if (Array.isArray(rows) && rows.length > 0) {
+        for (const row of rows) {
+          if (row.id) {
+            await supabaseRestFetch('category_masters', {
+              method: 'DELETE',
+              params: { id: `eq.${row.id}` }
+            }).catch(() => {});
+          }
+        }
+      }
+    } catch (e: any) {
+      errors.push(`category_masters: ${e?.message || 'failed'}`);
+    }
+  }
+
+  if (errors.length > 0) {
+    return {
+      success: false,
+      error: `Purge notices: ${errors.join(', ')}`
+    };
+  }
+
+  return {
+    success: true,
+    message: 'All questions, category masters, and skill masters have been permanently erased from Supabase.'
+  };
+}
+
+/**
+ * 14. Purge All App Tables in Supabase
+ */
+export async function purgeEntireDatabaseFromSupabase(): Promise<SyncResult> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, message: 'Supabase credentials not configured.' };
+  }
+
+  const tables = [
+    'activity_attempts',
+    'questions',
+    'skill_masters',
+    'category_masters',
+    'activities',
+    'student_progress',
+    'assignments',
+    'classes',
+    'schools',
+    'audit_logs',
+    'vouchers',
+    'subscriptions'
+  ];
+
+  const results: string[] = [];
+  for (const table of tables) {
+    try {
+      await supabaseRestFetch(table, {
+        method: 'DELETE',
+        params: { id: 'neq.__NON_EXISTENT_ID__' }
+      });
+      results.push(`${table}: erased`);
+    } catch (e: any) {
+      // Table might not exist or be empty
+      results.push(`${table}: ${e?.message || 'skipped'}`);
+    }
+  }
+
+  return {
+    success: true,
+    message: `Database purge completed for tables: ${results.join(', ')}`
   };
 }

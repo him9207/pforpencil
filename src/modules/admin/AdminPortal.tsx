@@ -134,6 +134,7 @@ interface AdminPortalProps {
   onDeleteGrade?: (gradeId: string) => void;
   onDeleteSubject?: (subjectId: string) => void;
   onResetToMathPreschoolToGrade6?: () => void;
+  onPurgeAllQuestions?: () => void;
   onResetCredentials?: (userId: string, newSecret: string, isPin: boolean, newUsername?: string) => void;
 }
 
@@ -187,6 +188,7 @@ export default function AdminPortal({
   onDeleteGrade,
   onDeleteSubject,
   onResetToMathPreschoolToGrade6,
+  onPurgeAllQuestions,
   onAddActivity,
   onEditActivity,
   onDeleteActivity,
@@ -499,12 +501,13 @@ export default function AdminPortal({
       id: 'curriculum',
       title: 'Curriculum & Content',
       icon: HelpCircle,
-      badge: questions.length,
+      badge: questions.length + activities.length,
       defaultTab: 'curriculum_master' as AdminTab,
       items: [
         { id: 'curriculum_master' as AdminTab, label: 'Curriculum Master', shortLabel: 'Curriculum Master', icon: Globe, description: 'Country, region & curriculum hierarchy' },
         { id: 'question_bank' as AdminTab, label: 'Master Question Bank', shortLabel: 'Question Bank', icon: HelpCircle, count: questions.length, description: 'Questions, CSV import & generator' },
-        { id: 'classes_subjects' as AdminTab, label: 'Grades & Subjects', shortLabel: 'Grades & Subjects', icon: GraduationCap, count: grades.length, description: 'Active curriculum levels' }
+        { id: 'activities' as AdminTab, label: 'Interactive Activities & Quests', shortLabel: 'Interactive Activities', icon: Sparkles, count: activities.length, description: 'Interactive visual games, manipulative activities & quests' },
+        { id: 'classes_subjects' as AdminTab, label: 'Grades & Subjects', shortLabel: 'Grades & Subjects', icon: GraduationCap, count: (grades?.length || 0), description: 'Active curriculum levels' }
       ]
     },
     {
@@ -773,83 +776,134 @@ export default function AdminPortal({
         </div>
       )}
 
-      {/* Streamlined Admin Navigation (5 Core Hubs + Contextual Sub-Nav) */}
-      <div className="space-y-3">
-        {/* Tier 1: 5 Primary Hub Tabs */}
-        <div className="bg-white rounded-2xl border-2 border-stone-200 p-1.5 shadow-sm grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5">
-          {navSections.map((sec) => {
-            const Icon = sec.icon;
-            const isHubActive = currentSection.id === sec.id;
-            return (
+      {/* Streamlined Admin Navigation - Professional Left Sidebar Layout */}
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+        {/* Modern Left Sidebar */}
+        <aside className={`w-full lg:w-72 xl:w-80 shrink-0 bg-white rounded-3xl border border-stone-200/90 shadow-sm p-4 space-y-4 lg:sticky lg:top-24 transition-all ${
+          mobileMenuOpen ? 'block' : 'hidden lg:block'
+        }`}>
+          {/* Quick Tool Search */}
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={sidebarSearch}
+              onChange={(e) => setSidebarSearch(e.target.value)}
+              placeholder="Search admin tools & tabs..."
+              className="w-full pl-9 pr-8 py-2 rounded-xl bg-stone-50 border border-stone-200 text-xs focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#10246f]"
+            />
+            {sidebarSearch && (
               <button
-                key={sec.id}
-                id={`admin-hub-${sec.id}`}
-                onClick={() => {
-                  sounds.playCorrect();
-                  if (!isHubActive) {
-                    setActiveTab(sec.defaultTab);
-                  }
-                }}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                  isHubActive
-                    ? 'bg-stone-900 text-white shadow-md'
-                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100 bg-stone-50/70 border border-stone-200/60'
-                }`}
+                onClick={() => setSidebarSearch('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 text-xs font-bold"
               >
-                <div className="flex items-center gap-2 truncate">
-                  <Icon className={`w-4 h-4 shrink-0 ${isHubActive ? 'text-amber-400' : 'text-stone-500'}`} />
-                  <span className="truncate">{sec.title}</span>
-                </div>
-                {sec.badge !== undefined && (
-                  <span className={`ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold shrink-0 ${
-                    isHubActive ? 'bg-stone-800 text-amber-300 border border-amber-400/30' : 'bg-stone-200/80 text-stone-700'
-                  }`}>
-                    {sec.badge}
-                  </span>
-                )}
+                ×
               </button>
-            );
-          })}
-        </div>
+            )}
+          </div>
 
-        {/* Tier 2: Contextual Sub-Nav Segmented Controls (Only shown for multi-view hubs) */}
-        {currentSection.items.length > 1 && (
-          <div className="bg-stone-100/90 rounded-2xl p-1.5 border border-stone-200/80 flex items-center gap-1 overflow-x-auto scrollbar-none shadow-2xs">
-            <span className="text-[10px] font-black uppercase tracking-wider text-stone-600 px-2 shrink-0 flex items-center gap-1">
-              <span>{currentSection.title} Views:</span>
-            </span>
-            {currentSection.items.map((subItem) => {
-              const SubIcon = subItem.icon;
-              const isSubActive = activeTab === subItem.id;
+          {/* Grouped Navigation Sections */}
+          <nav className="space-y-4 max-h-[calc(100vh-220px)] overflow-y-auto pr-1">
+            {filteredSections.map((sec) => {
+              const SectionIcon = sec.icon;
+              const isSectionCollapsed = !!collapsedSections[sec.id];
+              const hasActiveItem = sec.items.some(it => it.id === activeTab);
+
               return (
-                <button
-                  key={subItem.id}
-                  id={`admin-subtab-${subItem.id}`}
-                  onClick={() => {
-                    sounds.click();
-                    setActiveTab(subItem.id);
-                  }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 ${
-                    isSubActive
-                      ? 'bg-white text-stone-950 shadow-xs border border-stone-200/90'
-                      : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/70'
-                  }`}
-                >
-                  <SubIcon className={`w-3.5 h-3.5 ${isSubActive ? 'text-blue-600' : 'text-stone-400'}`} />
-                  <span>{subItem.label}</span>
-                  {subItem.count !== undefined && (
-                    <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono font-bold ${
-                      isSubActive ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-stone-200 text-stone-600'
-                    }`}>
-                      {subItem.count}
-                    </span>
+                <div key={sec.id} className="space-y-1">
+                  <div 
+                    onClick={() => toggleSection(sec.id)}
+                    className="flex items-center justify-between px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-stone-500 cursor-pointer hover:text-stone-900 group select-none"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <SectionIcon className={`w-3.5 h-3.5 ${hasActiveItem ? 'text-blue-600' : 'text-stone-500'}`} />
+                      <span>{sec.title}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {sec.badge !== undefined && (
+                        <span className="px-1.5 py-0.2 rounded-md bg-stone-100 text-stone-600 text-[9px] font-mono font-bold">
+                          {sec.badge}
+                        </span>
+                      )}
+                      <ChevronDown className={`w-3 h-3 transition-transform ${isSectionCollapsed ? '-rotate-90 text-stone-500' : 'text-stone-600'}`} />
+                    </div>
+                  </div>
+
+                  {!isSectionCollapsed && (
+                    <div className="space-y-0.5 pl-1">
+                      {sec.items.map((item) => {
+                        const ItemIcon = item.icon;
+                        const isActive = activeTab === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            id={`admin-nav-${item.id}`}
+                            onClick={() => {
+                              sounds.click();
+                              setActiveTab(item.id);
+                              setMobileMenuOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left cursor-pointer group ${
+                              isActive
+                                ? 'bg-[#10246f] text-white shadow-xs font-black'
+                                : 'text-stone-600 hover:text-stone-950 hover:bg-stone-50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <ItemIcon className={`w-4 h-4 shrink-0 transition-colors ${
+                                isActive ? 'text-[#ffbf32]' : 'text-stone-500 group-hover:text-stone-900'
+                              }`} />
+                              <span className="truncate">{item.label}</span>
+                            </div>
+                            {item.count !== undefined && (
+                              <span className={`ml-2 px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold shrink-0 ${
+                                isActive
+                                  ? 'bg-white/20 text-white'
+                                  : 'bg-stone-100 text-stone-600 group-hover:bg-stone-200'
+                              }`}>
+                                {item.count}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
                   )}
-                </button>
+                </div>
               );
             })}
+          </nav>
+        </aside>
+
+        {/* Right Main Content Workspace */}
+        <div className="flex-1 min-w-0 w-full space-y-6">
+          {/* Active View Header Breadcrumb Card */}
+          <div className="bg-white rounded-3xl border border-stone-200/90 p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-xs font-bold text-[#10246f]">
+                <span className="uppercase tracking-wider text-stone-500 font-extrabold">{currentSection.title}</span>
+                <span className="text-stone-300">/</span>
+                <span className="text-[#10246f] font-black">{currentItem?.label || activeTab}</span>
+              </div>
+              <h2 className="text-2xl font-black text-stone-900 tracking-tight flex items-center gap-2.5">
+                {currentItem && <currentItem.icon className="w-6 h-6 text-blue-600" />}
+                <span>{currentItem?.label || activeTab}</span>
+              </h2>
+              <p className="text-xs text-stone-500">
+                {currentItem?.description || 'Manage system data and administrative operations.'}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="lg:hidden px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-xs font-bold text-stone-800 flex items-center gap-1.5"
+              >
+                <Menu className="w-3.5 h-3.5" />
+                <span>Switch Tab</span>
+              </button>
+            </div>
           </div>
-        )}
-      </div>
 
       {/* ========================================================================= */}
       {/* TAB 1: EXECUTIVE DASHBOARD & REAL-TIME PLATFORM METRICS */}
@@ -2347,6 +2401,7 @@ export default function AdminPortal({
             onAddQuestion={onAddQuestion || (() => {})}
             onEditQuestion={onEditQuestion}
             onDeleteQuestion={onDeleteQuestion}
+            onPurgeAllQuestions={onPurgeAllQuestions}
             onSuccessMessage={triggerNotification}
           />
         </div>
@@ -3089,6 +3144,8 @@ CREATE TABLE public.audit_logs (id text PRIMARY KEY, timestamp timestamp, accoun
           </div>
         </div>
       )}
+        </div>
+      </div>
 
       {/* ========================================================================= */}
       {/* MODAL 1: USER DETAIL INSPECTOR MODAL */}

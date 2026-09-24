@@ -340,47 +340,49 @@ export default function StudentPortal({
     };
   }, []);
 
-  // Student's Enrolled Grade (strictly locked to the student's actual enrolled grade level)
-  const studentGrade: GradeLevel = (currentUser.grade || studentProgress.grade || 'Preschool') as GradeLevel;
+  // Student's Enrolled Grade (default to enrolled grade, with grade selector for practice)
+  const defaultGrade: GradeLevel = (currentUser.grade || studentProgress.grade || 'Preschool') as GradeLevel;
+  const [activeGrade, setActiveGrade] = useState<GradeLevel>(defaultGrade);
+
+  useEffect(() => {
+    if (currentUser.grade) {
+      setActiveGrade(currentUser.grade as GradeLevel);
+    }
+  }, [currentUser.grade]);
+
+  const studentGrade: GradeLevel = activeGrade;
   const studentCountry: string = currentUser.country || studentProgress.country || 'United States';
   const studentState: string = currentUser.state || studentProgress.state || 'California';
   const studentCurriculum: string = currentUser.curriculum || studentProgress.curriculum || 'US Common Core (CCSS)';
 
-  // Grade-Locked and Regional / Curriculum Scoped questions with flexible fuzzy matching
+  // Grade-Locked questions with inclusive matching so all uploaded questions for this grade are visible
   const gradeLockedQuestions = useMemo(() => {
     const normStudentGrade = normalizeGrade(studentGrade);
     const normStudentCountry = normalizeCountry(studentCountry);
-    const normStudentCurriculum = normalizeCurriculum(studentCurriculum);
 
     return questions.filter(q => {
-      // 0. Status check: Only Published (or legacy active questions without draft/archived status) are visible to students
-      if (q.status && q.status !== 'Published') return false;
+      // 0. Status check: Exclude questions that are explicitly marked Archived
+      if (q.status === 'Archived') return false;
 
-      // 1. Grade check
-      if (q.grade) {
-        const qNormGrade = normalizeGrade(q.grade);
-        if (qNormGrade !== normStudentGrade && q.grade !== studentGrade) return false;
+      // 1. Grade check: compare normalized grade, direct grade, or gradeId
+      if (q.grade || q.gradeId) {
+        const qNormGrade = normalizeGrade(q.grade || q.gradeId);
+        const matchesGrade = qNormGrade === normStudentGrade || 
+                             q.grade === studentGrade || 
+                             q.gradeId === studentGrade ||
+                             (normStudentGrade === 'preschool' && (qNormGrade.includes('pre') || qNormGrade.includes('kindergarten') || qNormGrade.includes('nursery') || qNormGrade.includes('eyfs'))) ||
+                             (normStudentGrade === 'foundation' && (qNormGrade.includes('foundation') || qNormGrade.includes('prep')));
+        if (!matchesGrade) return false;
       }
 
-      // 2. Country check (Global universal questions or matching student country)
-      if (q.country && q.country !== 'Global' && q.countryId !== 'CNT-GL') {
-        const qNormCountry = normalizeCountry(q.country || q.countryId);
-        if (qNormCountry !== 'global' && qNormCountry !== normStudentCountry && q.country !== studentCountry) {
-          return false;
-        }
-      }
-
-      // 3. Curriculum check (Universal standards or matching student curriculum)
-      if (q.curriculum && q.curriculum !== 'Global Standard' && q.curriculum !== 'Universal' && q.curriculumId !== 'CUR-GLOBAL') {
-        const qNormCurriculum = normalizeCurriculum(q.curriculum || q.curriculumId);
-        if (qNormCurriculum !== 'universal' && qNormCurriculum !== normStudentCurriculum && q.curriculum !== studentCurriculum) {
-          return false;
-        }
+      // 2. School-level check: if question is private to another school organization, exclude
+      if (q.schoolId && currentUser.organizationId && q.schoolId !== currentUser.organizationId) {
+        return false;
       }
 
       return true;
     });
-  }, [questions, studentGrade, studentCountry, studentCurriculum]);
+  }, [questions, studentGrade, studentCountry, currentUser.organizationId]);
 
   // Activity Category, Subject & Search filter states (strictly locked to student's grade)
   const [activityCategoryFilter, setActivityCategoryFilter] = useState<string>('All');
@@ -924,23 +926,45 @@ export default function StudentPortal({
 
   // Launch on-the-fly Practice for a specific skill from the Skill Standards Browser (Category & Skill based)
   const handlePracticeSkill = (skillName: string, subjectName: string, categoryName?: string) => {
-    // 1. Strictly match questions for this Category and Skill in the student's Grade and Curriculum
-    const matchingQuestions = gradeLockedQuestions.filter((q) => {
-      const matchesSkill = q.skill?.trim().toLowerCase() === skillName.trim().toLowerCase() ||
-        (q.skillId && q.skillId.toLowerCase().includes(skillName.toLowerCase().replace(/\s+/g, '-')));
-      const matchesCat = !categoryName || 
-        q.category?.trim().toLowerCase() === categoryName.trim().toLowerCase() ||
-        (q.categoryId && q.categoryId.toLowerCase().includes(categoryName.toLowerCase().replace(/\s+/g, '-')));
-      const matchesSub = !subjectName || q.subject === subjectName;
+    const sNameNorm = skillName.trim().toLowerCase();
+    const cNameNorm = categoryName ? categoryName.trim().toLowerCase() : '';
+    const subNorm = subjectName ? subjectName.trim().toLowerCase() : 'mathematics';
+
+    // 1. Match questions for this Category and Skill in the student's Grade
+    let matchingQuestions = gradeLockedQuestions.filter((q) => {
+      const qSkillNorm = (q.skill || '').trim().toLowerCase();
+      const qCatNorm = (q.category || '').trim().toLowerCase();
+      const qSubNorm = (q.subject || '').trim().toLowerCase();
+
+      const matchesSkill = qSkillNorm === sNameNorm ||
+        (q.skillId && (q.skillId.toLowerCase().includes(sNameNorm.replace(/\s+/g, '-')) || sNameNorm.includes(q.skillId.toLowerCase())));
+      
+      const matchesCat = !cNameNorm || 
+        qCatNorm === cNameNorm ||
+        (q.categoryId && (q.categoryId.toLowerCase().includes(cNameNorm.replace(/\s+/g, '-')) || cNameNorm.includes(q.categoryId.toLowerCase())));
+      
+      const matchesSub = !subjectName || qSubNorm === subNorm || !q.subject;
       return matchesSub && matchesCat && matchesSkill;
     });
 
     if (matchingQuestions.length === 0) {
-      alert(`No questions currently assigned for skill "${skillName}" in category "${categoryName || 'General'}" for ${studentGrade}. Please assign questions from the Master Question Bank.`);
+      // Fallback 1: match by skill name directly
+      matchingQuestions = gradeLockedQuestions.filter(q => (q.skill || '').trim().toLowerCase() === sNameNorm);
+    }
+    if (matchingQuestions.length === 0 && cNameNorm) {
+      // Fallback 2: match by category directly
+      matchingQuestions = gradeLockedQuestions.filter(q => (q.category || '').trim().toLowerCase() === cNameNorm);
+    }
+    if (matchingQuestions.length === 0) {
+      // Fallback 3: take all available questions for this grade
+      matchingQuestions = gradeLockedQuestions;
+    }
+
+    if (matchingQuestions.length === 0) {
       return;
     }
 
-    const selectedQuestions = matchingQuestions.slice(0, 10);
+    const selectedQuestions = matchingQuestions;
 
     const practiceActivity: Activity = {
       id: `PRACTICE-${Date.now()}`,
@@ -985,11 +1009,11 @@ export default function StudentPortal({
       const relevantCategories = masters.categories.filter(c => {
         if (!c.active) return false;
         if (c.name.trim().toLowerCase() === 'preschool wonder world') return false;
-        const normCurriculum = normalizeCurriculum(c.curriculumId);
         const normGrade = normalizeGrade(c.gradeId || '');
-        const curriculumMatch = !normCurriculum || normCurriculum === 'universal' || normCurriculum === normStudentCurriculum;
-        const gradeMatch = !normGrade || normGrade === normStudentGrade;
-        return curriculumMatch && gradeMatch;
+        const gradeMatch = !normGrade || normGrade === normStudentGrade ||
+          (normStudentGrade === 'preschool' && (normGrade.includes('pre') || normGrade.includes('kindergarten') || normGrade.includes('nursery'))) ||
+          (normStudentGrade === 'foundation' && (normGrade.includes('foundation') || normGrade.includes('prep')));
+        return gradeMatch;
       });
 
       relevantCategories.forEach(cat => {
@@ -998,7 +1022,9 @@ export default function StudentPortal({
           const key = `Mathematics:::${cat.name}:::${skl.name}`;
           const matchingQs = gradeLockedQuestions.filter(q => 
             (q.skillId && q.skillId === skl.id) ||
-            (q.skill?.trim().toLowerCase() === skl.name.trim().toLowerCase() && q.category?.trim().toLowerCase() === cat.name.trim().toLowerCase())
+            (q.skill?.trim().toLowerCase() === skl.name.trim().toLowerCase() && 
+             (!q.category || q.category?.trim().toLowerCase() === cat.name.trim().toLowerCase() || q.categoryId === cat.id)) ||
+            (!q.skill && q.category?.trim().toLowerCase() === cat.name.trim().toLowerCase())
           );
           map.set(key, {
             subject: 'Mathematics',
@@ -1121,10 +1147,24 @@ export default function StudentPortal({
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 uppercase tracking-wider flex items-center gap-1 shadow-2xs">
-                  <Lock className="w-3 h-3 text-indigo-600" />
-                  <span>{studentGrade}</span>
-                </span>
+                <div className="relative inline-flex items-center">
+                  <select
+                    value={studentGrade}
+                    onChange={(e) => setActiveGrade(e.target.value as GradeLevel)}
+                    className="text-[11px] font-bold pl-2.5 pr-6 py-0.5 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 uppercase tracking-wider cursor-pointer appearance-none transition focus:outline-none focus:ring-1 focus:ring-indigo-400 shadow-2xs"
+                    title="Switch Grade Level"
+                  >
+                    <option value="Preschool">Preschool</option>
+                    <option value="Foundation">Foundation</option>
+                    <option value="Grade 1">Grade 1</option>
+                    <option value="Grade 2">Grade 2</option>
+                    <option value="Grade 3">Grade 3</option>
+                    <option value="Grade 4">Grade 4</option>
+                    <option value="Grade 5">Grade 5</option>
+                    <option value="Grade 6">Grade 6</option>
+                  </select>
+                  <ChevronDown className="w-3 h-3 text-indigo-600 absolute right-2 pointer-events-none" />
+                </div>
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#eaf8f5] text-[#13b7ad] border border-[#a7f3d0] flex items-center gap-1 shadow-2xs">
                   <span>{studentCountry === 'India' ? '🇮🇳' : studentCountry === 'United Kingdom' ? '🇬🇧' : studentCountry === 'Canada' ? '🇨🇦' : studentCountry === 'Australia' ? '🇦🇺' : '🇺🇸'}</span>
                   <span>{studentState}</span>
@@ -1287,453 +1327,309 @@ export default function StudentPortal({
       {/* ACTIVE FULL-SCREEN QUESTION & ANSWER ARENA */}
       {/* ========================================================================= */}
       {activePlayActivity && (
-        <div className="fixed inset-0 z-[100] bg-[#f8faff] flex flex-col h-screen w-screen select-none overflow-hidden font-sans text-[#10246f] animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-[100] bg-slate-50 flex flex-col h-screen w-screen select-none overflow-hidden font-sans text-slate-900 animate-in fade-in duration-150">
           
           {/* 1. TOP NAVIGATION HEADER */}
-          <header className="h-16 px-4 sm:px-8 bg-white border-b border-[#e1e6f1] flex items-center justify-between shrink-0 shadow-xs z-20">
-            {/* Left: Logo */}
-            <div className="flex items-center gap-6 min-w-0">
-              <div 
-                onClick={() => setActivePlayActivity(null)}
-                className="cursor-pointer flex items-center"
-              >
-                <PforPencilLogo size="sm" />
-              </div>
-
-              {/* Main Nav Links */}
-              <nav className="hidden md:flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setActivePlayActivity(null)}
-                  className="px-3.5 py-1.5 rounded-full text-xs font-bold text-slate-600 hover:text-[#10246f] hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  Home
-                </button>
-                <button
-                  type="button"
-                  className="px-3.5 py-1.5 rounded-full text-xs font-bold text-blue-600 bg-blue-50 border border-blue-200 transition-colors cursor-pointer"
-                >
-                  Practice
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActivePlayActivity(null);
-                    setActiveTab('tactile');
-                  }}
-                  className="px-3.5 py-1.5 rounded-full text-xs font-bold text-slate-600 hover:text-[#10246f] hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  Tactile Lab
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActivePlayActivity(null);
-                    setActiveTab('leaderboard');
-                  }}
-                  className="px-3.5 py-1.5 rounded-full text-xs font-bold text-slate-600 hover:text-[#10246f] hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  Leaderboard
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActivePlayActivity(null);
-                    setActiveTab('analytics');
-                  }}
-                  className="px-3.5 py-1.5 rounded-full text-xs font-bold text-slate-600 hover:text-[#10246f] hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  Analytics & Rewards
-                </button>
-              </nav>
-            </div>
-
-            {/* Right: Coins + Student Profile Pill + Exit Button */}
-            <div className="flex items-center gap-3 shrink-0">
-              {/* Coins Pill */}
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold shadow-2xs">
-                <span>🟡</span>
-                <span>{studentProgress.coins + score} Coins</span>
-              </div>
-
-              {/* Student Profile Pill */}
-              <div className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full bg-white border border-[#e1e6f1] text-xs font-bold">
-                <span className="w-7 h-7 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-sm">
-                  {studentProgress.avatar || '🎓'}
-                </span>
-                <span className="hidden sm:inline text-[#10246f]">{studentProgress.studentName}</span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  {studentGrade}
-                </span>
-              </div>
-
-              {/* Exit Button */}
+          <header className="h-16 px-4 sm:px-8 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 shadow-xs z-20">
+            {/* Left: Exit Practice Button */}
+            <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setActivePlayActivity(null)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-rose-50 border border-slate-200 text-slate-500 hover:text-rose-600 flex items-center justify-center text-xs font-bold transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 text-xs sm:text-sm font-bold transition cursor-pointer"
                 title="Exit to Dashboard"
               >
-                ✕
+                <X className="w-4 h-4" />
+                <span className="hidden sm:inline">Exit</span>
               </button>
+              <div className="h-5 w-px bg-slate-200 hidden sm:block" />
+              <span className="text-xs font-bold text-slate-500 hidden sm:inline truncate max-w-[200px]">
+                {activePlayActivity.title}
+              </span>
+            </div>
+
+            {/* Center: Progress Tracker & Question Counter */}
+            <div className="flex-1 max-w-sm sm:max-w-md mx-3 sm:mx-6">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-500 mb-1.5">
+                <span className="text-[#10246f] font-extrabold">
+                  Question {currentQuestionIndex + 1} of {activeQuestions.length}
+                </span>
+                <span className="text-slate-400 font-mono text-[11px]">
+                  {Math.round(((currentQuestionIndex + (isAnswerSubmitted ? 1 : 0)) / activeQuestions.length) * 100)}%
+                </span>
+              </div>
+              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden border border-slate-200/80">
+                <div 
+                  className="bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full transition-all duration-300"
+                  style={{ width: `${Math.max(4, ((currentQuestionIndex + (isAnswerSubmitted ? 1 : 0)) / activeQuestions.length) * 100)}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Right: Read Aloud + Coins + Timer */}
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              {currentQ && (
+                <button
+                  type="button"
+                  onClick={() => handleReadAloud(currentQ.prompt)}
+                  className="p-2 rounded-xl text-slate-600 hover:text-blue-600 hover:bg-blue-50 border border-slate-200 transition cursor-pointer"
+                  title="Read question aloud"
+                >
+                  <Volume2 className="w-4 h-4" />
+                </button>
+              )}
+
+              {/* Coins Pill */}
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-900 text-xs font-extrabold shadow-2xs">
+                <span>🪙</span>
+                <span>{studentProgress.coins + score}</span>
+              </div>
+
+              {/* Timer Pill */}
+              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-mono text-slate-600">
+                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                <span>00:{String(questionTimer).padStart(2, '0')}</span>
+              </div>
             </div>
           </header>
 
-          {/* 2. MAIN TWO-COLUMN QUESTION ARENA */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 max-w-7xl w-full mx-auto flex flex-col min-h-0">
+          {/* 2. MAIN CENTERED QUESTION ARENA (Clean, Professional, No Clutter) */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col justify-center max-w-3xl w-full mx-auto min-h-0">
             {!quizFinished && currentQ ? (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-1">
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6 flex flex-col my-auto">
                 
-                {/* LEFT MAIN STAGE (Question Area, 8 cols) */}
-                <div className="lg:col-span-8 flex flex-col gap-4">
-                  
-                  {/* Question Card Box */}
-                  <div className="bg-white rounded-3xl border border-[#e1e6f1] p-6 sm:p-8 shadow-sm space-y-6">
-                    
-                    {/* Header Row: Question X of Y + Green Progress Bar + Timer */}
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between text-xs font-bold text-slate-500">
-                        <span className="text-[#10246f] font-black">
-                          Question {currentQuestionIndex + 1} of {activeQuestions.length}
-                        </span>
-                        
-                        <div className="flex items-center gap-3">
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 font-mono text-xs text-slate-700">
-                            ⏱️ 00:{String(questionTimer).padStart(2, '0')}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Continuous Green Progress Bar */}
-                      <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden border border-slate-200">
-                        <div 
-                          className="bg-emerald-500 h-full rounded-full transition-all duration-300"
-                          style={{ width: `${((currentQuestionIndex + (isAnswerSubmitted ? 1 : 0)) / activeQuestions.length) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Skill / Topic Badges */}
-                    <div className="flex flex-wrap items-center gap-2 pt-1">
-                      <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                        <span>▲</span>
-                        <span>{currentQ.category || 'Mathematics'}</span>
-                      </span>
-
-                      <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                        <span>📶</span>
-                        <span>{currentQ.difficulty || 'Medium'}</span>
-                      </span>
-
-                      {currentQ.skill && (
-                        <span className="text-xs text-slate-600 font-medium px-2 py-0.5">
-                          {currentQ.skill}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Question Prompt */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-start justify-between gap-3">
-                        <h2 className="text-xl sm:text-2xl font-black text-[#10246f] leading-snug">
-                          {currentQ.prompt}
-                        </h2>
-                        <button
-                          type="button"
-                          onClick={() => handleReadAloud(currentQ.prompt)}
-                          className="p-2 rounded-xl bg-slate-100 hover:bg-blue-50 text-blue-600 border border-slate-200 transition-colors cursor-pointer shrink-0"
-                          title="Read Question Aloud"
-                        >
-                          <Volume2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <p className="text-xs text-slate-500">
-                        Select the single correct option from the choices below.
-                      </p>
-                    </div>
-
-                    {/* Media Image / Clipart if present */}
-                    {currentQ.mediaUrl && (
-                      <div className="flex justify-center p-3 bg-slate-50 rounded-2xl border border-slate-200">
-                        <img 
-                          src={currentQ.mediaUrl} 
-                          alt="Question Illustration" 
-                          className="max-h-40 rounded-xl object-contain"
-                        />
-                      </div>
-                    )}
-
-                    {/* Interactive Question Card Options */}
-                    <div className="pt-2">
-                      <InteractiveQuestionCard
-                        question={currentQ}
-                        isSubmitted={isAnswerSubmitted}
-                        selectedOption={selectedOption}
-                        onSelectOption={handleSelectOption}
-                        openBoxInput={openBoxInput}
-                        onChangeOpenBoxInput={setOpenBoxInput}
-                        userDragPlacements={userDragPlacements}
-                        onUpdateDragPlacements={setUserDragPlacements}
-                        userMatchPairs={userMatchPairs}
-                        onUpdateMatchPairs={setUserMatchPairs}
-                        userOrderedList={userOrderedList}
-                        onUpdateOrderedList={setUserOrderedList}
-                        userBuckets={userBuckets}
-                        onUpdateBuckets={setUserBuckets}
-                        tappedObjectIds={tappedObjectIds}
-                        onToggleTapObject={(id) => {
-                          setTappedObjectIds((prev) =>
-                            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-                          );
-                        }}
-                        onReadAloud={handleReadAloud}
-                      />
-                    </div>
-
-                    {/* Feedback Banner */}
-                    {isAnswerSubmitted && answerFeedback && (
-                      <div className={`p-4 rounded-2xl border transition-all animate-in fade-in duration-200 ${
-                        answerFeedback.status === 'correct' 
-                          ? 'bg-emerald-50 border-emerald-200 text-emerald-950' 
-                          : 'bg-rose-50 border-rose-200 text-rose-950'
-                      }`}>
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-start gap-3">
-                            <span className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
-                              answerFeedback.status === 'correct' ? 'bg-emerald-600 text-white' : 'bg-rose-500 text-white'
-                            }`}>
-                              {answerFeedback.status === 'correct' ? '✓' : '✕'}
-                            </span>
-                            <div className="space-y-0.5">
-                              <h4 className="text-sm font-bold text-[#10246f]">
-                                {answerFeedback.status === 'correct' ? 'Correct!' : 'Incorrect'}
-                              </h4>
-                              <p className="text-xs text-slate-600">
-                                {currentQ.explanation || answerFeedback.message}
-                              </p>
-                            </div>
-                          </div>
-
-                          {answerFeedback.status === 'correct' && (
-                            <span className="px-3 py-1 rounded-full bg-amber-400 text-[#10246f] font-black text-xs shrink-0 shadow-2xs">
-                              +10 Coins 🪙
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Navigation Footer */}
-                    <div className="flex items-center justify-between pt-4 border-t border-[#e1e6f1]">
-                      <button
-                        type="button"
-                        disabled={currentQuestionIndex === 0}
-                        onClick={() => {
-                          if (currentQuestionIndex > 0) {
-                            const prevIdx = currentQuestionIndex - 1;
-                            setCurrentQuestionIndex(prevIdx);
-                            resetQuestionInteractions(activeQuestions[prevIdx]);
-                            setIsAnswerSubmitted(false);
-                            setAnswerFeedback(null);
-                          }
-                        }}
-                        className="px-5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-700 font-bold text-xs sm:text-sm transition-colors cursor-pointer flex items-center gap-1.5"
-                      >
-                        <ArrowLeft className="w-4 h-4" />
-                        <span>Previous</span>
-                      </button>
-
-                      {!isAnswerSubmitted ? (
-                        <button
-                          type="button"
-                          id="submit-answer-btn"
-                          disabled={!canSubmitAnswer}
-                          onClick={handleSubmitAnswer}
-                          className="px-7 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-black text-xs sm:text-sm shadow-sm transition-all transform hover:scale-102 cursor-pointer flex items-center gap-2"
-                        >
-                          <span>Check Answer</span>
-                          <Sparkles className="w-4 h-4" />
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          id="next-question-btn"
-                          onClick={handleNextQuestion}
-                          className="px-7 py-2.5 rounded-full bg-amber-400 hover:bg-amber-500 text-[#10246f] font-black text-xs sm:text-sm shadow-sm transition-all transform hover:scale-102 cursor-pointer flex items-center gap-2"
-                        >
-                          <span>{currentQuestionIndex + 1 < activeQuestions.length ? 'Next Question' : 'View Results'}</span>
-                          <ArrowRight className="w-4 h-4 text-[#10246f]" />
-                        </button>
-                      )}
-                    </div>
-
-                  </div>
+                {/* Topic & Difficulty Chips */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-indigo-50 text-indigo-800 border border-indigo-200">
+                    {currentQ.category || 'Mathematics'}
+                  </span>
+                  {currentQ.skill && (
+                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
+                      {currentQ.skill}
+                    </span>
+                  )}
+                  <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-lg border ${
+                    currentQ.difficulty === 'Easy' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                    currentQ.difficulty === 'Hard' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                    'bg-amber-50 text-amber-700 border-amber-200'
+                  }`}>
+                    {currentQ.difficulty || 'Medium'}
+                  </span>
                 </div>
 
-                {/* RIGHT SIDEBAR (Progress, Rewards, Tools, Math Tip, 4 cols) */}
-                <div className="lg:col-span-4 space-y-4">
-                  
-                  {/* Your Progress Card */}
-                  <div className="bg-white rounded-3xl border border-[#e1e6f1] p-5 shadow-sm space-y-3">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Your Progress
-                    </h3>
-                    
-                    <div className="flex items-center gap-4">
-                      {/* Circular Progress Ring */}
-                      <div className="relative w-16 h-16 flex items-center justify-center shrink-0">
-                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                          <path
-                            className="text-slate-100"
-                            strokeWidth="3.5"
-                            stroke="currentColor"
-                            fill="none"
-                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                          />
-                          <path
-                            className="text-emerald-500"
-                            strokeDasharray={`${Math.round(((currentQuestionIndex + 1) / activeQuestions.length) * 100)}, 100`}
-                            strokeWidth="3.5"
-                            strokeLinecap="round"
-                            stroke="currentColor"
-                            fill="none"
-                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                          />
-                        </svg>
-                        <span className="absolute text-xs font-black text-[#10246f]">
-                          {Math.round(((currentQuestionIndex + 1) / activeQuestions.length) * 100)}%
+                {/* Question Prompt */}
+                <div className="space-y-1.5">
+                  <div className="flex items-start justify-between gap-4">
+                    <h2 className="text-xl sm:text-2xl font-black text-slate-900 leading-snug tracking-tight">
+                      {currentQ.prompt}
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => handleReadAloud(currentQ.prompt)}
+                      className="p-2.5 rounded-2xl bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 transition shrink-0 cursor-pointer shadow-2xs"
+                      title="Read question aloud"
+                    >
+                      <Volume2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    Select or provide the correct answer below.
+                  </p>
+                </div>
+
+                {/* Media / Clipart Illustration if present */}
+                {currentQ.mediaUrl && (
+                  <div className="flex justify-center p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                    <img 
+                      src={currentQ.mediaUrl} 
+                      alt="Question Illustration" 
+                      className="max-h-48 rounded-xl object-contain shadow-2xs"
+                    />
+                  </div>
+                )}
+
+                {/* Hint Accordion (Optional) */}
+                {currentQ.hint && (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setShowHint(!showHint)}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-xl transition cursor-pointer"
+                    >
+                      <HelpCircle className="w-3.5 h-3.5 text-amber-600" />
+                      <span>{showHint ? 'Hide Hint' : 'Need a Hint?'}</span>
+                    </button>
+                    {showHint && (
+                      <div className="mt-2 p-3 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-950 animate-in fade-in duration-150">
+                        {currentQ.hint}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Interactive Question Content */}
+                <div className="pt-2">
+                  <InteractiveQuestionCard
+                    question={currentQ}
+                    isSubmitted={isAnswerSubmitted}
+                    selectedOption={selectedOption}
+                    onSelectOption={handleSelectOption}
+                    openBoxInput={openBoxInput}
+                    onChangeOpenBoxInput={setOpenBoxInput}
+                    userDragPlacements={userDragPlacements}
+                    onUpdateDragPlacements={setUserDragPlacements}
+                    userMatchPairs={userMatchPairs}
+                    onUpdateMatchPairs={setUserMatchPairs}
+                    userOrderedList={userOrderedList}
+                    onUpdateOrderedList={setUserOrderedList}
+                    userBuckets={userBuckets}
+                    onUpdateBuckets={setUserBuckets}
+                    tappedObjectIds={tappedObjectIds}
+                    onToggleTapObject={(id) => {
+                      setTappedObjectIds((prev) =>
+                        prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+                      );
+                    }}
+                    onReadAloud={handleReadAloud}
+                  />
+                </div>
+
+                {/* Feedback Banner on Submission */}
+                {isAnswerSubmitted && answerFeedback && (
+                  <div className={`p-4 rounded-2xl border transition-all animate-in fade-in duration-200 ${
+                    answerFeedback.status === 'correct' 
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-950' 
+                      : 'bg-rose-50 border-rose-200 text-rose-950'
+                  }`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
+                          answerFeedback.status === 'correct' ? 'bg-emerald-600 text-white' : 'bg-rose-500 text-white'
+                        }`}>
+                          {answerFeedback.status === 'correct' ? '✓' : '✕'}
                         </span>
+                        <div className="space-y-0.5">
+                          <h4 className="text-sm font-extrabold text-slate-900">
+                            {answerFeedback.status === 'correct' ? 'Great Job! That is correct.' : 'Keep Practicing!'}
+                          </h4>
+                          <p className="text-xs text-slate-600 leading-relaxed">
+                            {currentQ.explanation || (answerFeedback.status === 'correct' ? 'Excellent understanding!' : `The correct option was: ${String.fromCharCode(65 + (currentQ.correctIndex ?? 0))}`)}
+                          </p>
+                        </div>
                       </div>
 
-                      <div className="space-y-0.5">
-                        <span className="text-sm font-black text-[#10246f] block">
-                          {currentQuestionIndex + 1}/{activeQuestions.length} Questions
+                      {answerFeedback.status === 'correct' && (
+                        <span className="px-3 py-1 rounded-full bg-amber-400 text-slate-900 font-extrabold text-xs shrink-0 shadow-2xs">
+                          +10 Coins 🪙
                         </span>
-                        <span className="text-xs text-slate-500 block">
-                          Keep going! You're making great headway.
-                        </span>
-                      </div>
+                      )}
                     </div>
                   </div>
+                )}
 
-                  {/* Your Rewards Card */}
-                  <div className="bg-white rounded-3xl border border-[#e1e6f1] p-5 shadow-sm space-y-3">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Your Rewards
-                    </h3>
-                    
-                    <div className="grid grid-cols-3 gap-2 text-center">
-                      <div className="p-2.5 rounded-2xl bg-amber-50 border border-amber-200">
-                        <span className="text-base block">🟡</span>
-                        <span className="text-xs font-black text-[#10246f] block">{studentProgress.coins + score}</span>
-                        <span className="text-[10px] text-slate-500">Coins</span>
-                      </div>
+                {/* Navigation Footer Bar */}
+                <div className="flex items-center justify-between pt-4 border-t border-slate-200">
+                  <button
+                    type="button"
+                    disabled={currentQuestionIndex === 0}
+                    onClick={() => {
+                      if (currentQuestionIndex > 0) {
+                        const prevIdx = currentQuestionIndex - 1;
+                        setCurrentQuestionIndex(prevIdx);
+                        resetQuestionInteractions(activeQuestions[prevIdx]);
+                        setIsAnswerSubmitted(false);
+                        setAnswerFeedback(null);
+                      }
+                    }}
+                    className="px-4 sm:px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:pointer-events-none text-slate-700 font-bold text-xs sm:text-sm transition cursor-pointer flex items-center gap-1.5"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Previous</span>
+                  </button>
 
-                      <div className="p-2.5 rounded-2xl bg-rose-50 border border-rose-200">
-                        <span className="text-base block">🔥</span>
-                        <span className="text-xs font-black text-[#10246f] block">{studentProgress.streakDays || 7}</span>
-                        <span className="text-[10px] text-slate-500">Day Streak</span>
-                      </div>
-
-                      <div className="p-2.5 rounded-2xl bg-indigo-50 border border-indigo-200">
-                        <span className="text-base block">⭐</span>
-                        <span className="text-xs font-black text-[#10246f] block">{studentProgress.badges?.length || 3}</span>
-                        <span className="text-[10px] text-slate-500">Badges</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Quick Learning Tools */}
-                  <div className="bg-white rounded-3xl border border-[#e1e6f1] p-5 shadow-sm space-y-3">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Tools
-                    </h3>
-                    
-                    <div className="grid grid-cols-3 gap-2">
-                      <button 
-                        type="button"
-                        onClick={() => alert('Calculator: Basic calculation tool available during practice.')}
-                        className="p-2.5 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-400 text-center transition-colors cursor-pointer"
-                      >
-                        <span className="text-base block">🧮</span>
-                        <span className="text-[11px] font-bold text-[#10246f] block">Calculator</span>
-                      </button>
-
-                      <button 
-                        type="button"
-                        onClick={() => alert('Ruler: Measurement scale available.')}
-                        className="p-2.5 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-400 text-center transition-colors cursor-pointer"
-                      >
-                        <span className="text-base block">📏</span>
-                        <span className="text-[11px] font-bold text-[#10246f] block">Ruler</span>
-                      </button>
-
-                      <button 
-                        type="button"
-                        onClick={() => alert('Scratch Pad: Draw or jot notes.')}
-                        className="p-2.5 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-400 text-center transition-colors cursor-pointer"
-                      >
-                        <span className="text-base block">📝</span>
-                        <span className="text-[11px] font-bold text-[#10246f] block">Scratch Pad</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Math Tip Card (Soft Yellow BG) */}
-                  <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-1.5 text-xs">
-                    <div className="flex items-center gap-2 text-amber-800 font-bold">
-                      <span>💡</span>
-                      <span>Math Tip</span>
-                    </div>
-                    <p className="text-amber-950 leading-relaxed">
-                      Look closely at the units of measurement before calculating. Converting to the same unit first makes solving much simpler!
-                    </p>
-                  </div>
-
+                  {!isAnswerSubmitted ? (
+                    <button
+                      type="button"
+                      id="submit-answer-btn"
+                      disabled={!canSubmitAnswer}
+                      onClick={handleSubmitAnswer}
+                      className="px-6 sm:px-8 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-extrabold text-xs sm:text-sm shadow-sm transition transform hover:scale-[1.01] active:scale-[0.99] cursor-pointer flex items-center gap-2"
+                    >
+                      <span>Check Answer</span>
+                      <Sparkles className="w-4 h-4 text-amber-300" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      id="next-question-btn"
+                      onClick={handleNextQuestion}
+                      className="px-6 sm:px-8 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm shadow-sm transition transform hover:scale-[1.01] active:scale-[0.99] cursor-pointer flex items-center gap-2"
+                    >
+                      <span>{currentQuestionIndex + 1 < activeQuestions.length ? 'Next Question' : 'View Results'}</span>
+                      <ArrowRight className="w-4 h-4 text-white" />
+                    </button>
+                  )}
                 </div>
 
               </div>
             ) : (
-              /* 3. ACTIVITY RESULTS SUMMARY (ELEGANT CARD) */
-              <div className="bg-white rounded-3xl border border-[#e1e6f1] p-8 shadow-xl text-center space-y-5 max-w-lg mx-auto w-full my-auto animate-in zoom-in-95 duration-200">
-                <div className="w-16 h-16 rounded-3xl bg-amber-100 text-amber-600 flex items-center justify-center text-3xl shadow-xs mx-auto border border-amber-200">
+              /* 3. ACTIVITY RESULTS SUMMARY (CLEAN CELEBRATORY CARD) */
+              <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-10 shadow-xl text-center space-y-6 max-w-lg mx-auto w-full my-auto animate-in zoom-in-95 duration-200">
+                <div className="w-20 h-20 rounded-3xl bg-amber-100 text-amber-600 flex items-center justify-center text-4xl shadow-sm mx-auto border border-amber-200">
                   🏆
                 </div>
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-                    Activity Completed!
+                <div className="space-y-1.5">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                    Practice Completed!
                   </span>
-                  <h3 className="text-2xl font-black text-[#10246f] mt-2">
-                    Fantastic Job, {studentProgress.studentName}!
+                  <h3 className="text-2xl sm:text-3xl font-black text-slate-900">
+                    Great Job, {studentProgress.studentName}!
                   </h3>
-                  <p className="text-slate-600 text-xs sm:text-sm mt-1">
-                    You earned <strong className="text-blue-600">+{activePlayActivity.rewardXP + (speedBonusesEarned * 10)} XP</strong> and <strong className="text-amber-600">+{activePlayActivity.rewardCoins} 🪙 Coins</strong>!
+                  <p className="text-slate-600 text-xs sm:text-sm">
+                    You completed all {activeQuestions.length} questions and earned <strong className="text-blue-600">+{activePlayActivity.rewardXP + (speedBonusesEarned * 10)} XP</strong> & <strong className="text-amber-600">+{activePlayActivity.rewardCoins} Coins 🪙</strong>!
                   </p>
                 </div>
 
-                {/* Summary Metric Badges */}
+                {/* Summary Metrics */}
                 <div className="grid grid-cols-3 gap-2.5 w-full text-xs sm:text-sm">
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-center">
                     <span className="text-slate-500 font-semibold block text-[11px]">Total Score</span>
-                    <strong className="text-base sm:text-lg font-black text-[#10246f]">{score} Pts</strong>
+                    <strong className="text-base sm:text-lg font-black text-slate-900">{score} Pts</strong>
+                  </div>
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-center">
+                    <span className="text-slate-500 font-semibold block text-[11px]">Questions</span>
+                    <strong className="text-base sm:text-lg font-black text-emerald-700">{activeQuestions.length} Qs</strong>
                   </div>
                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-center">
                     <span className="text-slate-500 font-semibold block text-[11px]">Streak</span>
                     <strong className="text-base sm:text-lg font-black text-amber-600">{studentProgress.streakDays} Days 🔥</strong>
                   </div>
-                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-center">
-                    <span className="text-slate-500 font-semibold block text-[11px]">Speed Bonus</span>
-                    <strong className="text-base sm:text-lg font-black text-emerald-600">+{speedBonusesEarned * 10} XP ⚡</strong>
-                  </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setActivePlayActivity(null)}
-                  className="w-full py-3.5 px-6 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-black text-sm shadow-md transition-all hover:scale-102 active:scale-98 cursor-pointer mt-2"
-                >
-                  Return to Dashboard
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentQuestionIndex(0);
+                      setQuizFinished(false);
+                      setIsAnswerSubmitted(false);
+                      setAnswerFeedback(null);
+                      setScore(0);
+                      resetQuestionInteractions(activeQuestions[0]);
+                    }}
+                    className="flex-1 py-3 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs sm:text-sm transition cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    <span>Practice Again</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActivePlayActivity(null)}
+                    className="flex-1 py-3 px-4 rounded-xl bg-[#10246f] hover:bg-[#0c1a52] text-white font-extrabold text-xs sm:text-sm shadow-md transition cursor-pointer"
+                  >
+                    Return to Dashboard
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -1779,10 +1675,24 @@ export default function StudentPortal({
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200 flex items-center gap-1.5">
-                  <Lock className="w-3.5 h-3.5 text-indigo-700" />
-                  <span>{studentGrade} Standards</span>
-                </span>
+                <div className="relative inline-flex items-center">
+                  <select
+                    value={studentGrade}
+                    onChange={(e) => setActiveGrade(e.target.value as GradeLevel)}
+                    className="text-xs font-bold pl-2.5 pr-6 py-0.5 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 uppercase tracking-wider cursor-pointer appearance-none transition focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    title="Switch Grade Level"
+                  >
+                    <option value="Preschool">Preschool</option>
+                    <option value="Foundation">Foundation</option>
+                    <option value="Grade 1">Grade 1</option>
+                    <option value="Grade 2">Grade 2</option>
+                    <option value="Grade 3">Grade 3</option>
+                    <option value="Grade 4">Grade 4</option>
+                    <option value="Grade 5">Grade 5</option>
+                    <option value="Grade 6">Grade 6</option>
+                  </select>
+                  <ChevronDown className="w-3 h-3 text-indigo-600 absolute right-2 pointer-events-none" />
+                </div>
                 <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-700 border border-stone-200 font-mono">
                   {categoryGroups.length} Categories • {skillHierarchy.length} Skills
                 </span>

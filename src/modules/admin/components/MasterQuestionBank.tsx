@@ -1,12 +1,22 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BookOpen, ChevronRight, FolderPlus, HelpCircle, Layers3, Plus, Search, Trash2, X, Globe2, ToggleLeft, ToggleRight, Eye, Sparkles, Check, CheckSquare, Square, Filter, FileSpreadsheet, Send, ArrowRight, Edit3, AlertTriangle } from 'lucide-react';
+import { BookOpen, ChevronRight, FolderPlus, HelpCircle, Layers3, Plus, Search, Trash2, X, Globe2, ToggleLeft, ToggleRight, Eye, Sparkles, Check, CheckSquare, Square, Filter, FileSpreadsheet, Send, ArrowRight, Edit3, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Question, CurriculumGrade, CurriculumSubject, QuestionType } from '../../../types';
 import QuestionBankModal from './QuestionBankModal';
 import QuestionPreviewModal from './QuestionPreviewModal';
 import QuestionEditModal from './QuestionEditModal';
 import { loadCurriculumMaster } from '../../../data/curriculumMasterData';
 import { CategoryMasterRecord, SkillMasterRecord, QuestionBankMasterData, loadQuestionBankMasters, saveQuestionBankMasters } from '../../../data/questionBankMasterData';
-import { MASTER_CATEGORY_SKILL_CATALOG } from '../../../utils/questionExcelHelper';
+import { 
+  syncCategoryMasterToSupabase, 
+  syncSkillMasterToSupabase, 
+  deleteCategoryMasterFromSupabase, 
+  deleteSkillMasterFromSupabase, 
+  deleteQuestionFromSupabase,
+  syncQuestionToSupabase,
+  purgeAllQuestionBankDataFromSupabase,
+  fetchCategoryMastersFromSupabase,
+  fetchSkillMastersFromSupabase
+} from '../../../database/sync';
 
 interface Props {
   grades: CurriculumGrade[];
@@ -15,6 +25,7 @@ interface Props {
   onAddQuestion: (q: Question) => void;
   onEditQuestion?: (q: Question) => void;
   onDeleteQuestion?: (id: string) => void;
+  onPurgeAllQuestions?: () => void;
   onSuccessMessage?: (message: string) => void;
 }
 
@@ -51,6 +62,7 @@ export default function MasterQuestionBank({
   onAddQuestion,
   onEditQuestion,
   onDeleteQuestion,
+  onPurgeAllQuestions,
   onSuccessMessage
 }: Props) {
   const [curriculumMaster, setCurriculumMaster] = useState(loadCurriculumMaster);
@@ -98,13 +110,16 @@ export default function MasterQuestionBank({
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
 
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'Draft' | 'Published' | 'Archived'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'Draft' | 'Published'>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<'all' | 'Easy' | 'Medium' | 'Hard'>('all');
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>([]);
+  const [expandedQuestionIds, setExpandedQuestionIds] = useState<Record<string, boolean>>({});
 
   const [showCreator, setShowCreator] = useState(false);
   const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [showSkillForm, setShowSkillForm] = useState(false);
+  const [showPurgeModal, setShowPurgeModal] = useState(false);
+  const [isPurging, setIsPurging] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<CategoryMasterRecord | null>(null);
   const [skillToDelete, setSkillToDelete] = useState<SkillMasterRecord | null>(null);
   const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
@@ -112,6 +127,27 @@ export default function MasterQuestionBank({
   const [newCategory, setNewCategory] = useState('');
   const [newSkill, setNewSkill] = useState('');
   const [showInactive, setShowInactive] = useState(true);
+
+  // Sync / load categories and skills from Supabase on mount
+  useEffect(() => {
+    let isMounted = true;
+    async function loadLiveMasters() {
+      try {
+        const [catRes, skillRes] = await Promise.all([
+          fetchCategoryMastersFromSupabase(),
+          fetchSkillMastersFromSupabase()
+        ]);
+        if (isMounted) {
+          const loadedCats = (catRes.success && Array.isArray(catRes.categories)) ? catRes.categories : [];
+          const loadedSkills = (skillRes.success && Array.isArray(skillRes.skills)) ? skillRes.skills : [];
+          if (loadedCats.length > 0 || loadedSkills.length > 0) {
+            setMasters({ categories: loadedCats, skills: loadedSkills });
+          }
+        }
+      } catch {}
+    }
+    loadLiveMasters();
+  }, []);
 
   useEffect(() => {
     if (!regionId && regions[0]) setRegionId(regions[0].id);
@@ -139,76 +175,67 @@ export default function MasterQuestionBank({
   const selectedSubject = activeSubjects.find(x => x.id === selectedSubjectId);
 
   const categories = useMemo(() => {
-    const list = masters.categories.filter(c => (showInactive || c.active) && (
-      (!c.curriculumId || c.curriculumId === curriculumId) &&
-      c.subjectId === selectedSubjectId &&
-      c.gradeId === selectedGradeId
+    // 1. First get categories matching the specific curriculum for this subject & grade
+    const exact = masters.categories.filter(c => (showInactive || c.active) && (
+      c.curriculumId === curriculumId &&
+      (!c.subjectId || c.subjectId === selectedSubjectId) &&
+      (!c.gradeId || c.gradeId === selectedGradeId)
     ));
 
-    // If no custom category records exist for this grade/subject, supply standard ones from catalog
-    if (list.length === 0) {
-      const subCode = selectedSubjectId || 'SUB_MTH';
-      const gradeName = selectedGrade?.name || 'Grade 1';
-      MASTER_CATEGORY_SKILL_CATALOG.forEach(item => {
-        const matchSubject = !item.subject || item.subject === subCode || (subCode === 'SUB_MTH' && item.subject === 'SUB_MTH');
-        const matchGrade = !item.grades || item.grades.includes(gradeName) || gradeName === 'Grade 1';
-        if (matchSubject && matchGrade) {
-          if (!list.some(x => x.name.trim().toLowerCase() === item.catName.trim().toLowerCase() || x.code === item.catCode)) {
-            list.push({
-              id: item.catCode,
-              code: item.catCode,
-              name: item.catName,
-              description: item.catName,
-              curriculumId: curriculumId,
-              subjectId: selectedSubjectId,
-              gradeId: selectedGradeId,
-              active: true
-            });
-          }
-        }
-      });
-    }
+    // 2. If no exact curriculum categories exist, get universal/global ones
+    const pool = exact.length > 0 ? exact : masters.categories.filter(c => (showInactive || c.active) && (
+      (!c.curriculumId || c.curriculumId === 'CUR-GLOBAL') &&
+      (!c.subjectId || c.subjectId === selectedSubjectId) &&
+      (!c.gradeId || c.gradeId === selectedGradeId)
+    ));
 
-    return list;
-  }, [masters, curriculumId, selectedSubjectId, selectedGradeId, showInactive, selectedGrade]);
+    // Strict deduplication by trimmed, case-insensitive name
+    const seen = new Set<string>();
+    const result: CategoryMasterRecord[] = [];
+    for (const cat of pool) {
+      const key = cat.name.trim().toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        result.push(cat);
+      }
+    }
+    return result;
+  }, [masters, curriculumId, selectedSubjectId, selectedGradeId, showInactive]);
 
   const selectedCategory = categories.find(c => c.id === selectedCategoryId) || categories.find(c => c.active) || categories[0];
 
   const skills = useMemo(() => {
     if (!selectedCategory) return [];
-    const list = masters.skills.filter(s => (showInactive || s.active) && s.categoryId === selectedCategory.id && s.gradeId === selectedGradeId);
+    const pool = masters.skills.filter(s => 
+      (showInactive || s.active) && 
+      s.categoryId === selectedCategory.id && 
+      (!s.gradeId || s.gradeId === selectedGradeId)
+    );
 
-    if (list.length === 0) {
-      const catCode = selectedCategory.code || selectedCategory.id;
-      const catNameLower = selectedCategory.name.trim().toLowerCase();
-      MASTER_CATEGORY_SKILL_CATALOG.forEach(item => {
-        if (item.catCode === catCode || item.catName.trim().toLowerCase() === catNameLower) {
-          if (!list.some(x => x.name.trim().toLowerCase() === item.skName.trim().toLowerCase() || x.code === item.skCode)) {
-            list.push({
-              id: item.skCode,
-              code: item.skCode,
-              name: item.skName,
-              categoryId: selectedCategory.id,
-              gradeId: selectedGradeId,
-              active: true
-            });
-          }
-        }
-      });
+    // Strict deduplication by trimmed, case-insensitive skill name
+    const seen = new Set<string>();
+    const result: SkillMasterRecord[] = [];
+    for (const skl of pool) {
+      const key = skl.name.trim().toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        result.push(skl);
+      }
     }
-
-    return list;
+    return result;
   }, [masters, selectedCategory, selectedGradeId, showInactive]);
 
   const selectedSkill = skills.find(s => s.id === selectedSkillId) || skills.find(s => s.active) || skills[0];
 
   useEffect(() => {
-    setSelectedCategoryId(prev => categories.some(c => c.id === prev) ? prev : (categories[0]?.id || null));
-  }, [categories]);
+    if (selectedCategoryId && categories.some(c => c.id === selectedCategoryId)) return;
+    setSelectedCategoryId(categories[0]?.id || null);
+  }, [categories, selectedCategoryId]);
 
   useEffect(() => {
-    setSelectedSkillId(prev => skills.some(s => s.id === prev) ? prev : (skills[0]?.id || null));
-  }, [skills]);
+    if (selectedSkillId && skills.some(s => s.id === selectedSkillId)) return;
+    setSelectedSkillId(skills[0]?.id || null);
+  }, [skills, selectedSkillId]);
 
   // Clear selection when filters or category/skill change
   useEffect(() => {
@@ -218,39 +245,27 @@ export default function MasterQuestionBank({
   const visibleQuestions = useMemo(() => {
     const term = search.trim().toLowerCase();
     return questions.filter(q => {
-      const curriculumMatches = !q.curriculumId ||
-        q.curriculumId === 'CUR-GLOBAL' ||
-        q.curriculum === 'Global Standard' ||
-        q.curriculum === 'Universal' ||
-        q.curriculum === 'Universal Foundational' ||
-        q.curriculumId === curriculumId ||
-        (selectedCurriculum && q.curriculum === selectedCurriculum.name);
-      if (!curriculumMatches) return false;
+      // 1. Strict Category check
+      if (!selectedCategory) return false;
+      const isSameCategory = (q.categoryId && q.categoryId === selectedCategory.id) ||
+        (q.category && q.category.trim().toLowerCase() === selectedCategory.name.trim().toLowerCase() &&
+         (!q.curriculumId || q.curriculumId === curriculumId) && 
+         (!q.gradeId || q.gradeId === selectedGradeId) && 
+         (!q.subjectId || q.subjectId === selectedSubjectId));
+      if (!isSameCategory) return false;
 
-      const subjectMatches = !q.subjectId ||
-        q.subjectId === selectedSubjectId ||
-        (selectedSubject && q.subject === selectedSubject.name);
-      if (!subjectMatches) return false;
-
-      const gradeMatches = !q.gradeId ||
-        q.gradeId === selectedGradeId ||
-        (selectedGrade && q.grade?.toLowerCase() === selectedGrade.name.toLowerCase());
-      if (!gradeMatches) return false;
-
-      if (selectedCategory) {
-        const catMatch = q.categoryId === selectedCategory.id ||
-          q.category?.trim().toLowerCase() === selectedCategory.name.trim().toLowerCase();
-        if (!catMatch) return false;
-      }
-
+      // 2. Strict Skill check
       if (selectedSkill) {
-        const sklMatch = q.skillId === selectedSkill.id ||
-          q.skill?.trim().toLowerCase() === selectedSkill.name.trim().toLowerCase();
-        if (!sklMatch) return false;
+        const isSameSkill = (q.skillId && q.skillId === selectedSkill.id) ||
+          (q.skill && q.skill.trim().toLowerCase() === selectedSkill.name.trim().toLowerCase() &&
+           (q.categoryId === selectedCategory.id || !q.categoryId));
+        if (!isSameSkill) return false;
+      } else if (skills.length > 0) {
+        return false;
       }
 
       if (statusFilter !== 'all') {
-        const qStatus = q.status || 'Draft';
+        const qStatus = q.status || 'Published';
         if (qStatus !== statusFilter) return false;
       }
 
@@ -260,30 +275,44 @@ export default function MasterQuestionBank({
 
       return !term || [q.id, q.prompt, q.category, q.skill, q.difficulty, typeLabel(q), ...(q.options || [])].some(v => String(v || '').toLowerCase().includes(term));
     });
-  }, [questions, curriculumId, selectedCurriculum, selectedSubjectId, selectedSubject, selectedGradeId, selectedGrade, selectedCategory, selectedSkill, search, statusFilter, difficultyFilter]);
+  }, [questions, curriculumId, selectedSubjectId, selectedGradeId, selectedCategory, selectedSkill, skills.length, search, statusFilter, difficultyFilter]);
 
   const categoryCount = (c: CategoryMasterRecord) => {
+    const cSkills = masters.skills.filter(s => s.categoryId === c.id);
     return questions.filter(q => {
-      const categoryMatch = q.categoryId === c.id || q.category?.trim().toLowerCase() === c.name.trim().toLowerCase();
-      const gradeMatch = !q.gradeId || q.gradeId === c.gradeId || (selectedGrade && q.grade?.toLowerCase() === selectedGrade.name.toLowerCase());
-      return categoryMatch && gradeMatch;
+      // Must match category strictly
+      const catMatch = (q.categoryId && q.categoryId === c.id) ||
+        (q.category && q.category.trim().toLowerCase() === c.name.trim().toLowerCase() &&
+         (!q.curriculumId || q.curriculumId === c.curriculumId) &&
+         (!q.gradeId || q.gradeId === c.gradeId) &&
+         (!q.subjectId || q.subjectId === c.subjectId));
+      if (!catMatch) return false;
+
+      if (cSkills.length > 0) {
+        return cSkills.some(s => 
+          (q.skillId && q.skillId === s.id) ||
+          (q.skill && q.skill.trim().toLowerCase() === s.name.trim().toLowerCase() && (q.categoryId === c.id || !q.categoryId))
+        );
+      }
+      return (q.categoryId && q.categoryId === c.id);
     }).length;
   };
 
   const skillCount = (s: SkillMasterRecord) => {
     return questions.filter(q => {
-      const skillMatch = q.skillId === s.id || q.skill?.trim().toLowerCase() === s.name.trim().toLowerCase();
-      const gradeMatch = !q.gradeId || q.gradeId === s.gradeId || (selectedGrade && q.grade?.toLowerCase() === selectedGrade.name.toLowerCase());
-      return skillMatch && gradeMatch;
+      return (q.skillId && q.skillId === s.id) ||
+        (q.skill && q.skill.trim().toLowerCase() === s.name.trim().toLowerCase() &&
+         (q.categoryId === s.categoryId || !q.categoryId) &&
+         (!q.gradeId || q.gradeId === s.gradeId));
     }).length;
   };
 
   const draftCountInSkill = useMemo(() => {
-    return visibleQuestions.filter(q => (q.status || 'Draft') === 'Draft').length;
+    return visibleQuestions.filter(q => q.status === 'Draft').length;
   }, [visibleQuestions]);
 
   const publishedCountInSkill = useMemo(() => {
-    return visibleQuestions.filter(q => q.status === 'Published').length;
+    return visibleQuestions.filter(q => (q.status || 'Published') === 'Published').length;
   }, [visibleQuestions]);
 
   const addCategory = () => {
@@ -293,9 +322,10 @@ export default function MasterQuestionBank({
       onSuccessMessage?.(`Category '${name}' already exists for ${selectedGrade.name} in this curriculum.`);
       return;
     }
+    const catCode = `CAT-${slug(name).toUpperCase().slice(0, 8)}`;
     const item: CategoryMasterRecord = {
       id: `CAT-${Date.now()}`,
-      code: code(name),
+      code: catCode,
       curriculumId: selectedCurriculum.id,
       subjectId: selectedSubject.id,
       gradeId: selectedGrade.id,
@@ -304,6 +334,7 @@ export default function MasterQuestionBank({
       active: true
     };
     setMasters(p => ({ ...p, categories: [...p.categories, item] }));
+    syncCategoryMasterToSupabase(item).catch(() => {});
     setSelectedCategoryId(item.id);
     setSelectedSkillId(null);
     setNewCategory('');
@@ -321,13 +352,14 @@ export default function MasterQuestionBank({
     const n = skills.length + 1;
     const item: SkillMasterRecord = {
       id: `SKL-${Date.now()}`,
-      code: `SK-${slug(selectedCategory.code)}-${slug(selectedGrade.name).replace(/-/g, '').slice(0, 6).toUpperCase()}-${String(n).padStart(3, '0')}`,
+      code: `SK-${slug(selectedCategory.code || selectedCategory.name)}-${slug(selectedGrade.name).replace(/-/g, '').slice(0, 6).toUpperCase()}-${String(n).padStart(3, '0')}`,
       categoryId: selectedCategory.id,
       gradeId: selectedGrade.id,
       name,
       active: true
     };
     setMasters(p => ({ ...p, skills: [...p.skills, item] }));
+    syncSkillMasterToSupabase(item).catch(() => {});
     setSelectedSkillId(item.id);
     setNewSkill('');
     setShowSkillForm(false);
@@ -337,6 +369,9 @@ export default function MasterQuestionBank({
   const toggleCategory = (id: string) => setMasters(p => {
     const nextCategories = p.categories.map(c => c.id === id ? { ...c, active: !c.active } : c);
     const updatedCategory = nextCategories.find(c => c.id === id);
+    if (updatedCategory) {
+      syncCategoryMasterToSupabase(updatedCategory).catch(() => {});
+    }
     window.dispatchEvent(new CustomEvent('pforpencil_master_data_updated', { detail: { type: 'category', id, active: updatedCategory?.active } }));
     return { ...p, categories: nextCategories };
   });
@@ -344,6 +379,9 @@ export default function MasterQuestionBank({
   const toggleSkill = (id: string) => setMasters(p => {
     const nextSkills = p.skills.map(s => s.id === id ? { ...s, active: !s.active } : s);
     const updatedSkill = nextSkills.find(s => s.id === id);
+    if (updatedSkill) {
+      syncSkillMasterToSupabase(updatedSkill).catch(() => {});
+    }
     window.dispatchEvent(new CustomEvent('pforpencil_master_data_updated', { detail: { type: 'skill', id, active: updatedSkill?.active } }));
     return { ...p, skills: nextSkills };
   });
@@ -395,7 +433,10 @@ export default function MasterQuestionBank({
 
     // 1. Delete all cascading questions
     if (onDeleteQuestion && linkedQuestions.length > 0) {
-      linkedQuestions.forEach(q => onDeleteQuestion(q.id));
+      linkedQuestions.forEach(q => {
+        onDeleteQuestion(q.id);
+        deleteQuestionFromSupabase(q.id).catch(() => {});
+      });
     }
 
     // 2. Remove skills & category from master records
@@ -407,6 +448,8 @@ export default function MasterQuestionBank({
 
     setMasters(nextMasters);
     saveQuestionBankMasters(nextMasters);
+    deleteCategoryMasterFromSupabase(categoryToDelete.id).catch(() => {});
+    linkedSkills.forEach(s => deleteSkillMasterFromSupabase(s.id).catch(() => {}));
     window.dispatchEvent(new CustomEvent('pforpencil_master_data_updated', { detail: { type: 'category_deleted', id: categoryToDelete.id } }));
 
     onSuccessMessage?.(`Permanently deleted category "${categoryToDelete.name}", ${linkedSkills.length} skill(s), and ${linkedQuestions.length} question(s).`);
@@ -422,7 +465,10 @@ export default function MasterQuestionBank({
 
     // 1. Delete all linked questions
     if (onDeleteQuestion && linkedQuestions.length > 0) {
-      linkedQuestions.forEach(q => onDeleteQuestion(q.id));
+      linkedQuestions.forEach(q => {
+        onDeleteQuestion(q.id);
+        deleteQuestionFromSupabase(q.id).catch(() => {});
+      });
     }
 
     // 2. Remove skill from master records
@@ -433,6 +479,7 @@ export default function MasterQuestionBank({
 
     setMasters(nextMasters);
     saveQuestionBankMasters(nextMasters);
+    deleteSkillMasterFromSupabase(skillToDelete.id).catch(() => {});
     window.dispatchEvent(new CustomEvent('pforpencil_master_data_updated', { detail: { type: 'skill_deleted', id: skillToDelete.id } }));
 
     onSuccessMessage?.(`Permanently deleted skill "${skillToDelete.name}" and ${linkedQuestions.length} question(s).`);
@@ -522,6 +569,40 @@ export default function MasterQuestionBank({
     onSuccessMessage?.(`Published all ${drafts.length} draft questions in ${selectedSkill?.name || 'this skill'}!`);
   };
 
+  const handleExecutePurgeAll = async () => {
+    setIsPurging(true);
+    try {
+      // 1. Purge Supabase database tables (questions, category_masters, skill_masters)
+      await purgeAllQuestionBankDataFromSupabase();
+
+      // 2. Clear state in Parent
+      onPurgeAllQuestions?.();
+
+      // 3. Reset local master records
+      setMasters({ categories: [], skills: [] });
+      setSelectedCategoryId(null);
+      setSelectedSkillId(null);
+      setSelectedQuestionIds([]);
+
+      // 4. Purge browser storage keys
+      try {
+        localStorage.removeItem('pforpencil_question_bank_v1');
+        localStorage.removeItem('pforpencil_question_bank_v2');
+        localStorage.removeItem('funlearn_question_bank_v3');
+        localStorage.removeItem('pforpencil_question_bank_masters_v1');
+        localStorage.removeItem('pforpencil_question_bank_masters_v2');
+        localStorage.removeItem('funlearn_question_bank_masters_v3');
+      } catch {}
+
+      onSuccessMessage?.('All questions, categories, and skills have been completely erased from database and local memory. Ready for fresh testing!');
+    } catch (err: any) {
+      onSuccessMessage?.(`Purge completed with notice: ${err?.message || 'Done'}`);
+    } finally {
+      setIsPurging(false);
+      setShowPurgeModal(false);
+    }
+  };
+
   const isAllSelected = visibleQuestions.length > 0 && selectedQuestionIds.length === visibleQuestions.length;
 
   return (
@@ -542,6 +623,14 @@ export default function MasterQuestionBank({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setShowPurgeModal(true)}
+              className="px-3 py-2.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+              title="Erase all questions, categories, and skills from database and memory"
+            >
+              <Trash2 className="w-4 h-4 text-rose-600" /> Erase All Bank Data
+            </button>
+
             <button
               onClick={() => setShowCreator(true)}
               disabled={!selectedCategory || !selectedSkill || !selectedCategory.active || !selectedSkill.active}
@@ -788,7 +877,7 @@ export default function MasterQuestionBank({
                 <span>{selectedSubject?.name}</span>
               </div>
               <h3 className="text-base sm:text-lg font-black text-stone-900 mt-0.5">
-                {selectedCategory?.name || 'Category'} <span className="text-pink-600">→</span> {selectedSkill?.name || 'All Questions'}
+                {selectedCategory?.name || 'Category'} <span className="text-pink-600">→</span> {selectedSkill?.name || (skills.length === 0 ? 'No Skills Defined' : 'All Skills')}
                 <span className="ml-2 font-mono text-xs font-semibold text-stone-500 bg-white border border-stone-200 px-2 py-0.5 rounded-md">
                   {visibleQuestions.length} Questions
                 </span>
@@ -897,189 +986,282 @@ export default function MasterQuestionBank({
           </div>
         </div>
 
-        {/* FULL WIDTH QUESTION CARDS LIST */}
-        <div className="p-4 sm:p-5 space-y-3.5">
-          {visibleQuestions.map((q, idx) => {
-            const isSelected = selectedQuestionIds.includes(q.id);
-            const isDraft = (q.status || 'Draft') === 'Draft';
-            const isPublished = q.status === 'Published';
+        {/* COMPACT QUESTIONS LIST / TABLE */}
+        <div className="p-4 sm:p-5">
+          {visibleQuestions.length > 0 ? (
+            <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-2xs">
+              {/* Table Header (Hidden on extra small screens) */}
+              <div className="hidden md:grid grid-cols-[44px_140px_1fr_130px_90px_120px_110px] items-center gap-3 px-4 py-3 bg-stone-50 border-b border-stone-200 text-[11px] font-black text-stone-600 uppercase tracking-wider">
+                <div className="flex justify-center">
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={handleToggleSelectAll}
+                    className="rounded border-stone-300 w-4 h-4 cursor-pointer text-indigo-600 focus:ring-indigo-500"
+                    title="Select All Questions"
+                  />
+                </div>
+                <div># & QID</div>
+                <div>Question & Answer Preview</div>
+                <div>Type</div>
+                <div>Difficulty</div>
+                <div>Status</div>
+                <div className="text-right pr-1">Actions</div>
+              </div>
 
-            return (
-              <div
-                key={q.id}
-                className={`p-4 rounded-2xl border transition ${
-                  isSelected
-                    ? 'border-indigo-500 bg-indigo-50/30 shadow-xs'
-                    : isDraft
-                    ? 'border-amber-200/80 bg-amber-50/15 hover:border-stone-300'
-                    : 'border-stone-200 bg-white hover:border-stone-300 shadow-2xs'
-                }`}
-              >
-                {/* Header row: Checkbox, ID, Type, Difficulty, Status */}
-                <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-stone-100">
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => handleToggleSelectQuestion(q.id)}
-                      className="rounded border-stone-300 w-4 h-4 cursor-pointer text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <span className="font-mono text-xs font-bold text-stone-800 bg-stone-100 px-2 py-0.5 rounded-md">
-                      #{idx + 1} · {q.id}
-                    </span>
-                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
-                      q.difficulty === 'Easy'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : q.difficulty === 'Hard'
-                        ? 'bg-rose-100 text-rose-800'
-                        : 'bg-amber-100 text-amber-800'
-                    }`}>
-                      {q.difficulty}
-                    </span>
-                    <span className="text-[11px] font-semibold text-stone-600 bg-stone-100 px-2 py-0.5 rounded-md">
-                      {typeLabel(q)}
-                    </span>
-                    {q.visualClipart && (
-                      <span className="text-xs px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-md font-medium flex items-center gap-1">
-                        Badge: {q.visualClipart}
-                      </span>
-                    )}
-                    {q.visualConfig && (
-                      <span className="text-[10px] px-2 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-800 rounded-md font-bold">
-                        Interactive Visual ({q.visualConfig.template})
-                      </span>
-                    )}
-                  </div>
+              {/* Rows */}
+              <div className="divide-y divide-stone-100">
+                {visibleQuestions.map((q, idx) => {
+                  const isSelected = selectedQuestionIds.includes(q.id);
+                  const isDraft = (q.status || 'Draft') === 'Draft';
+                  const isPublished = q.status === 'Published';
+                  const isExpanded = !!expandedQuestionIds[q.id];
 
-                  {/* Status toggle & Direct Action Buttons */}
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={q.status || 'Draft'}
-                      onChange={e => onEditQuestion?.({ ...q, status: e.target.value as Question['status'] })}
-                      disabled={!onEditQuestion}
-                      className={`px-2.5 py-1 rounded-lg border text-xs font-bold outline-none cursor-pointer ${
-                        isPublished
-                          ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
-                          : q.status === 'Archived'
-                          ? 'border-stone-200 bg-stone-100 text-stone-500'
-                          : 'border-amber-300 bg-amber-50 text-amber-800'
+                  // Get correct answer text preview
+                  let correctAnswerPreview = '';
+                  if (q.options && q.options.length > 0 && typeof q.correctIndex === 'number' && q.options[q.correctIndex]) {
+                    correctAnswerPreview = `${String.fromCharCode(65 + q.correctIndex)}: ${q.options[q.correctIndex]}`;
+                  } else if (q.openBoxAnswer) {
+                    correctAnswerPreview = q.openBoxAnswer;
+                  }
+
+                  const toggleExpand = () => {
+                    setExpandedQuestionIds(prev => ({ ...prev, [q.id]: !prev[q.id] }));
+                  };
+
+                  return (
+                    <div
+                      key={q.id}
+                      className={`transition ${
+                        isSelected
+                          ? 'bg-indigo-50/40'
+                          : idx % 2 === 0
+                          ? 'bg-white hover:bg-stone-50/70'
+                          : 'bg-stone-50/30 hover:bg-stone-50/80'
                       }`}
                     >
-                      <option value="Draft">Draft</option>
-                      <option value="Published">Published / Ready</option>
-                      <option value="Archived">Archived</option>
-                    </select>
+                      {/* Main compact row */}
+                      <div className="p-3 sm:px-4 sm:py-2.5 flex flex-col md:grid md:grid-cols-[44px_140px_1fr_130px_90px_120px_110px] items-start md:items-center gap-2 md:gap-3">
+                        {/* 1. Checkbox */}
+                        <div className="flex items-center justify-between w-full md:w-auto md:justify-center">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleSelectQuestion(q.id)}
+                            className="rounded border-stone-300 w-4 h-4 cursor-pointer text-indigo-600 focus:ring-indigo-500"
+                          />
+                          {/* Mobile-only inline tags */}
+                          <div className="flex md:hidden items-center gap-1.5">
+                            <span className="font-mono text-xs font-bold text-stone-700 bg-stone-100 px-1.5 py-0.5 rounded">
+                              #{idx + 1}
+                            </span>
+                            <button
+                              onClick={() => onEditQuestion?.({ ...q, status: isDraft ? 'Published' : 'Draft' })}
+                              className={`px-2 py-0.5 rounded text-[11px] font-bold cursor-pointer transition ${
+                                isPublished
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-amber-100 text-amber-800'
+                              }`}
+                            >
+                              {q.status || 'Draft'}
+                            </button>
+                          </div>
+                        </div>
 
-                    {isDraft && onEditQuestion && (
-                      <button
-                        onClick={() => {
-                          onEditQuestion({ ...q, status: 'Published' });
-                          onSuccessMessage?.(`Published ${q.id}. Ready for students!`);
-                        }}
-                        className="px-2.5 py-1 rounded-lg bg-stone-900 hover:bg-black text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                      >
-                        <Check className="w-3 h-3 text-emerald-400" /> Publish
-                      </button>
-                    )}
+                        {/* 2. # & ID */}
+                        <div className="hidden md:flex flex-col">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-xs text-stone-900 font-mono">
+                              #{idx + 1}
+                            </span>
+                            <span className="text-[11px] font-mono text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded border border-stone-200 truncate max-w-[95px]" title={q.id}>
+                              {q.id}
+                            </span>
+                          </div>
+                        </div>
 
-                    {/* EDIT QUESTION BUTTON */}
-                    {onEditQuestion && (
-                      <button
-                        onClick={() => setEditingQuestion(q)}
-                        className="px-2.5 py-1 rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs"
-                        title="Edit question text, answers, type, difficulty, or visual settings"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" /> Edit
-                      </button>
-                    )}
+                        {/* 3. Question Prompt & Answer Preview */}
+                        <div className="w-full min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="text-xs sm:text-sm font-bold text-stone-900 leading-snug break-words">
+                              {q.prompt}
+                            </div>
+                            {(q.options?.length || q.explanation || q.hint) && (
+                              <button
+                                onClick={toggleExpand}
+                                className="shrink-0 text-[11px] font-semibold text-stone-500 hover:text-stone-800 px-1.5 py-0.5 rounded bg-stone-100 hover:bg-stone-200 transition flex items-center gap-0.5 cursor-pointer"
+                                title={isExpanded ? 'Hide Options' : 'Show Options'}
+                              >
+                                {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                <span className="hidden sm:inline">{isExpanded ? 'Hide' : 'Options'}</span>
+                              </button>
+                            )}
+                          </div>
 
-                    <button
-                      onClick={() => setPreviewQuestion(q)}
-                      className="p-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-100 text-stone-700 transition cursor-pointer"
-                      title="Preview question in student interactive view"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                    </button>
+                          {/* Inline preview chips */}
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px]">
+                            {correctAnswerPreview && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold">
+                                <Check className="w-3 h-3 text-emerald-600" />
+                                <span className="truncate max-w-[220px]" title={correctAnswerPreview}>
+                                  {correctAnswerPreview}
+                                </span>
+                              </span>
+                            )}
+                            {q.visualConfig && (
+                              <span className="px-1.5 py-0.5 rounded bg-indigo-50 border border-indigo-200 text-indigo-700 font-semibold text-[10px]">
+                                🖼️ Visual ({q.visualConfig.template})
+                              </span>
+                            )}
+                            {q.visualClipart && (
+                              <span className="px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-800 font-semibold text-[10px]">
+                                {q.visualClipart}
+                              </span>
+                            )}
+                          </div>
+                        </div>
 
-                    {onDeleteQuestion && (
-                      <button
-                        onClick={() => {
-                          if (confirm(`Delete question ${q.id}?`)) {
-                            onDeleteQuestion(q.id);
-                          }
-                        }}
-                        className="p-1.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 transition cursor-pointer"
-                        title="Delete question"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Prompt Text (Prominently rendered, full width) */}
-                <div className="pt-3">
-                  <div className="text-sm sm:text-base font-bold text-stone-900 leading-relaxed">
-                    {q.prompt}
-                  </div>
-                </div>
-
-                {/* Options & Answers Full Width Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 mt-3">
-                  {(q.options && q.options.length > 0 ? q.options : [q.openBoxAnswer || '']).map((opt, optIdx) => {
-                    const isCorrect = q.correctIndex === optIdx || q.type === 'open_box' || q.type === 'fill_blank';
-                    return (
-                      <div
-                        key={optIdx}
-                        className={`p-2.5 rounded-xl border text-xs flex items-center gap-2 ${
-                          isCorrect
-                            ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold shadow-2xs'
-                            : 'bg-stone-50 border-stone-200 text-stone-700'
-                        }`}
-                      >
-                        <span className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 ${
-                          isCorrect ? 'bg-emerald-600 text-white' : 'bg-stone-200 text-stone-600'
-                        }`}>
-                          {String.fromCharCode(65 + optIdx)}
-                        </span>
-                        <span className="flex-1 break-words">{opt || '(No text)'}</span>
-                        {isCorrect && (
-                          <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-0.5 shrink-0">
-                            <Check className="w-3.5 h-3.5 text-emerald-600" /> Correct
+                        {/* 4. Type */}
+                        <div className="hidden md:block">
+                          <span className="text-[11px] font-semibold text-stone-700 bg-stone-100 border border-stone-200 px-2 py-0.5 rounded-md inline-block max-w-full truncate" title={typeLabel(q)}>
+                            {typeLabel(q)}
                           </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                        </div>
 
-                {/* Explanation or Hint if available */}
-                {(q.explanation || q.hint) && (
-                  <div className="mt-2.5 pt-2 border-t border-stone-100 flex flex-wrap gap-4 text-xs text-stone-600">
-                    {q.explanation && (
-                      <div>
-                        <span className="font-bold text-stone-700">Explanation: </span>
-                        <span>{q.explanation}</span>
+                        {/* 5. Difficulty */}
+                        <div className="hidden md:block">
+                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md inline-block ${
+                            q.difficulty === 'Easy'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : q.difficulty === 'Hard'
+                              ? 'bg-rose-100 text-rose-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}>
+                            {q.difficulty}
+                          </span>
+                        </div>
+
+                        {/* 6. Status Toggle (Only Draft & Published) */}
+                        <div className="hidden md:flex items-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!onEditQuestion) return;
+                              const nextStatus: Question['status'] = isDraft ? 'Published' : 'Draft';
+                              onEditQuestion({ ...q, status: nextStatus });
+                              onSuccessMessage?.(`Updated ${q.id} to ${nextStatus}.`);
+                            }}
+                            disabled={!onEditQuestion}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition flex items-center gap-1 cursor-pointer select-none shadow-2xs ${
+                              isPublished
+                                ? 'bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100'
+                                : 'bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100'
+                            }`}
+                            title={`Click to switch status to ${isDraft ? 'Published' : 'Draft'}`}
+                          >
+                            <span className={`w-2 h-2 rounded-full ${isPublished ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                            <span>{q.status || 'Draft'}</span>
+                          </button>
+                        </div>
+
+                        {/* 7. Action Buttons */}
+                        <div className="w-full md:w-auto flex items-center justify-end gap-1 pt-1 md:pt-0 border-t md:border-t-0 border-stone-100">
+                          <button
+                            onClick={() => setPreviewQuestion(q)}
+                            className="p-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-100 text-stone-700 transition cursor-pointer shadow-2xs"
+                            title="Preview question in student interactive view"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+
+                          {onEditQuestion && (
+                            <button
+                              onClick={() => setEditingQuestion(q)}
+                              className="p-1.5 rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition cursor-pointer shadow-2xs"
+                              title="Edit question text, answers, type, difficulty, or visual settings"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+
+                          {onDeleteQuestion && (
+                            <button
+                              onClick={() => {
+                                if (confirm(`Delete question ${q.id}?`)) {
+                                  onDeleteQuestion(q.id);
+                                }
+                              }}
+                              className="p-1.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 transition cursor-pointer shadow-2xs"
+                              title="Delete question"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    )}
-                    {q.hint && (
-                      <div>
-                        <span className="font-bold text-amber-700">Hint: </span>
-                        <span>{q.hint}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
+
+                      {/* Expandable Options Drawer */}
+                      {isExpanded && (
+                        <div className="px-4 pb-3 pt-1 bg-stone-50/70 border-t border-stone-100 space-y-2">
+                          {q.options && q.options.length > 0 && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+                              {q.options.map((opt, optIdx) => {
+                                const isCorrect = q.correctIndex === optIdx || q.type === 'open_box' || q.type === 'fill_blank';
+                                return (
+                                  <div
+                                    key={optIdx}
+                                    className={`p-2 rounded-lg border text-xs flex items-center gap-1.5 ${
+                                      isCorrect
+                                        ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold'
+                                        : 'bg-white border-stone-200 text-stone-700'
+                                    }`}
+                                  >
+                                    <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                                      isCorrect ? 'bg-emerald-600 text-white' : 'bg-stone-200 text-stone-600'
+                                    }`}>
+                                      {String.fromCharCode(65 + optIdx)}
+                                    </span>
+                                    <span className="truncate">{opt || '(No text)'}</span>
+                                    {isCorrect && <Check className="w-3 h-3 text-emerald-600 ml-auto shrink-0" />}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {(q.explanation || q.hint) && (
+                            <div className="flex flex-wrap gap-3 text-xs text-stone-600 pt-1">
+                              {q.explanation && (
+                                <div><strong className="text-stone-700">Explanation:</strong> {q.explanation}</div>
+                              )}
+                              {q.hint && (
+                                <div><strong className="text-amber-700">Hint:</strong> {q.hint}</div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
-
-          {!visibleQuestions.length && (
+            </div>
+          ) : (
             <div className="p-12 text-center bg-stone-50/50 rounded-2xl border border-dashed border-stone-200 space-y-2">
               <HelpCircle className="w-8 h-8 text-stone-400 mx-auto" />
-              <div className="text-sm font-bold text-stone-700">No questions found matching the selected filters.</div>
+              <div className="text-sm font-bold text-stone-700">
+                {selectedCategory
+                  ? (skills.length === 0
+                      ? `No skills or questions created yet for category "${selectedCategory.name}".`
+                      : `No questions found for "${selectedCategory.name}" (${selectedSkill?.name || 'Selected Skill'}).`)
+                  : 'No questions found matching the selected filters.'}
+              </div>
               <p className="text-xs text-stone-500">
-                Click <strong>"+ Add / Import Questions"</strong> to add questions manually, generate in batch, or upload Excel/CSV.
+                {skills.length === 0 && selectedCategory ? (
+                  <span>Click <strong className="text-pink-600">"+ Add Skill"</strong> above to define skills under this category, then add questions.</span>
+                ) : (
+                  <span>Click <strong>"+ Add / Import Questions"</strong> to create questions manually, batch generate drills, or upload Excel/CSV.</span>
+                )}
               </p>
             </div>
           )}
@@ -1324,6 +1506,80 @@ export default function MasterQuestionBank({
               >
                 <Trash2 className="w-4 h-4" />
                 <span>Yes, Delete Skill & Questions</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 9. PURGE ALL BANK DATA CONFIRMATION MODAL */}
+      {showPurgeModal && (
+        <div className="fixed inset-0 z-[120] bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-rose-200 space-y-4">
+            <div className="flex items-start gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 border border-rose-300 text-rose-700 flex items-center justify-center shrink-0">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-black text-rose-950 text-lg">Erase All Bank Data?</h3>
+                <p className="text-xs text-rose-700 mt-0.5 font-semibold">
+                  Complete purge from Supabase database tables & local memory.
+                </p>
+              </div>
+              <button
+                onClick={() => !isPurging && setShowPurgeModal(false)}
+                disabled={isPurging}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer disabled:opacity-40"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 bg-rose-50 rounded-2xl border border-rose-200 text-xs text-rose-950 space-y-3">
+              <p className="font-semibold text-rose-900 leading-relaxed">
+                This will permanently delete all <strong>Questions</strong>, <strong>Categories</strong>, and <strong>Skills</strong> from both:
+              </p>
+              <ul className="space-y-1.5 pl-2 text-[11px] font-medium text-rose-800">
+                <li className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-rose-600"></span>
+                  <span>Supabase tables: <code className="font-mono bg-white px-1.5 py-0.5 rounded border border-rose-200">questions</code>, <code className="font-mono bg-white px-1.5 py-0.5 rounded border border-rose-200">category_masters</code>, <code className="font-mono bg-white px-1.5 py-0.5 rounded border border-rose-200">skill_masters</code></span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-rose-600"></span>
+                  <span>All local browser temporary cache and in-memory master records.</span>
+                </li>
+              </ul>
+              <div className="p-2.5 bg-white rounded-xl border border-rose-200 text-[11px] text-stone-700 font-bold">
+                🎯 After this operation, the question bank will be 100% clean and empty (0 categories, 0 skills, 0 questions), allowing you to test dynamic creation and database syncing from scratch.
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={isPurging}
+                onClick={() => setShowPurgeModal(false)}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer disabled:opacity-40"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isPurging}
+                onClick={handleExecutePurgeAll}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black flex items-center gap-2 cursor-pointer shadow-md transition disabled:opacity-60"
+              >
+                {isPurging ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Erasing Data...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Yes, Erase Everything (DB & Local)</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

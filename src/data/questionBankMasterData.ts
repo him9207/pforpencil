@@ -524,23 +524,26 @@ function ensureCurriculumStandards(data: QuestionBankMasterData, grades: Curricu
   return { categories, skills };
 }
 
-export function loadQuestionBankMasters(grades: CurriculumGrade[] = INITIAL_GRADES, subjects: CurriculumSubject[] = INITIAL_SUBJECTS): QuestionBankMasterData {
-  const activeGrades = grades.filter(g => g.active);
-  try {
-    const raw = localStorage.getItem(QUESTION_BANK_MASTER_STORAGE_KEY) || localStorage.getItem(LEGACY_QUESTION_BANK_MASTER_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed?.categories) && Array.isArray(parsed?.skills)) {
-        const cleaned = purgeLegacyPreschoolMasters(parsed);
-        const enriched = ensureCurriculumStandards(cleaned, grades, subjects);
-        return normalizeMasterData(enriched, grades);
-      }
-    }
-  } catch {}
-
+export function generateStandardCurriculumTemplates(grades: CurriculumGrade[] = INITIAL_GRADES, subjects: CurriculumSubject[] = INITIAL_SUBJECTS): QuestionBankMasterData {
   const initial = ensureCurriculumStandards({ categories: [], skills: [] }, grades, subjects);
   return normalizeMasterData(initial, grades);
 }
-export function saveQuestionBankMasters(data: QuestionBankMasterData) {
-  localStorage.setItem(QUESTION_BANK_MASTER_STORAGE_KEY, JSON.stringify(data));
+
+export function loadQuestionBankMasters(grades: CurriculumGrade[] = INITIAL_GRADES, _subjects: CurriculumSubject[] = INITIAL_SUBJECTS): QuestionBankMasterData {
+  try {
+    // Purge any stale legacy keys from browser
+    localStorage.removeItem(QUESTION_BANK_MASTER_STORAGE_KEY);
+    localStorage.removeItem(LEGACY_QUESTION_BANK_MASTER_STORAGE_KEY);
+    localStorage.removeItem('pforpencil_question_bank_masters_v2');
+    localStorage.removeItem('pforpencil_question_bank_v1');
+    localStorage.removeItem('pforpencil_question_bank_v2');
+    localStorage.removeItem('funlearn_question_bank_v3');
+  } catch {}
+
+  // Starts with clean, empty master data. Driven purely by database and live user creation.
+  return normalizeMasterData({ categories: [], skills: [] }, grades);
+}
+
+export function saveQuestionBankMasters(_data: QuestionBankMasterData) {
+  // Master data persists directly to Supabase; localStorage caching is disabled.
 }

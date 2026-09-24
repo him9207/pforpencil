@@ -1284,6 +1284,7 @@ export async function parseQuestionExcelFile(file: File, context: ExcelParseCont
     const colGrd = findCol('Grade', 'Grade Level', 'Grade Name', 'Grade Code');
     const colCat = findCol('Category Name', 'Category', 'Category Code');
     const colSk = findCol('Skill Name', 'Skill', 'Skill Code');
+    const colStatus = findCol('Status', 'Question Status', 'Publish Status', 'State');
 
     if (colPrompt < 0) {
       errors.push(`Missing required column "Question Text" in the Questions sheet.`);
@@ -1354,6 +1355,8 @@ export async function parseQuestionExcelFile(file: File, context: ExcelParseCont
 
       const explanation = getVal(colExp) || `The correct answer is ${options[correctIndex] || rawCorrect || 'Option A'}.`;
       const hint = getVal(colHint);
+      const rawStatusVal = getVal(colStatus).toLowerCase();
+      const status: 'Draft' | 'Published' = rawStatusVal.includes('draft') ? 'Draft' : 'Published';
 
       // Dynamic Hierarchy Resolution
       let currId = context.defaultCurriculumId || 'CUR-VCAA20';
@@ -1529,7 +1532,7 @@ export async function parseQuestionExcelFile(file: File, context: ExcelParseCont
         explanation,
         hint,
         points: difficulty === 'Hard' ? 30 : difficulty === 'Medium' ? 20 : 10,
-        status: 'Draft',
+        status,
         visualClipart,
         visualConfig,
         dragItems,

@@ -61,6 +61,7 @@ import {
   syncAuditLogToSupabase,
   syncVoucherToSupabase,
   syncSubscriptionToSupabase,
+  deleteQuestionFromSupabase,
   fetchUsersFromSupabase,
   fetchQuestionsFromSupabase,
   fetchActivitiesFromSupabase,
@@ -146,29 +147,17 @@ export default function App() {
 
   const [questions, setQuestions] = useState<Question[]>(() => {
     try {
-      // Clear legacy storage keys containing stale or incorrectly populated QIDs
+      // Clear legacy/temp storage keys containing stale or incorrectly populated questions
       localStorage.removeItem('pforpencil_question_bank_v1');
+      localStorage.removeItem('pforpencil_question_bank_v2');
       localStorage.removeItem('funlearn_question_bank_v3');
-      
-      const saved = localStorage.getItem('pforpencil_question_bank_v2');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const sanitized = sanitizeQuestionBank(parsed).questions;
-          try { localStorage.setItem('pforpencil_question_bank_v2', JSON.stringify(sanitized)); } catch {}
-          return sanitized;
-        }
-      }
-      const initialSanitized = sanitizeQuestionBank(INITIAL_QUESTIONS).questions;
-      try { localStorage.setItem('pforpencil_question_bank_v2', JSON.stringify(initialSanitized)); } catch {}
-      return initialSanitized;
-    } catch {
-      return sanitizeQuestionBank(INITIAL_QUESTIONS).questions;
-    }
+      localStorage.removeItem('pforpencil_question_bank_masters_v1');
+      localStorage.removeItem('pforpencil_question_bank_masters_v2');
+      localStorage.removeItem('funlearn_question_bank_masters_v3');
+    } catch {}
+    return sanitizeQuestionBank(INITIAL_QUESTIONS).questions;
   });
-  useEffect(() => {
-    try { localStorage.setItem('pforpencil_question_bank_v2', JSON.stringify(questions)); } catch {}
-  }, [questions]);
+  // Questions synchronize directly with Supabase via syncQuestionToSupabase / fetchQuestionsFromSupabase
   // Interactive Activities use their own normalized database store.
   // The Activity[] state is the hydrated UI view; Question Bank storage remains separate.
   const [activities, setActivities] = useState<Activity[]>(() => getActivityDatabaseView(loadActivityDatabase()));
@@ -539,6 +528,7 @@ export default function App() {
   // Delete Question handler (Content Manager)
   const handleDeleteQuestion = (id: string) => {
     setQuestions((prev) => prev.filter((q) => q.id !== id));
+    deleteQuestionFromSupabase(id);
 
     const newLog: AuditLog = {
       id: generateLogId(),
@@ -548,6 +538,31 @@ export default function App() {
       role: currentUser.role,
       action: 'DELETE_QUESTION',
       details: `Deleted question ${id} from question bank`,
+      ipAddress: '127.0.0.1'
+    };
+    setAuditLogs((prev) => [newLog, ...prev]);
+  };
+
+  // Complete Question Bank & Masters Purge handler
+  const handlePurgeAllQuestions = () => {
+    setQuestions([]);
+    try {
+      localStorage.removeItem('pforpencil_question_bank_v1');
+      localStorage.removeItem('pforpencil_question_bank_v2');
+      localStorage.removeItem('funlearn_question_bank_v3');
+      localStorage.removeItem('pforpencil_question_bank_masters_v1');
+      localStorage.removeItem('pforpencil_question_bank_masters_v2');
+      localStorage.removeItem('funlearn_question_bank_masters_v3');
+    } catch {}
+
+    const newLog: AuditLog = {
+      id: generateLogId(),
+      timestamp: new Date().toISOString().replace('T', ' ').slice(0, 19),
+      accountId: currentUser.id,
+      accountName: currentUser.name,
+      role: currentUser.role,
+      action: 'PURGE_QUESTION_BANK',
+      details: 'Purged entire question bank, category masters, and skill masters from database and local storage.',
       ipAddress: '127.0.0.1'
     };
     setAuditLogs((prev) => [newLog, ...prev]);
@@ -1588,7 +1603,7 @@ export default function App() {
         />
       ) : (
         /* Main Container for Dashboards & Portals */
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 pt-6 pb-24">
+        <main className={`flex-1 w-full mx-auto px-4 sm:px-6 pt-6 pb-24 ${currentUser.role === 'admin' ? 'max-w-[1680px]' : 'max-w-7xl'}`}>
           {currentView === 'pricing' ? (
             <SubscriptionsView
               currentUser={currentUser}
@@ -1751,6 +1766,7 @@ export default function App() {
                 onAddQuestion={handleAddQuestion}
                 onEditQuestion={handleEditQuestion}
                 onDeleteQuestion={handleDeleteQuestion}
+                onPurgeAllQuestions={handlePurgeAllQuestions}
                 onAddGrade={handleAddGrade}
                 onAddSubject={handleAddSubject}
                 onDeleteGrade={handleDeleteGrade}

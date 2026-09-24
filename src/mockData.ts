@@ -268,10 +268,10 @@ export const INITIAL_USERS: UserAccount[] = [
   }
 ];
 
-const rawInitialQuestions = [...COMPREHENSIVE_QUESTIONS, ...PRESCHOOL_QUESTIONS];
+const rawInitialQuestions: Question[] = [];
 const sanitizedBankResult = sanitizeQuestionBank(rawInitialQuestions);
-export const INITIAL_QUESTIONS: Question[] = sanitizedBankResult.questions;
-export const QUESTION_ID_MAP: Record<string, string> = sanitizedBankResult.idMap;
+export const INITIAL_QUESTIONS: Question[] = [];
+export const QUESTION_ID_MAP: Record<string, string> = {};
 
 export const INITIAL_ACTIVITIES: Activity[] = [...PRESCHOOL_ACTIVITIES, ...COMPREHENSIVE_ACTIVITIES];
 

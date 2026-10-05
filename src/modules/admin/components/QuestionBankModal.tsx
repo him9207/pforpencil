@@ -4,7 +4,7 @@ import { X, HelpCircle, Sparkles, Check, Plus, AlertCircle, Download, Upload, Fi
 import { sounds } from '../../../utils/audio';
 import { getNextQuestionId } from '../../../utils/idAndUsernameGenerator';
 import { loadCurriculumMaster } from '../../../data/curriculumMasterData';
-import { CategoryMasterRecord, SkillMasterRecord } from '../../../data/questionBankMasterData';
+import { CategoryMasterRecord, SkillMasterRecord, getGradeStandardTemplates } from '../../../data/questionBankMasterData';
 import { fixMojibake, parseVisualObjectsString } from '../../../utils/visualUtils';
 import { generateQuestionMasterExcel, parseQuestionExcelFile, MASTER_CATEGORY_SKILL_CATALOG } from '../../../utils/questionExcelHelper';
 import { CLIPART_LIBRARY } from '../../../data/clipartLibraryData';
@@ -117,8 +117,8 @@ export default function QuestionBankModal({
     // Custom master categories matching current curriculum, subject, grade
     const custom = categoryMasters.filter(c => c.active && (
       (!curriculumId || c.curriculumId === curriculumId) &&
-      c.subjectId === (selectedSubject?.id || '') &&
-      c.gradeId === (selectedGrade?.id || '')
+      (!c.subjectId || c.subjectId === (selectedSubject?.id || '')) &&
+      (!c.gradeId || c.gradeId === (selectedGrade?.id || ''))
     ));
     custom.forEach(c => {
       if (!list.some(x => x.name.trim().toLowerCase() === c.name.trim().toLowerCase())) {
@@ -126,8 +126,17 @@ export default function QuestionBankModal({
       }
     });
 
+    if (list.length === 0) {
+      const tpls = getGradeStandardTemplates(selectedGrade?.name || grade);
+      tpls.forEach(t => {
+        if (!list.some(x => x.name.trim().toLowerCase() === t.category.trim().toLowerCase())) {
+          list.push({ id: `CAT-${t.categoryCode || t.category.replace(/[^a-zA-Z0-9]/g, '')}`, code: `CAT-${t.categoryCode}`, name: t.category });
+        }
+      });
+    }
+
     return list;
-  }, [categoryMasters, curriculumId, selectedSubject, selectedGrade]);
+  }, [categoryMasters, curriculumId, selectedSubject, selectedGrade, grade]);
 
   const [categoryId, setCategoryId] = useState('');
 
@@ -147,15 +156,28 @@ export default function QuestionBankModal({
     if (!selectedCategory) return list;
 
     // Custom master skills strictly belonging to this category and grade
-    const custom = skillMasters.filter(s => s.active && s.categoryId === selectedCategory.id && s.gradeId === (selectedGrade?.id || ''));
+    const custom = skillMasters.filter(s => s.active && s.categoryId === selectedCategory.id && (!s.gradeId || s.gradeId === (selectedGrade?.id || '')));
     custom.forEach(s => {
       if (!list.some(x => x.name.trim().toLowerCase() === s.name.trim().toLowerCase())) {
         list.push({ id: s.id, code: s.code || `SK-${s.id}`, name: s.name, curriculumReference: s.curriculumReference });
       }
     });
 
+    if (list.length === 0) {
+      const tpls = getGradeStandardTemplates(selectedGrade?.name || grade);
+      const matchedTpl = tpls.find(t => 
+        t.category.toLowerCase() === selectedCategory.name.toLowerCase() ||
+        `CAT-${t.categoryCode}`.toLowerCase() === selectedCategory.id.toLowerCase()
+      );
+      if (matchedTpl && matchedTpl.skills) {
+        matchedTpl.skills.forEach(skl => {
+          list.push({ id: skl.code || `SKL-${selectedCategory.id}-${skl.name.replace(/[^a-zA-Z0-9]/g, '')}`, code: skl.code, name: skl.name });
+        });
+      }
+    }
+
     return list;
-  }, [skillMasters, selectedCategory, selectedGrade]);
+  }, [skillMasters, selectedCategory, selectedGrade, grade]);
 
   const [skillId, setSkillId] = useState('');
 

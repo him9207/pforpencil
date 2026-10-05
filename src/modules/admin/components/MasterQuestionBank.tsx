@@ -7,7 +7,7 @@ import QuestionEditModal from './QuestionEditModal';
 import { ClipartImage, ClipartText } from '../../../common/ClipartRenderer';
 import { resolveMultipleClipartItems, parseOptionClipart } from '../../../data/clipartRegistry';
 import { loadCurriculumMaster } from '../../../data/curriculumMasterData';
-import { CategoryMasterRecord, SkillMasterRecord, QuestionBankMasterData, loadQuestionBankMasters, saveQuestionBankMasters } from '../../../data/questionBankMasterData';
+import { CategoryMasterRecord, SkillMasterRecord, QuestionBankMasterData, loadQuestionBankMasters, saveQuestionBankMasters, getGradeStandardTemplates } from '../../../data/questionBankMasterData';
 import { 
   syncCategoryMasterToSupabase, 
   syncSkillMasterToSupabase, 
@@ -179,6 +179,9 @@ export default function MasterQuestionBank({
   const selectedSubject = activeSubjects.find(x => x.id === selectedSubjectId);
 
   const categories = useMemo(() => {
+    const seen = new Set<string>();
+    const result: CategoryMasterRecord[] = [];
+
     // 1. First get categories matching the specific curriculum for this subject & grade
     const exact = masters.categories.filter(c => (showInactive || c.active) && (
       c.curriculumId === curriculumId &&
@@ -186,16 +189,13 @@ export default function MasterQuestionBank({
       (!c.gradeId || c.gradeId === selectedGradeId)
     ));
 
-    // 2. If no exact curriculum categories exist, get universal/global ones
-    const pool = exact.length > 0 ? exact : masters.categories.filter(c => (showInactive || c.active) && (
-      (!c.curriculumId || c.curriculumId === 'CUR-GLOBAL') &&
-      (!c.subjectId || c.subjectId === selectedSubjectId) &&
-      (!c.gradeId || c.gradeId === selectedGradeId)
+    // 2. If no exact curriculum categories exist, get universal/global ones or ones for this grade
+    const gradeCats = masters.categories.filter(c => (showInactive || c.active) && (
+      (!c.gradeId || c.gradeId === selectedGradeId) &&
+      (!c.subjectId || c.subjectId === selectedSubjectId)
     ));
 
-    // Strict deduplication by trimmed, case-insensitive name
-    const seen = new Set<string>();
-    const result: CategoryMasterRecord[] = [];
+    const pool = exact.length > 0 ? exact : gradeCats;
     for (const cat of pool) {
       const key = cat.name.trim().toLowerCase();
       if (!seen.has(key)) {
@@ -203,22 +203,67 @@ export default function MasterQuestionBank({
         result.push(cat);
       }
     }
+
+    // 3. Discover any categories from existing questions for this grade
+    questions.forEach(q => {
+      const gradeMatches = (!q.gradeId && !q.grade) ||
+        (q.gradeId && q.gradeId === selectedGradeId) ||
+        (q.grade && selectedGrade && q.grade.trim().toLowerCase() === selectedGrade.name.trim().toLowerCase());
+      if (gradeMatches && q.category) {
+        const key = q.category.trim().toLowerCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          result.push({
+            id: q.categoryId || `CAT-${slug(q.category)}`,
+            code: `CAT-${slug(q.category).toUpperCase().slice(0, 8)}`,
+            curriculumId: q.curriculumId || curriculumId,
+            subjectId: selectedSubjectId,
+            gradeId: selectedGradeId,
+            name: q.category,
+            description: `${q.category} curriculum area`,
+            active: true
+          });
+        }
+      }
+    });
+
+    // 4. If still empty, seed with standard grade templates for this grade
+    if (result.length === 0) {
+      const tpls = getGradeStandardTemplates(selectedGrade?.name || 'Grade 1');
+      tpls.forEach(t => {
+        const key = t.category.trim().toLowerCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          result.push({
+            id: `CAT-${t.categoryCode || slug(t.category)}`,
+            code: `CAT-${t.categoryCode}`,
+            curriculumId: curriculumId,
+            subjectId: selectedSubjectId,
+            gradeId: selectedGradeId,
+            name: t.category,
+            description: `${t.category} standard curriculum area`,
+            active: true
+          });
+        }
+      });
+    }
+
     return result;
-  }, [masters, curriculumId, selectedSubjectId, selectedGradeId, showInactive]);
+  }, [masters, curriculumId, selectedSubjectId, selectedGradeId, selectedGrade, questions, showInactive]);
 
   const selectedCategory = categories.find(c => c.id === selectedCategoryId) || categories.find(c => c.active) || categories[0];
 
   const skills = useMemo(() => {
     if (!selectedCategory) return [];
-    const pool = masters.skills.filter(s => 
-      (showInactive || s.active) && 
-      s.categoryId === selectedCategory.id && 
-      (!s.gradeId || s.gradeId === selectedGradeId)
-    );
-
-    // Strict deduplication by trimmed, case-insensitive skill name
     const seen = new Set<string>();
     const result: SkillMasterRecord[] = [];
+
+    // 1. From masters matching selectedCategory.id or name
+    const pool = masters.skills.filter(s => 
+      (showInactive || s.active) && 
+      (s.categoryId === selectedCategory.id || (selectedCategory.name && s.categoryId && s.categoryId.toLowerCase().includes(selectedCategory.name.toLowerCase()))) && 
+      (!s.gradeId || s.gradeId === selectedGradeId)
+    );
     for (const skl of pool) {
       const key = skl.name.trim().toLowerCase();
       if (!seen.has(key)) {
@@ -226,8 +271,57 @@ export default function MasterQuestionBank({
         result.push(skl);
       }
     }
+
+    // 2. Discover skills from questions matching this category and grade
+    questions.forEach(q => {
+      const gradeMatches = (!q.gradeId && !q.grade) ||
+        (q.gradeId && q.gradeId === selectedGradeId) ||
+        (q.grade && selectedGrade && q.grade.trim().toLowerCase() === selectedGrade.name.trim().toLowerCase());
+      const catMatches = (q.categoryId && q.categoryId === selectedCategory.id) ||
+        (q.category && q.category.trim().toLowerCase() === selectedCategory.name.trim().toLowerCase());
+      if (gradeMatches && catMatches && q.skill) {
+        const key = q.skill.trim().toLowerCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          result.push({
+            id: q.skillId || `SKL-${selectedCategory.id}-${slug(q.skill)}`,
+            code: `SK-${slug(q.skill).slice(0, 10).toUpperCase()}`,
+            categoryId: selectedCategory.id,
+            gradeId: selectedGradeId,
+            name: q.skill,
+            active: true
+          });
+        }
+      }
+    });
+
+    // 3. Fallback to standard grade templates for this category
+    if (result.length === 0) {
+      const tpls = getGradeStandardTemplates(selectedGrade?.name || 'Grade 1');
+      const matchedTpl = tpls.find(t => 
+        t.category.toLowerCase() === selectedCategory.name.toLowerCase() ||
+        `CAT-${t.categoryCode}`.toLowerCase() === selectedCategory.id.toLowerCase()
+      );
+      if (matchedTpl && matchedTpl.skills) {
+        matchedTpl.skills.forEach(skl => {
+          const key = skl.name.trim().toLowerCase();
+          if (!seen.has(key)) {
+            seen.add(key);
+            result.push({
+              id: skl.code || `SKL-${selectedCategory.id}-${slug(skl.name)}`,
+              code: skl.code,
+              categoryId: selectedCategory.id,
+              gradeId: selectedGradeId,
+              name: skl.name,
+              active: true
+            });
+          }
+        });
+      }
+    }
+
     return result;
-  }, [masters, selectedCategory, selectedGradeId, showInactive]);
+  }, [masters, selectedCategory, selectedGradeId, selectedGrade, questions, showInactive]);
 
   const selectedSkill = skills.find(s => s.id === selectedSkillId) || skills.find(s => s.active) || skills[0];
 
@@ -249,20 +343,25 @@ export default function MasterQuestionBank({
   const visibleQuestions = useMemo(() => {
     const term = search.trim().toLowerCase();
     return questions.filter(q => {
-      // 1. Strict Category check
+      // 1. Grade check
+      const gradeMatches = 
+        (!q.gradeId && !q.grade) ||
+        (q.gradeId && q.gradeId === selectedGradeId) ||
+        (q.grade && selectedGrade && q.grade.trim().toLowerCase() === selectedGrade.name.trim().toLowerCase());
+      if (!gradeMatches) return false;
+
+      // 2. Strict Category check
       if (!selectedCategory) return false;
-      const isSameCategory = (q.categoryId && q.categoryId === selectedCategory.id) ||
-        (q.category && q.category.trim().toLowerCase() === selectedCategory.name.trim().toLowerCase() &&
-         (!q.curriculumId || q.curriculumId === curriculumId) && 
-         (!q.gradeId || q.gradeId === selectedGradeId) && 
-         (!q.subjectId || q.subjectId === selectedSubjectId));
+      const isSameCategory = 
+        (q.categoryId && q.categoryId === selectedCategory.id) ||
+        (q.category && q.category.trim().toLowerCase() === selectedCategory.name.trim().toLowerCase());
       if (!isSameCategory) return false;
 
-      // 2. Strict Skill check
+      // 3. Strict Skill check
       if (selectedSkill) {
-        const isSameSkill = (q.skillId && q.skillId === selectedSkill.id) ||
-          (q.skill && q.skill.trim().toLowerCase() === selectedSkill.name.trim().toLowerCase() &&
-           (q.categoryId === selectedCategory.id || !q.categoryId));
+        const isSameSkill = 
+          (q.skillId && q.skillId === selectedSkill.id) ||
+          (q.skill && q.skill.trim().toLowerCase() === selectedSkill.name.trim().toLowerCase());
         if (!isSameSkill) return false;
       } else if (skills.length > 0) {
         return false;
@@ -279,35 +378,36 @@ export default function MasterQuestionBank({
 
       return !term || [q.id, q.prompt, q.category, q.skill, q.difficulty, typeLabel(q), ...(q.options || [])].some(v => String(v || '').toLowerCase().includes(term));
     });
-  }, [questions, curriculumId, selectedSubjectId, selectedGradeId, selectedCategory, selectedSkill, skills.length, search, statusFilter, difficultyFilter]);
+  }, [questions, selectedGradeId, selectedGrade, selectedCategory, selectedSkill, skills.length, search, statusFilter, difficultyFilter]);
 
   const categoryCount = (c: CategoryMasterRecord) => {
-    const cSkills = masters.skills.filter(s => s.categoryId === c.id);
     return questions.filter(q => {
-      // Must match category strictly
-      const catMatch = (q.categoryId && q.categoryId === c.id) ||
-        (q.category && q.category.trim().toLowerCase() === c.name.trim().toLowerCase() &&
-         (!q.curriculumId || q.curriculumId === c.curriculumId) &&
-         (!q.gradeId || q.gradeId === c.gradeId) &&
-         (!q.subjectId || q.subjectId === c.subjectId));
-      if (!catMatch) return false;
+      const gradeMatches = 
+        (!q.gradeId && !q.grade) ||
+        (q.gradeId && q.gradeId === selectedGradeId) ||
+        (q.grade && selectedGrade && q.grade.trim().toLowerCase() === selectedGrade.name.trim().toLowerCase());
+      if (!gradeMatches) return false;
 
-      if (cSkills.length > 0) {
-        return cSkills.some(s => 
-          (q.skillId && q.skillId === s.id) ||
-          (q.skill && q.skill.trim().toLowerCase() === s.name.trim().toLowerCase() && (q.categoryId === c.id || !q.categoryId))
-        );
-      }
-      return (q.categoryId && q.categoryId === c.id);
+      return (q.categoryId && q.categoryId === c.id) ||
+        (q.category && q.category.trim().toLowerCase() === c.name.trim().toLowerCase());
     }).length;
   };
 
   const skillCount = (s: SkillMasterRecord) => {
     return questions.filter(q => {
+      const gradeMatches = 
+        (!q.gradeId && !q.grade) ||
+        (q.gradeId && q.gradeId === selectedGradeId) ||
+        (q.grade && selectedGrade && q.grade.trim().toLowerCase() === selectedGrade.name.trim().toLowerCase());
+      if (!gradeMatches) return false;
+
+      const catMatches = !selectedCategory ||
+        (q.categoryId && q.categoryId === selectedCategory.id) ||
+        (q.category && q.category.trim().toLowerCase() === selectedCategory.name.trim().toLowerCase());
+      if (!catMatches) return false;
+
       return (q.skillId && q.skillId === s.id) ||
-        (q.skill && q.skill.trim().toLowerCase() === s.name.trim().toLowerCase() &&
-         (q.categoryId === s.categoryId || !q.categoryId) &&
-         (!q.gradeId || q.gradeId === s.gradeId));
+        (q.skill && q.skill.trim().toLowerCase() === s.name.trim().toLowerCase());
     }).length;
   };
 
@@ -1437,6 +1537,75 @@ export default function MasterQuestionBank({
           onSave={newQ => {
             onAddQuestion(newQ);
             syncQuestionToSupabase(newQ).catch(() => {});
+
+            const targetGrade = activeGrades.find(g => 
+              g.id === newQ.gradeId || g.name.toLowerCase() === newQ.grade?.toLowerCase()
+            ) || selectedGrade;
+            const targetGradeId = targetGrade?.id || selectedGradeId;
+            const targetSubjectId = selectedSubjectId || 'SUB_MTH';
+
+            const catName = (newQ.category || '').trim();
+            const skillName = (newQ.skill || '').trim();
+            let effectiveCatId = newQ.categoryId || `CAT-${slug(catName).toUpperCase().slice(0, 8)}`;
+            let effectiveSkillId = newQ.skillId || `SKL-${effectiveCatId}-${slug(skillName)}`;
+
+            setMasters(prev => {
+              let updatedCats = [...prev.categories];
+              let updatedSkills = [...prev.skills];
+
+              let matchedCat = updatedCats.find(c => 
+                c.id === effectiveCatId ||
+                (catName && c.name.trim().toLowerCase() === catName.toLowerCase() && (!c.gradeId || c.gradeId === targetGradeId))
+              );
+
+              if (!matchedCat && catName) {
+                matchedCat = {
+                  id: effectiveCatId,
+                  code: `CAT-${slug(catName).toUpperCase().slice(0, 8)}`,
+                  curriculumId: newQ.curriculumId || curriculumId,
+                  subjectId: targetSubjectId,
+                  gradeId: targetGradeId,
+                  name: catName,
+                  description: `${catName} curriculum area`,
+                  active: true
+                };
+                updatedCats.push(matchedCat);
+                syncCategoryMasterToSupabase(matchedCat).catch(() => {});
+              } else if (matchedCat) {
+                effectiveCatId = matchedCat.id;
+              }
+
+              if (catName && skillName) {
+                const skillExists = updatedSkills.some(s =>
+                  s.id === effectiveSkillId ||
+                  (s.name.trim().toLowerCase() === skillName.toLowerCase() && s.categoryId === effectiveCatId)
+                );
+                if (!skillExists) {
+                  const newSkillRec: SkillMasterRecord = {
+                    id: effectiveSkillId,
+                    code: `SK-${slug(skillName).slice(0, 10).toUpperCase()}`,
+                    categoryId: effectiveCatId,
+                    gradeId: targetGradeId,
+                    name: skillName,
+                    active: true
+                  };
+                  updatedSkills.push(newSkillRec);
+                  syncSkillMasterToSupabase(newSkillRec).catch(() => {});
+                }
+              }
+
+              const next = { categories: updatedCats, skills: updatedSkills };
+              saveQuestionBankMasters(next);
+              return next;
+            });
+
+            if (newQ.countryId) setCountryId(newQ.countryId);
+            if (newQ.curriculumId) setCurriculumId(newQ.curriculumId);
+            if (targetGradeId) setSelectedGradeId(targetGradeId);
+            if (targetSubjectId) setSelectedSubjectId(targetSubjectId);
+            setSelectedCategoryId(effectiveCatId);
+            setSelectedSkillId(effectiveSkillId);
+
             onSuccessMessage?.(`Created question ${newQ.id} successfully!`);
             setIsCreatingQuestion(false);
           }}
@@ -1465,6 +1634,75 @@ export default function MasterQuestionBank({
           onSave={updated => {
             onEditQuestion?.(updated);
             syncQuestionToSupabase(updated).catch(() => {});
+
+            const targetGrade = activeGrades.find(g => 
+              g.id === updated.gradeId || g.name.toLowerCase() === updated.grade?.toLowerCase()
+            ) || selectedGrade;
+            const targetGradeId = targetGrade?.id || selectedGradeId;
+            const targetSubjectId = selectedSubjectId || 'SUB_MTH';
+
+            const catName = (updated.category || '').trim();
+            const skillName = (updated.skill || '').trim();
+            let effectiveCatId = updated.categoryId || `CAT-${slug(catName).toUpperCase().slice(0, 8)}`;
+            let effectiveSkillId = updated.skillId || `SKL-${effectiveCatId}-${slug(skillName)}`;
+
+            setMasters(prev => {
+              let updatedCats = [...prev.categories];
+              let updatedSkills = [...prev.skills];
+
+              let matchedCat = updatedCats.find(c => 
+                c.id === effectiveCatId ||
+                (catName && c.name.trim().toLowerCase() === catName.toLowerCase() && (!c.gradeId || c.gradeId === targetGradeId))
+              );
+
+              if (!matchedCat && catName) {
+                matchedCat = {
+                  id: effectiveCatId,
+                  code: `CAT-${slug(catName).toUpperCase().slice(0, 8)}`,
+                  curriculumId: updated.curriculumId || curriculumId,
+                  subjectId: targetSubjectId,
+                  gradeId: targetGradeId,
+                  name: catName,
+                  description: `${catName} curriculum area`,
+                  active: true
+                };
+                updatedCats.push(matchedCat);
+                syncCategoryMasterToSupabase(matchedCat).catch(() => {});
+              } else if (matchedCat) {
+                effectiveCatId = matchedCat.id;
+              }
+
+              if (catName && skillName) {
+                const skillExists = updatedSkills.some(s =>
+                  s.id === effectiveSkillId ||
+                  (s.name.trim().toLowerCase() === skillName.toLowerCase() && s.categoryId === effectiveCatId)
+                );
+                if (!skillExists) {
+                  const newSkillRec: SkillMasterRecord = {
+                    id: effectiveSkillId,
+                    code: `SK-${slug(skillName).slice(0, 10).toUpperCase()}`,
+                    categoryId: effectiveCatId,
+                    gradeId: targetGradeId,
+                    name: skillName,
+                    active: true
+                  };
+                  updatedSkills.push(newSkillRec);
+                  syncSkillMasterToSupabase(newSkillRec).catch(() => {});
+                }
+              }
+
+              const next = { categories: updatedCats, skills: updatedSkills };
+              saveQuestionBankMasters(next);
+              return next;
+            });
+
+            if (updated.countryId) setCountryId(updated.countryId);
+            if (updated.curriculumId) setCurriculumId(updated.curriculumId);
+            if (targetGradeId) setSelectedGradeId(targetGradeId);
+            if (targetSubjectId) setSelectedSubjectId(targetSubjectId);
+            setSelectedCategoryId(effectiveCatId);
+            setSelectedSkillId(effectiveSkillId);
+
             onSuccessMessage?.(`Updated question ${updated.id} successfully!`);
             setEditingQuestion(null);
           }}
@@ -1511,6 +1749,67 @@ export default function MasterQuestionBank({
         grades={activeGrades}
         subjects={activeSubjects}
         onAddBatchQuestions={qs => {
+          setMasters(prev => {
+            let updatedCats = [...prev.categories];
+            let updatedSkills = [...prev.skills];
+            let changed = false;
+
+            qs.forEach(q => {
+              const catName = (q.category || '').trim();
+              const skillName = (q.skill || '').trim();
+              const targetGrdId = q.gradeId || activeGrades.find(g => g.name.toLowerCase() === q.grade?.toLowerCase())?.id || selectedGradeId;
+
+              if (catName) {
+                let cat = updatedCats.find(c =>
+                  (q.categoryId && c.id === q.categoryId) ||
+                  (c.name.trim().toLowerCase() === catName.toLowerCase() && (!c.gradeId || c.gradeId === targetGrdId))
+                );
+                if (!cat) {
+                  cat = {
+                    id: q.categoryId || `CAT-${slug(catName).toUpperCase().slice(0, 8)}`,
+                    code: `CAT-${slug(catName).toUpperCase().slice(0, 8)}`,
+                    curriculumId: q.curriculumId || curriculumId,
+                    subjectId: q.subjectId || selectedSubjectId,
+                    gradeId: targetGrdId,
+                    name: catName,
+                    description: `${catName} curriculum area`,
+                    active: true
+                  };
+                  updatedCats.push(cat);
+                  syncCategoryMasterToSupabase(cat).catch(() => {});
+                  changed = true;
+                }
+
+                if (skillName) {
+                  const skillExists = updatedSkills.some(s =>
+                    (q.skillId && s.id === q.skillId) ||
+                    (s.name.trim().toLowerCase() === skillName.toLowerCase() && s.categoryId === cat!.id)
+                  );
+                  if (!skillExists) {
+                    const newSkillRec: SkillMasterRecord = {
+                      id: q.skillId || `SKL-${cat.id}-${slug(skillName)}`,
+                      code: `SK-${slug(skillName).slice(0, 10).toUpperCase()}`,
+                      categoryId: cat.id,
+                      gradeId: targetGrdId,
+                      name: skillName,
+                      active: true
+                    };
+                    updatedSkills.push(newSkillRec);
+                    syncSkillMasterToSupabase(newSkillRec).catch(() => {});
+                    changed = true;
+                  }
+                }
+              }
+            });
+
+            if (changed) {
+              const next = { categories: updatedCats, skills: updatedSkills };
+              saveQuestionBankMasters(next);
+              return next;
+            }
+            return prev;
+          });
+
           qs.forEach(q => {
             onAddQuestion(q);
             syncQuestionToSupabase(q).catch(() => {});

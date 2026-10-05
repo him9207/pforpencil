@@ -111,13 +111,13 @@ function normalizeMasterData(data: QuestionBankMasterData, grades: CurriculumGra
   return { categories: Array.from(byKey.values()), skills: normalizedSkills };
 }
 
-interface CurriculumStandardTemplate {
+export interface CurriculumStandardTemplate {
   category: string;
   categoryCode: string;
   skills: { name: string; code: string }[];
 }
 
-const STANDARD_CURRICULUM_TEMPLATES: Record<string, CurriculumStandardTemplate[]> = {
+export const STANDARD_CURRICULUM_TEMPLATES: Record<string, CurriculumStandardTemplate[]> = {
   preschool: [
     {
       category: 'Counting & Cardinality',
@@ -524,26 +524,50 @@ function ensureCurriculumStandards(data: QuestionBankMasterData, grades: Curricu
   return { categories, skills };
 }
 
+export function getGradeTemplateKey(gradeName: string): string {
+  const name = (gradeName || '').toLowerCase();
+  if (name.includes('pre')) return 'preschool';
+  if (name.includes('found') || name.includes('kinder') || name.includes('fnd')) return 'foundation';
+  if (name.includes('1') || name.includes('one')) return 'grade1';
+  if (name.includes('2') || name.includes('two')) return 'grade2';
+  if (name.includes('3') || name.includes('three')) return 'grade3';
+  if (name.includes('4') || name.includes('four')) return 'grade4';
+  if (name.includes('5') || name.includes('five')) return 'grade5';
+  if (name.includes('6') || name.includes('six')) return 'grade6';
+  return 'grade1';
+}
+
+export function getGradeStandardTemplates(gradeName: string): CurriculumStandardTemplate[] {
+  const key = getGradeTemplateKey(gradeName);
+  return STANDARD_CURRICULUM_TEMPLATES[key] || STANDARD_CURRICULUM_TEMPLATES.grade1;
+}
+
 export function generateStandardCurriculumTemplates(grades: CurriculumGrade[] = INITIAL_GRADES, subjects: CurriculumSubject[] = INITIAL_SUBJECTS): QuestionBankMasterData {
   const initial = ensureCurriculumStandards({ categories: [], skills: [] }, grades, subjects);
   return normalizeMasterData(initial, grades);
 }
 
-export function loadQuestionBankMasters(grades: CurriculumGrade[] = INITIAL_GRADES, _subjects: CurriculumSubject[] = INITIAL_SUBJECTS): QuestionBankMasterData {
+export function loadQuestionBankMasters(grades: CurriculumGrade[] = INITIAL_GRADES, subjects: CurriculumSubject[] = INITIAL_SUBJECTS): QuestionBankMasterData {
   try {
-    // Purge any stale legacy keys from browser
-    localStorage.removeItem(QUESTION_BANK_MASTER_STORAGE_KEY);
-    localStorage.removeItem(LEGACY_QUESTION_BANK_MASTER_STORAGE_KEY);
-    localStorage.removeItem('pforpencil_question_bank_masters_v2');
-    localStorage.removeItem('pforpencil_question_bank_v1');
-    localStorage.removeItem('pforpencil_question_bank_v2');
-    localStorage.removeItem('funlearn_question_bank_v3');
+    const saved = localStorage.getItem('pforpencil_question_bank_masters_v4');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && Array.isArray(parsed.categories) && Array.isArray(parsed.skills) && parsed.categories.length > 0) {
+        return normalizeMasterData(parsed, grades);
+      }
+    }
   } catch {}
 
-  // Starts with clean, empty master data. Driven purely by database and live user creation.
-  return normalizeMasterData({ categories: [], skills: [] }, grades);
+  // Generate clean standard curriculum templates seeded with grade-specific standards
+  const initial = generateStandardCurriculumTemplates(grades, subjects);
+  try {
+    localStorage.setItem('pforpencil_question_bank_masters_v4', JSON.stringify(initial));
+  } catch {}
+  return initial;
 }
 
-export function saveQuestionBankMasters(_data: QuestionBankMasterData) {
-  // Master data persists directly to Supabase; localStorage caching is disabled.
+export function saveQuestionBankMasters(data: QuestionBankMasterData) {
+  try {
+    localStorage.setItem('pforpencil_question_bank_masters_v4', JSON.stringify(data));
+  } catch {}
 }

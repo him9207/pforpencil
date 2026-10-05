@@ -36,7 +36,14 @@ import { ClipartImage, ClipartText } from '../../../common/ClipartRenderer';
 import QuestionPreviewModal from './QuestionPreviewModal';
 import { sounds } from '../../../utils/audio';
 import { loadCurriculumMaster } from '../../../data/curriculumMasterData';
-import { loadQuestionBankMasters, CategoryMasterRecord, SkillMasterRecord } from '../../../data/questionBankMasterData';
+import { 
+  loadQuestionBankMasters, 
+  CategoryMasterRecord, 
+  SkillMasterRecord,
+  getGradeStandardTemplates,
+  getGradeTemplateKey
+} from '../../../data/questionBankMasterData';
+import { INITIAL_GRADES } from '../../../mockData';
 import { getNextQuestionId } from '../../../utils/idAndUsernameGenerator';
 
 export interface MasterQuestionCreatorProps {
@@ -167,7 +174,7 @@ export default function MasterQuestionCreator({
     return question?.subject || initialSubject || availableSubjects[0] || 'Mathematics';
   });
 
-  // 4. Categories (Topic) - Guaranteed rich list
+  // 4. Categories (Topic) - Grade-specific & dynamically updated
   const defaultMasters = useMemo(() => {
     try {
       return loadQuestionBankMasters();
@@ -190,6 +197,9 @@ export default function MasterQuestionCreator({
     return Array.from(map.values());
   }, [skillMasters, defaultMasters]);
 
+  const gradeKey = useMemo(() => getGradeTemplateKey(grade), [grade]);
+  const standardGradeTemplates = useMemo(() => getGradeStandardTemplates(grade), [grade]);
+
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [customCategoryText, setCustomCategoryText] = useState('');
 
@@ -197,52 +207,59 @@ export default function MasterQuestionCreator({
     const list: Array<{ id: string; name: string }> = [];
     const seen = new Set<string>();
 
-    // Add standard categories
-    const standards = [
-      'Numbers & Quantities',
-      'Addition & Subtraction',
-      'Counting & Cardinality',
-      'Geometry & Shapes',
-      'Measurement & Time',
-      'Fractions & Decimals',
-      'Operations & Algebraic Thinking',
-      'Data & Graphs',
-      'Word Problems',
-      'Comparison & Sorting'
-    ];
-
-    standards.forEach(name => {
-      seen.add(name.toLowerCase());
-      list.push({ id: `CAT-${name.replace(/[^a-zA-Z0-9]/g, '')}`, name });
+    // 1. Grade-specific standard categories
+    standardGradeTemplates.forEach(tpl => {
+      seen.add(tpl.category.toLowerCase());
+      list.push({ 
+        id: `CAT-${tpl.categoryCode || tpl.category.replace(/[^a-zA-Z0-9]/g, '')}`, 
+        name: tpl.category 
+      });
     });
 
-    // Merge from masters
+    // 2. Merge from masters matching this grade
     mergedCategories.forEach(c => {
-      if (!seen.has(c.name.toLowerCase())) {
+      const matchesGrade = !c.gradeId || 
+        c.gradeId.toLowerCase().includes(gradeKey) || 
+        (c.gradeId && grade.toLowerCase().includes(c.gradeId.toLowerCase()));
+      if (matchesGrade && !seen.has(c.name.toLowerCase())) {
         seen.add(c.name.toLowerCase());
         list.push({ id: c.id, name: c.name });
       }
     });
 
+    // 3. Question's existing category or initialCategory
     if (question?.category && !seen.has(question.category.toLowerCase())) {
       list.unshift({ id: question.categoryId || 'CAT-Q', name: question.category });
+      seen.add(question.category.toLowerCase());
+    } else if (initialCategory && !seen.has(initialCategory.toLowerCase())) {
+      list.unshift({ id: 'CAT-INIT', name: initialCategory });
+      seen.add(initialCategory.toLowerCase());
     }
 
     return list;
-  }, [mergedCategories, question?.category, question?.categoryId]);
+  }, [standardGradeTemplates, mergedCategories, grade, gradeKey, question?.category, question?.categoryId, initialCategory]);
 
   const [categoryId, setCategoryId] = useState<string>(() => {
-    return question?.categoryId || categoryOptions[0]?.id || 'CAT-NumbersQuantities';
+    return question?.categoryId || categoryOptions[0]?.id || 'CAT-1';
   });
+
+  // Keep category valid when grade changes
+  useEffect(() => {
+    if (!categoryOptions.some(c => c.id === categoryId)) {
+      if (categoryOptions[0]) {
+        setCategoryId(categoryOptions[0].id);
+      }
+    }
+  }, [categoryOptions, categoryId]);
 
   const selectedCategory = useMemo(() => {
     if (isCustomCategory) {
       return { id: 'CAT-CUSTOM', name: customCategoryText.trim() || 'Custom Topic' };
     }
-    return categoryOptions.find(c => c.id === categoryId) || categoryOptions[0];
+    return categoryOptions.find(c => c.id === categoryId) || categoryOptions[0] || { id: 'CAT-1', name: 'Topic Area' };
   }, [isCustomCategory, customCategoryText, categoryOptions, categoryId]);
 
-  // 5. Skills
+  // 5. Skills - Grade & Category specific
   const [isCustomSkill, setIsCustomSkill] = useState(false);
   const [customSkillText, setCustomSkillText] = useState('');
 
@@ -250,17 +267,38 @@ export default function MasterQuestionCreator({
     const list: Array<{ id: string; name: string }> = [];
     const seen = new Set<string>();
 
-    const matches = mergedSkills.filter(s => s.categoryId === selectedCategory.id);
+    // 1. Grade-specific standard skills for selected category
+    const matchedTemplate = standardGradeTemplates.find(tpl =>
+      tpl.category.toLowerCase() === selectedCategory.name.toLowerCase() ||
+      `CAT-${tpl.categoryCode}`.toLowerCase() === selectedCategory.id.toLowerCase() ||
+      `CAT-${tpl.category.replace(/[^a-zA-Z0-9]/g, '')}`.toLowerCase() === selectedCategory.id.toLowerCase()
+    );
+
+    if (matchedTemplate && matchedTemplate.skills && matchedTemplate.skills.length > 0) {
+      matchedTemplate.skills.forEach(skl => {
+        seen.add(skl.name.toLowerCase());
+        list.push({ id: skl.code || `SKL-${selectedCategory.id}-${skl.name.replace(/[^a-zA-Z0-9]/g, '')}`, name: skl.name });
+      });
+    }
+
+    // 2. Check mergedSkills matching this category and grade
+    const matches = mergedSkills.filter(s =>
+      s.categoryId === selectedCategory.id ||
+      (selectedCategory.name && s.name && s.categoryId?.includes(selectedCategory.name))
+    );
     matches.forEach(s => {
-      seen.add(s.name.toLowerCase());
-      list.push({ id: s.id, name: s.name });
+      if (!seen.has(s.name.toLowerCase())) {
+        seen.add(s.name.toLowerCase());
+        list.push({ id: s.id, name: s.name });
+      }
     });
 
+    // 3. Fallback skills for custom or non-template categories
     if (list.length === 0) {
       const defaultSkillNames = [
-        `Core ${selectedCategory.name} Practice`,
-        `Interactive ${selectedCategory.name} Drill`,
-        `Applied ${selectedCategory.name} Challenges`
+        `${selectedCategory.name} Practice Drill`,
+        `${selectedCategory.name} Visual Challenge`,
+        `Applied ${selectedCategory.name} Mastery`
       ];
       defaultSkillNames.forEach((name, idx) => {
         list.push({ id: `SK-${selectedCategory.id}-${idx + 1}`, name });
@@ -269,20 +307,33 @@ export default function MasterQuestionCreator({
 
     if (question?.skill && !seen.has(question.skill.toLowerCase())) {
       list.unshift({ id: question.skillId || 'SK-Q', name: question.skill });
+      seen.add(question.skill.toLowerCase());
+    } else if (initialSkill && !seen.has(initialSkill.toLowerCase())) {
+      list.unshift({ id: 'SK-INIT', name: initialSkill });
+      seen.add(initialSkill.toLowerCase());
     }
 
     return list;
-  }, [mergedSkills, selectedCategory, question?.skill, question?.skillId]);
+  }, [standardGradeTemplates, selectedCategory, mergedSkills, question?.skill, question?.skillId, initialSkill]);
 
   const [skillId, setSkillId] = useState<string>(() => {
     return question?.skillId || skillOptions[0]?.id || '';
   });
 
+  // Keep skill valid when category or grade changes
+  useEffect(() => {
+    if (!skillOptions.some(s => s.id === skillId)) {
+      if (skillOptions[0]) {
+        setSkillId(skillOptions[0].id);
+      }
+    }
+  }, [skillOptions, skillId]);
+
   const selectedSkill = useMemo(() => {
     if (isCustomSkill) {
       return { id: 'SK-CUSTOM', name: customSkillText.trim() || 'Custom Skill' };
     }
-    return skillOptions.find(s => s.id === skillId) || skillOptions[0] || { id: 'SK-1', name: 'Core Foundation Drill' };
+    return skillOptions.find(s => s.id === skillId) || skillOptions[0] || { id: 'SK-1', name: 'Core Skill' };
   }, [isCustomSkill, customSkillText, skillOptions, skillId]);
 
   // 6. Question Type
@@ -514,6 +565,16 @@ export default function MasterQuestionCreator({
     return getNextQuestionId(grade as GradeLevel, existingQuestions, 0, subject as Subject);
   }, [question?.id, grade, subject, existingQuestions]);
 
+  const targetGradeId = useMemo(() => {
+    if (question?.gradeId) return question.gradeId;
+    const matchedGrade = INITIAL_GRADES.find(g => g.name.toLowerCase() === grade.toLowerCase());
+    return matchedGrade?.id || `GRD_${grade.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6)}`;
+  }, [question?.gradeId, grade]);
+
+  const targetSubjectId = useMemo(() => {
+    return question?.subjectId || 'SUB_MTH';
+  }, [question?.subjectId]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!prompt.trim()) {
@@ -589,7 +650,9 @@ export default function MasterQuestionCreator({
       points: Number(points) || 20,
       status,
       grade: grade as GradeLevel,
+      gradeId: targetGradeId,
       subject: subject as Subject,
+      subjectId: targetSubjectId,
       category: selectedCategory.name,
       skill: selectedSkill.name,
       categoryId: selectedCategory.id,
@@ -664,7 +727,9 @@ export default function MasterQuestionCreator({
       points: Number(points) || 20,
       status,
       grade: grade as GradeLevel,
+      gradeId: targetGradeId,
       subject: subject as Subject,
+      subjectId: targetSubjectId,
       category: selectedCategory.name,
       skill: selectedSkill.name,
       categoryId: selectedCategory.id,

@@ -22,6 +22,8 @@ export default function EditClassModal({
   const [grade, setGrade] = useState<GradeLevel>(classroom.grade);
   const [section, setSection] = useState(classroom.section || '');
   const [teacherId, setTeacherId] = useState(classroom.teacherId);
+  const [secondaryTeacherId, setSecondaryTeacherId] = useState(classroom.secondaryTeacherId || '');
+  const [subject, setSubject] = useState<string>(classroom.subject || 'Mathematics');
   const [room, setRoom] = useState(classroom.room || '');
   const [status, setStatus] = useState<'active' | 'inactive'>(classroom.status || 'active');
   const [description, setDescription] = useState(classroom.description || '');
@@ -30,11 +32,14 @@ export default function EditClassModal({
     ? grades.filter(g => g.active).map(g => g.name as GradeLevel)
     : ['Preschool', 'Foundation', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
 
+  const availableSubjects = ['Mathematics', 'Science', 'English Language', 'Logic & Puzzles', 'Social Studies', 'Art & Creativity'];
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
     const selectedTeacher = teachers.find(t => t.id === teacherId);
+    const selectedSecondary = secondaryTeacherId ? teachers.find(t => t.id === secondaryTeacherId) : undefined;
 
     const updated: ClassRoom = {
       ...classroom,
@@ -43,6 +48,10 @@ export default function EditClassModal({
       section: section.trim() || undefined,
       teacherId: selectedTeacher ? selectedTeacher.id : classroom.teacherId,
       teacherName: selectedTeacher ? selectedTeacher.name : classroom.teacherName,
+      secondaryTeacherId: selectedSecondary ? selectedSecondary.id : undefined,
+      secondaryTeacherName: selectedSecondary ? selectedSecondary.name : undefined,
+      subject,
+      subjects: [subject],
       room: room.trim() || undefined,
       status,
       description: description.trim() || undefined
@@ -180,42 +189,85 @@ export default function EditClassModal({
             </div>
           </div>
 
-          <div>
-            <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
-              Assigned Lead Teacher
-            </label>
-            <div className="relative">
-              <UserCheck className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Primary Lead Teacher *
+              </label>
+              <div className="relative">
+                <UserCheck className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
+                <select
+                  value={teacherId}
+                  onChange={(e) => setTeacherId(e.target.value)}
+                  className="w-full pl-8 pr-2.5 py-2.5 rounded-xl border border-slate-200 font-bold text-slate-800 text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden"
+                >
+                  {teachers.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} • {t.grade || 'Faculty'} ({t.id})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">
+                Primary teacher who holds primary lead responsibility for class.
+              </p>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Secondary / Co-Teacher (Optional)
+              </label>
+              <div className="relative">
+                <UserCheck className="w-3.5 h-3.5 absolute left-3 top-3 text-purple-400" />
+                <select
+                  value={secondaryTeacherId}
+                  onChange={(e) => setSecondaryTeacherId(e.target.value)}
+                  className="w-full pl-8 pr-2.5 py-2.5 rounded-xl border border-slate-200 font-bold text-slate-800 text-xs focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-hidden"
+                >
+                  <option value="">-- No Secondary Teacher (Optional) --</option>
+                  {teachers.filter(t => t.id !== teacherId).map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} • {t.grade || 'Faculty'} ({t.id})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-[10px] text-purple-600 mt-1">
+                Backup / co-teacher who steps in and performs tasks if primary teacher is unavailable.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Class Curriculum Subject
+              </label>
               <select
-                value={teacherId}
-                onChange={(e) => setTeacherId(e.target.value)}
-                className="w-full pl-8 pr-2.5 py-2.5 rounded-xl border border-slate-200 font-bold text-slate-800 text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                className="w-full p-2.5 rounded-xl border border-slate-200 font-bold text-slate-800 text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden"
               >
-                {teachers.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} • {t.grade || 'Faculty'} ({t.id})
-                  </option>
+                {availableSubjects.map((s) => (
+                  <option key={s} value={s}>{s}</option>
                 ))}
               </select>
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">
-              Changing teacher reassigns classroom ownership and active student assignments.
-            </p>
-          </div>
 
-          <div>
-            <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
-              Description or Focus Area (Optional)
-            </label>
-            <div className="relative">
-              <FileText className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
-              <input
-                type="text"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="e.g. STEM and Interactive Foundations Cohort"
-                className="w-full pl-8 pr-2.5 py-2.5 rounded-xl border border-slate-200 font-medium text-slate-900 text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden"
-              />
+            <div>
+              <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Description / Cohort Focus (Optional)
+              </label>
+              <div className="relative">
+                <FileText className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
+                <input
+                  type="text"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="e.g. STEM and Interactive Foundations Cohort"
+                  className="w-full pl-8 pr-2.5 py-2.5 rounded-xl border border-slate-200 font-medium text-slate-900 text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden"
+                />
+              </div>
             </div>
           </div>
 

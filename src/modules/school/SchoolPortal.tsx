@@ -31,14 +31,20 @@ import {
   Calendar,
   Clock,
   DoorOpen,
-  Filter
+  Filter,
+  Globe,
+  MapPin,
+  Sparkles,
+  ArrowRightLeft
 } from 'lucide-react';
 import { sounds } from '../../utils/audio';
 import { getSchoolPrefix, generateSchoolStudentUsername, getNextRoleId, commitAccountId } from '../../utils/idAndUsernameGenerator';
+import { COUNTRY_FLAG_MAP } from '../../data/curriculumData';
 import StudentReportCardModal from '../student/StudentReportCardModal';
 import ResetCredentialsModal from '../auth/ResetCredentialsModal';
 import EditClassModal from './components/EditClassModal';
 import EditTeacherModal from './components/EditTeacherModal';
+import EditStudentModal from './components/EditStudentModal';
 import SchoolSubscriptionModal from './components/SchoolSubscriptionModal';
 import EditUserProfileModal from '../admin/components/EditUserProfileModal';
 import { useBodyScrollLock } from '../../utils/useBodyScrollLock';
@@ -120,7 +126,8 @@ export default function SchoolPortal({
   const [resettingUser, setResettingUser] = useState<UserAccount | null>(null);
   const [editingClass, setEditingClass] = useState<ClassRoom | null>(null);
   const [editingTeacher, setEditingTeacher] = useState<UserAccount | null>(null);
-  const [editingStudentUser, setEditingStudentUser] = useState<UserAccount | null>(null);
+  const [editingUserProfile, setEditingUserProfile] = useState<UserAccount | null>(null);
+  const [editingStudentData, setEditingStudentData] = useState<{ student: StudentProgress; user?: UserAccount } | null>(null);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState<boolean>(false);
 
   // Lock body scroll while any school modal is open
@@ -132,7 +139,8 @@ export default function SchoolPortal({
     resettingUser ||
     editingClass ||
     editingTeacher ||
-    editingStudentUser ||
+    editingUserProfile ||
+    editingStudentData ||
     showSubscriptionModal
   ));
 
@@ -157,6 +165,8 @@ export default function SchoolPortal({
   const [newClassGrade, setNewClassGrade] = useState<GradeLevel>(() => activeCurriculumGrades[0] || 'Grade 1');
   const [newClassSection, setNewClassSection] = useState('');
   const [newClassTeacherId, setNewClassTeacherId] = useState(schoolTeachers[0]?.id || teachers[0]?.id || '');
+  const [newClassSecondaryTeacherId, setNewClassSecondaryTeacherId] = useState('');
+  const [newClassSubject, setNewClassSubject] = useState('Mathematics');
   const [newClassRoom, setNewClassRoom] = useState('');
 
   const [newTeacherName, setNewTeacherName] = useState('');
@@ -207,6 +217,7 @@ export default function SchoolPortal({
     if (!newClassName.trim()) return;
 
     const assignedTeacher = schoolTeachers.find(t => t.id === newClassTeacherId) || schoolTeachers[0];
+    const secondaryTeacher = newClassSecondaryTeacherId ? schoolTeachers.find(t => t.id === newClassSecondaryTeacherId) : undefined;
     const newClass: ClassRoom = {
       id: `CLS-00${classes.length + 1}`,
       name: newClassName.trim(),
@@ -214,6 +225,10 @@ export default function SchoolPortal({
       section: newClassSection.trim() || undefined,
       teacherId: assignedTeacher ? assignedTeacher.id : currentUser.id,
       teacherName: assignedTeacher ? assignedTeacher.name : currentUser.name,
+      secondaryTeacherId: secondaryTeacher?.id || undefined,
+      secondaryTeacherName: secondaryTeacher?.name || undefined,
+      subject: newClassSubject || 'Mathematics',
+      subjects: [newClassSubject || 'Mathematics'],
       room: newClassRoom.trim() || undefined,
       status: 'active',
       schoolId: school.id,
@@ -228,7 +243,9 @@ export default function SchoolPortal({
     setNewClassName('');
     setNewClassSection('');
     setNewClassRoom('');
-    setSuccessBanner(`Classroom "${newClass.name}" (${newClass.grade}${newClass.section ? ` • ${newClass.section}` : ''}) created and assigned to ${newClass.teacherName}!`);
+    setNewClassSecondaryTeacherId('');
+    setNewClassSubject('Mathematics');
+    setSuccessBanner(`Classroom "${newClass.name}" (${newClass.grade}${newClass.section ? ` • ${newClass.section}` : ''}) created with Lead: ${newClass.teacherName}${newClass.secondaryTeacherName ? ` & Co-Teacher: ${newClass.secondaryTeacherName}` : ''}!`);
     setTimeout(() => setSuccessBanner(''), 4000);
   };
 
@@ -385,215 +402,271 @@ export default function SchoolPortal({
 
   return (
     <div className="space-y-8 pb-12">
-      {/* School Header Banner */}
-      <div className="bg-white rounded-3xl border border-stone-200 p-6 sm:p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-3xl">
-            🏫
+      {/* School Header Banner - Clean, Modern & Well-Organized */}
+      <div className="bg-white rounded-2xl border border-stone-200/90 p-5 sm:p-6 shadow-xs space-y-4">
+        {/* Top Row: School Identity & Clean Action Buttons */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-2xs">
+              🏫
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <span className="text-amber-800">School Administration</span>
+                <span aria-hidden="true" className="text-stone-300">/</span>
+                <span>Institution Portal</span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight truncate">
+                {school.name}
+              </h1>
+            </div>
           </div>
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 text-[11px] font-bold uppercase tracking-wider mb-1">
-              <Building2 className="w-3 h-3 text-blue-600" />
-              School Administration Portal
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">
-              School: {school.name}
-            </h1>
-            <div className="flex flex-wrap items-center gap-2 mt-1.5">
-              <span className="font-mono text-xs px-2.5 py-0.5 bg-blue-50 text-blue-800 rounded-md font-bold border border-blue-200">
-                School ID: {school.id}
-              </span>
-              <span className="font-mono text-xs px-2.5 py-0.5 bg-purple-50 text-purple-800 rounded-md font-bold border border-purple-200">
-                School Code: {school.schoolCode || getSchoolPrefix(school.name)}
-              </span>
-              <span className="text-xs text-stone-500 font-mono">
-                • Principal / Admin: {currentUser.name} • License: {school.plan}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  sounds.click();
-                  setEditingStudentUser(currentUser);
-                }}
-                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-stone-100 hover:bg-stone-200 text-stone-700 text-[11px] font-bold border border-stone-200 cursor-pointer transition"
-                title="Edit Admin / Principal Profile"
-              >
-                <Edit3 className="w-3 h-3 text-stone-600" />
-                <span>Edit Profile</span>
-              </button>
-            </div>
+
+          {/* Action Buttons: Clean & Compact */}
+          <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => {
+                sounds.click();
+                setEditingUserProfile(currentUser);
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-slate-800 text-xs font-bold border border-stone-200 cursor-pointer transition shadow-2xs"
+              title="Edit Profile Details"
+            >
+              <Edit3 className="w-3.5 h-3.5 text-slate-600" />
+              <span>Edit Profile</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenPricing}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-xs font-bold transition shadow-xs cursor-pointer hover:scale-102 active:scale-98"
+            >
+              <CreditCard className="w-3.5 h-3.5 text-amber-400" />
+              <span>Upgrade Capacity</span>
+            </button>
           </div>
         </div>
 
-        {/* School Subscription & Capacity Pill */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="p-3.5 bg-stone-50 border border-stone-200 rounded-2xl flex items-center gap-4 text-xs">
-            <div>
-              <span className="text-stone-400 block text-[10px] uppercase font-bold tracking-wider">
-                Student License Capacity
-              </span>
-              <div className="flex items-baseline gap-1 mt-0.5">
-                <span className="text-base font-black text-stone-900">{allocatedSeats}</span>
-                <span className="text-stone-400">/ {school.totalSeats} seats filled</span>
-              </div>
+        {/* Bottom Row: 4 Clean, Balanced Metadata Cards */}
+        <div className="pt-3.5 border-t border-stone-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+          {/* Card 1: School ID & Principal */}
+          <div className="p-3 rounded-xl bg-stone-50/80 border border-stone-200/70 flex flex-col justify-between space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Campus Identity</span>
+            <div className="font-mono font-bold text-slate-900 flex items-center gap-1.5">
+              <span className="px-1.5 py-0.5 rounded bg-white border border-stone-200 text-[11px] font-bold text-amber-900">{school.schoolCode || getSchoolPrefix(school.name)}</span>
+              <span className="text-slate-700 text-xs">{school.id}</span>
             </div>
-            <div className="w-20 bg-stone-200 h-2 rounded-full overflow-hidden">
+            <div className="text-[11px] text-slate-500 truncate font-sans">
+              Admin: <strong className="text-slate-800 font-semibold">{currentUser.name.toLowerCase() === school.name.toLowerCase() ? 'Dr. Arthur Mitchell' : currentUser.name}</strong>
+            </div>
+          </div>
+
+          {/* Card 2: Jurisdiction & Region (Locked One-Time Selection) */}
+          <div className="p-3 rounded-xl bg-stone-50/80 border border-stone-200/70 flex flex-col justify-between space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Region & Jurisdiction</span>
+              <span className="text-[10px] text-stone-500 font-semibold flex items-center gap-1">
+                <Lock className="w-2.5 h-2.5 text-stone-400" />
+                <span>Locked</span>
+              </span>
+            </div>
+            <div className="font-bold text-slate-900 flex items-center gap-1.5 truncate">
+              <span className="text-sm shrink-0">{COUNTRY_FLAG_MAP[school.country || currentUser.country || ''] || '🌐'}</span>
+              <span className="truncate">{school.country || currentUser.country || 'United States'}</span>
+              {(school.state || currentUser.state) && (
+                <span className="text-slate-500 font-medium">({school.state || currentUser.state})</span>
+              )}
+            </div>
+            <div className="text-[10px] text-slate-400 truncate">
+              Bound at account registration
+            </div>
+          </div>
+
+          {/* Card 3: Curriculum Standard */}
+          <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-100 flex flex-col justify-between space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700">Curriculum Standard</span>
+            <div className="font-bold text-blue-950 flex items-center gap-1.5 truncate" title={school.curriculum || currentUser.curriculum || 'US Common Core State Standards (CCSS)'}>
+              <BookOpen className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span className="truncate">{school.curriculum || currentUser.curriculum || 'US Common Core State Standards (CCSS)'}</span>
+            </div>
+            <div className="text-[10px] text-blue-700/80 font-medium">
+              Preschool through Grade 6
+            </div>
+          </div>
+
+          {/* Card 4: License & Seat Capacity */}
+          <div 
+            onClick={() => setShowSubscriptionModal(true)}
+            className="p-3 rounded-xl bg-stone-50/80 border border-stone-200/70 flex flex-col justify-between space-y-1 cursor-pointer hover:bg-stone-100/80 transition"
+            title="Click to view license validity details"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">License Capacity</span>
+              <span className="text-[10px] font-bold text-emerald-700 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span>Active</span>
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between">
+              <div className="font-mono font-black text-slate-900 text-sm">
+                {allocatedSeats} <span className="text-slate-400 text-xs font-normal">/ {school.totalSeats} seats</span>
+              </div>
+              <span className="text-[10px] font-bold text-slate-500">{school.plan}</span>
+            </div>
+            <div className="w-full bg-stone-200 h-1.5 rounded-full overflow-hidden">
               <div 
                 className={`h-full rounded-full transition-all ${
-                  seatUsagePercent > 90 ? 'bg-rose-500' : 'bg-blue-600'
+                  seatUsagePercent > 90 ? 'bg-rose-500' : 'bg-emerald-600'
                 }`}
                 style={{ width: `${seatUsagePercent}%` }}
               />
             </div>
           </div>
-
-          {/* School License Validity Card */}
-          <div className="p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl flex items-center justify-between sm:justify-start gap-3.5 text-xs">
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-blue-700 font-bold uppercase tracking-wider text-[10px]">
-                  {school.validityType === 'monthly' ? 'Monthly License' : 'Yearly License'}
-                </span>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              </div>
-              <div className="font-black text-stone-900 text-xs mt-0.5">
-                {school.contractDuration || (school.validityType === 'monthly' ? '30 Days' : '365 Days')}
-              </div>
-              <p className="text-[10px] text-stone-500 font-mono">
-                Expires: {school.expiresAt || '2026-08-31'}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowSubscriptionModal(true)}
-              className="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] cursor-pointer transition shadow-xs flex items-center gap-1 shrink-0"
-              title="Change validity period or expiration date"
-            >
-              <Calendar className="w-3 h-3" />
-              <span>Validity</span>
-            </button>
-          </div>
-
-          <button
-            onClick={onOpenPricing}
-            className="px-4 py-3 rounded-2xl bg-stone-900 hover:bg-black text-white text-xs font-bold transition-all shadow-xs cursor-pointer inline-flex items-center justify-center gap-1.5 shrink-0"
-          >
-            <CreditCard className="w-3.5 h-3.5" />
-            <span>Upgrade Capacity</span>
-          </button>
         </div>
       </div>
 
       {/* Success Notification Banner */}
       {successBanner && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl text-xs font-bold flex items-center gap-2 animate-in fade-in">
+        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl text-xs font-bold flex items-center gap-2 animate-in fade-in">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>{successBanner}</span>
         </div>
       )}
 
       {/* Metric Cards Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-white border border-stone-200 shadow-xs">
-          <div className="flex items-center justify-between text-xs font-bold text-stone-500 mb-2">
-            <span>Active Classrooms</span>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-stone-200/90 shadow-2xs space-y-1">
+          <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+            <span>Classrooms</span>
             <Layers className="w-4 h-4 text-blue-600" />
           </div>
-          <div className="text-2xl font-black text-stone-900">{schoolClasses.length}</div>
-          <p className="text-[11px] text-stone-400 mt-1">Preschool through Grade 6</p>
+          <div className="text-2xl sm:text-3xl font-black text-slate-950 font-mono">{schoolClasses.length}</div>
+          <p className="text-[11px] text-slate-400 truncate">Preschool through Grade 6</p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-stone-200 shadow-xs">
-          <div className="flex items-center justify-between text-xs font-bold text-stone-500 mb-2">
-            <span>Faculty Teachers</span>
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-stone-200/90 shadow-2xs space-y-1">
+          <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+            <span>Faculty</span>
             <GraduationCap className="w-4 h-4 text-emerald-600" />
           </div>
-          <div className="text-2xl font-black text-stone-900">{schoolTeachers.length}</div>
-          <p className="text-[11px] text-stone-400 mt-1">100% active credentials</p>
+          <div className="text-2xl sm:text-3xl font-black text-slate-950 font-mono">{schoolTeachers.length}</div>
+          <p className="text-[11px] text-slate-400 truncate">100% active credentials</p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-stone-200 shadow-xs">
-          <div className="flex items-center justify-between text-xs font-bold text-stone-500 mb-2">
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-stone-200/90 shadow-2xs space-y-1">
+          <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
             <span>Rostered Students</span>
-            <Users className="w-4 h-4 text-blue-600" />
+            <Users className="w-4 h-4 text-amber-600" />
           </div>
-          <div className="text-2xl font-black text-stone-900">{schoolStudents.length}</div>
-          <p className="text-[11px] text-stone-400 mt-1">{remainingSeats} open seats left</p>
+          <div className="text-2xl sm:text-3xl font-black text-slate-950 font-mono">{schoolStudents.length}</div>
+          <p className="text-[11px] text-slate-400 truncate">{remainingSeats} open seats left</p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-stone-200 shadow-xs">
-          <div className="flex items-center justify-between text-xs font-bold text-stone-500 mb-2">
-            <span>School Accuracy Avg</span>
-            <TrendingUp className="w-4 h-4 text-amber-500" />
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-stone-200/90 shadow-2xs space-y-1">
+          <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+            <span>Accuracy Avg</span>
+            <TrendingUp className="w-4 h-4 text-emerald-600" />
           </div>
-          <div className="text-2xl font-black text-stone-900">
+          <div className="text-2xl sm:text-3xl font-black text-slate-950 font-mono">
             {schoolStudents.length > 0 
               ? Math.round(schoolStudents.reduce((acc, s) => acc + s.averageScore, 0) / schoolStudents.length) 
               : 88}%
           </div>
-          <p className="text-[11px] text-emerald-600 font-bold mt-1">Institutional Honor Roll</p>
+          <p className="text-[11px] text-emerald-700 font-bold truncate">Institutional Honor Roll</p>
         </div>
       </div>
 
-      {/* Navigation Tabs Bar */}
-      <div className="bg-white rounded-3xl border border-[#e1e6f1] p-4 shadow-xs flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-2 bg-[#eef4ff] p-1.5 rounded-full border border-[#d7def0]">
+      {/* Navigation Tabs Bar - Responsive, Never Overflowing */}
+      <div className="bg-white rounded-2xl border border-stone-200/90 p-3 sm:p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        {/* Segmented Tab Group with Horizontal Scroll Safety */}
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-stone-100 border border-stone-200/80 overflow-x-auto no-scrollbar max-w-full">
           <button
+            type="button"
             onClick={() => setActiveTab('classes')}
-            className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+            className={`px-3.5 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               activeTab === 'classes'
-                ? 'bg-[#10246f] text-white shadow-xs'
-                : 'text-[#59627a] hover:text-[#10246f]'
+                ? 'bg-slate-950 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-950 hover:bg-white/60'
             }`}
           >
             🏫 Active Classes ({schoolClasses.length})
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('teachers')}
-            className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+            className={`px-3.5 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               activeTab === 'teachers'
-                ? 'bg-[#10246f] text-white shadow-xs'
-                : 'text-[#59627a] hover:text-[#10246f]'
+                ? 'bg-slate-950 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-950 hover:bg-white/60'
             }`}
           >
             👩‍🏫 Faculty Teachers ({schoolTeachers.length})
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('students')}
-            className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+            className={`px-3.5 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               activeTab === 'students'
-                ? 'bg-[#10246f] text-white shadow-xs'
-                : 'text-[#59627a] hover:text-[#10246f]'
+                ? 'bg-slate-950 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-950 hover:bg-white/60'
             }`}
           >
             🎒 Students & Report Cards ({schoolStudents.length})
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('overview')}
+            className={`px-3.5 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+              activeTab === 'overview'
+                ? 'bg-slate-950 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-950 hover:bg-white/60'
+            }`}
+          >
+            🌐 School Profile & Standards
+          </button>
         </div>
 
         {/* Action Buttons corresponding to active view */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0 sm:ml-auto">
+          {activeTab === 'overview' && (
+            <button
+              type="button"
+              onClick={() => {
+                sounds.click();
+                setEditingUserProfile(currentUser);
+              }}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-102 active:scale-98 whitespace-nowrap"
+            >
+              <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+              <span>Edit Profile & Standards</span>
+            </button>
+          )}
           {activeTab === 'classes' && (
             <button
+              type="button"
               onClick={() => setShowAddClassModal(true)}
-              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#10246f] hover:bg-[#0c1a52] text-white text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-105 active:scale-95"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-102 active:scale-98 whitespace-nowrap"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-3.5 h-3.5 text-amber-400" />
               <span>Create Class</span>
             </button>
           )}
 
           {activeTab === 'teachers' && (
             <button
+              type="button"
               onClick={() => setShowAddTeacherModal(true)}
-              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#10246f] hover:bg-[#0c1a52] text-white text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-105 active:scale-95"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-102 active:scale-98 whitespace-nowrap"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-3.5 h-3.5 text-amber-400" />
               <span>Create Teacher</span>
             </button>
           )}
 
           {activeTab === 'students' && (
             <button
+              type="button"
               onClick={() => {
                 if (schoolClasses[0]) {
                   setNewStudentClassId(schoolClasses[0].id);
@@ -602,9 +675,9 @@ export default function SchoolPortal({
                 setNewStudentPin(String(Math.floor(1000 + Math.random() * 9000)));
                 setShowAddStudentModal(true);
               }}
-              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-102 active:scale-98"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-102 active:scale-98 whitespace-nowrap"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-3.5 h-3.5 text-amber-400" />
               <span>Enroll Student</span>
             </button>
           )}
@@ -767,20 +840,42 @@ export default function SchoolPortal({
                           </p>
                         )}
 
-                        <div className="pt-3 border-t border-stone-100 flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-2">
-                            <span className="text-base shrink-0">{teacherAvatar}</span>
-                            <div>
-                              <span className="text-stone-400 block text-[10px] uppercase font-bold">Assigned Teacher</span>
-                              <div className="flex items-center gap-1">
-                                <strong className="text-stone-800 font-bold">{teacherDisplayName}</strong>
-                                {teacherId && <span className="text-[10px] text-stone-400 font-mono">({teacherId})</span>}
+                        <div className="pt-3 border-t border-stone-100 space-y-2 text-xs">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-base shrink-0">{teacherAvatar}</span>
+                              <div>
+                                <span className="text-blue-600 block text-[9px] uppercase font-black tracking-wider">Primary Lead Teacher</span>
+                                <div className="flex items-center gap-1">
+                                  <strong className="text-stone-900 font-bold">{teacherDisplayName}</strong>
+                                  {teacherId && <span className="text-[10px] text-stone-400 font-mono">({teacherId})</span>}
+                                </div>
                               </div>
                             </div>
+                            <div className="text-right">
+                              <span className="text-stone-400 block text-[9px] uppercase font-bold">Rostered Students</span>
+                              <strong className="text-stone-900 font-bold">{classStudentCount} Students</strong>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <span className="text-stone-400 block text-[10px] uppercase font-bold">Rostered Students</span>
-                            <strong className="text-stone-800">{classStudentCount} Students</strong>
+
+                          {cls.secondaryTeacherName && (
+                            <div className="flex items-center justify-between bg-purple-50/70 p-2 rounded-xl border border-purple-100">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs">👥</span>
+                                <div>
+                                  <span className="text-purple-700 block text-[9px] uppercase font-black tracking-wider">Secondary Co-Teacher</span>
+                                  <span className="text-stone-900 font-bold text-xs">{cls.secondaryTeacherName}</span>
+                                </div>
+                              </div>
+                              <span className="text-[10px] text-purple-700 font-mono">
+                                {cls.secondaryTeacherId ? `(${cls.secondaryTeacherId})` : ''}
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between text-[11px] text-stone-500 pt-0.5">
+                            <span className="font-medium">Subject: <strong className="text-stone-700">{cls.subject || (cls.subjects && cls.subjects[0]) || 'Mathematics'}</strong></span>
+                            <span className="font-mono text-[10px] bg-stone-100 px-1.5 py-0.5 rounded text-stone-600">Standard: {school.curriculum || 'CCSS'}</span>
                           </div>
                         </div>
                       </div>
@@ -834,7 +929,12 @@ export default function SchoolPortal({
             ? true
             : t.grade === teacherGradeFilter;
 
-          const teacherClasses = schoolClasses.filter(c => c.teacherId === t.id || c.teacherName === t.name);
+          const teacherClasses = schoolClasses.filter(c => 
+            c.teacherId === t.id || 
+            c.teacherName === t.name ||
+            c.secondaryTeacherId === t.id ||
+            c.secondaryTeacherName === t.name
+          );
           const matchesClass = teacherClassFilter === 'all'
             ? true
             : teacherClassFilter === 'unassigned'
@@ -1024,7 +1124,12 @@ export default function SchoolPortal({
                     </tr>
                   ) : (
                     filteredTeachers.map((t) => {
-                      const assignedClasses = schoolClasses.filter(c => c.teacherId === t.id || c.teacherName === t.name);
+                      const assignedClasses = schoolClasses.filter(c => 
+                        c.teacherId === t.id || 
+                        c.teacherName === t.name ||
+                        c.secondaryTeacherId === t.id ||
+                        c.secondaryTeacherName === t.name
+                      );
                       const isDeactivated = t.status === 'suspended';
 
                       return (
@@ -1054,15 +1159,28 @@ export default function SchoolPortal({
                             </span>
                           </td>
                           <td className="p-4">
-                            <div className="space-y-1">
+                            <div className="flex flex-wrap gap-1">
                               {assignedClasses.length > 0 ? (
-                                assignedClasses.map(c => (
-                                  <span key={c.id} className="inline-block mr-1 px-2 py-0.5 rounded bg-stone-100 text-stone-700 text-[10px] font-bold">
-                                    {c.name}
-                                  </span>
-                                ))
+                                assignedClasses.map(c => {
+                                  const isPrimary = c.teacherId === t.id || c.teacherName === t.name;
+                                  return (
+                                    <span 
+                                      key={c.id} 
+                                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+                                        isPrimary
+                                          ? 'bg-blue-50 border border-blue-200 text-blue-900'
+                                          : 'bg-purple-50 border border-purple-200 text-purple-900'
+                                      }`}
+                                    >
+                                      <span>{c.name}</span>
+                                      <span className="text-[8px] font-mono uppercase opacity-75">
+                                        ({isPrimary ? 'Lead' : 'Co-Teacher'})
+                                      </span>
+                                    </span>
+                                  );
+                                })
                               ) : (
-                                <span className="text-stone-400 text-xs italic">General Faculty</span>
+                                <span className="text-stone-400 text-xs italic">Unassigned Faculty</span>
                               )}
                             </div>
                           </td>
@@ -1346,7 +1464,34 @@ export default function SchoolPortal({
                             </span>
                           </td>
                           <td className="p-4">
-                            <div className="font-bold text-stone-900">{studentClass ? studentClass.name : 'General Cohort'}</div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold text-stone-900">{studentClass ? studentClass.name : 'General Cohort'}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  sounds.click();
+                                  const targetUser: UserAccount = studentUser || {
+                                    id: s.studentId,
+                                    name: s.studentName,
+                                    username: s.studentUsername,
+                                    role: 'student' as const,
+                                    pin: currentPin,
+                                    avatar: s.avatar,
+                                    grade: s.grade,
+                                    organizationId: school.id,
+                                    schoolName: school.name,
+                                    status: 'active' as const,
+                                    enrolledAt: '2025-09-01'
+                                  };
+                                  setEditingStudentData({ student: s, user: targetUser });
+                                }}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-stone-100 hover:bg-amber-100 hover:text-amber-900 text-stone-600 text-[10px] font-bold border border-stone-200 transition cursor-pointer"
+                                title="Change assigned class or promote grade"
+                              >
+                                <ArrowRightLeft className="w-2.5 h-2.5" />
+                                <span>Reassign</span>
+                              </button>
+                            </div>
                             <div className="text-[10px] text-stone-500 font-medium">Mapped Grade: {s.grade}</div>
                           </td>
                           <td className="p-4">
@@ -1378,7 +1523,7 @@ export default function SchoolPortal({
                           </td>
                           <td className="p-4 text-right">
                             <div className="flex items-center justify-end gap-1.5">
-                              {/* Edit Student Profile Button */}
+                              {/* Edit Student & Class Assignment Button */}
                               <button
                                 onClick={() => {
                                   sounds.click();
@@ -1395,13 +1540,13 @@ export default function SchoolPortal({
                                     status: 'active' as const,
                                     enrolledAt: '2025-09-01'
                                   };
-                                  setEditingStudentUser(targetUser);
+                                  setEditingStudentData({ student: s, user: targetUser });
                                 }}
                                 className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
-                                title="Edit Student Basic Details"
+                                title="Edit Student, Promote Grade & Reassign Class"
                               >
                                 <Edit3 className="w-3 h-3 text-blue-600" />
-                                <span>Edit</span>
+                                <span>Edit & Reassign</span>
                               </button>
 
                               <button
@@ -1451,6 +1596,179 @@ export default function SchoolPortal({
           </div>
         );
       })()}
+
+      {/* ========================================================================= */}
+      {/* TAB 4: SCHOOL PROFILE, JURISDICTION & CURRICULUM STANDARDS */}
+      {/* ========================================================================= */}
+      {activeTab === 'overview' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          {/* Top Banner Card with Institutional Overview */}
+          <div className="bg-white rounded-2xl border border-stone-200/90 p-6 sm:p-8 shadow-xs">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="flex items-start sm:items-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-center justify-center text-3xl shadow-2xs shrink-0">
+                  🏫
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                      Official Campus Profile
+                    </span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                      {school.status === 'active' ? 'Active Status' : school.status}
+                    </span>
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight">
+                    {school.name}
+                  </h2>
+                  <p className="text-xs text-slate-500 font-mono">
+                    System ID: <strong className="text-slate-800">{school.id}</strong> • Campus Code: <strong className="text-slate-800">{school.schoolCode || getSchoolPrefix(school.name)}</strong>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    sounds.click();
+                    setEditingUserProfile(currentUser);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-xs font-bold transition shadow-xs cursor-pointer hover:scale-102 active:scale-98"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Edit School Profile</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSubscriptionModal(true)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-slate-800 border border-stone-200 text-xs font-bold transition cursor-pointer"
+                >
+                  <CreditCard className="w-3.5 h-3.5 text-slate-600" />
+                  <span>Manage License</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 3 Detail Cards Grid: Geographic Jurisdiction, Curriculum Framework, Administration & Capacity */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Card 1: Geographic & Regional Standards */}
+            <div className="bg-white rounded-2xl border border-stone-200/90 p-5 sm:p-6 shadow-xs flex flex-col justify-between space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+                    <Globe className="w-4 h-4 text-amber-600" />
+                    <span>Jurisdiction & Region</span>
+                  </div>
+                  <span className="text-xl">
+                    {COUNTRY_FLAG_MAP[school.country || currentUser.country || ''] || '🌐'}
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase">Country / Territory</span>
+                  <div className="text-base font-black text-slate-950">
+                    {school.country || currentUser.country || 'United States'}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase">State / Province / Region</span>
+                  <div className="text-sm font-extrabold text-slate-800 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-amber-600" />
+                    <span>{school.state || currentUser.state || 'California'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-stone-100 text-[11px] text-slate-500 leading-relaxed">
+                Campus registration is geographically aligned for educational standards and regional school board assessments.
+              </div>
+            </div>
+
+            {/* Card 2: Curriculum Standard & Grade Span */}
+            <div className="bg-white rounded-2xl border border-stone-200/90 p-5 sm:p-6 shadow-xs flex flex-col justify-between space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+                    <BookOpen className="w-4 h-4 text-blue-600" />
+                    <span>Curriculum Framework</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 text-[10px] font-bold border border-blue-200">
+                    Official
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase">Standard Title</span>
+                  <div className="text-base font-black text-blue-950">
+                    {school.curriculum || currentUser.curriculum || 'Universal Foundational Standards'}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase">Grade Span Supported</span>
+                  <div className="text-xs font-bold text-slate-800">
+                    Preschool, Foundation, Grade 1 to Grade 6 (8 Levels)
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-stone-100 text-[11px] text-slate-500 leading-relaxed">
+                All classes ({schoolClasses.length}), teachers ({schoolTeachers.length}), and enrolled students automatically map questions to this standard.
+              </div>
+            </div>
+
+            {/* Card 3: Administration & Licensing */}
+            <div className="bg-white rounded-2xl border border-stone-200/90 p-5 sm:p-6 shadow-xs flex flex-col justify-between space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                    <span>Administration & Plan</span>
+                  </div>
+                  <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-stone-100 text-slate-800">
+                    {school.plan}
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase">Primary Administrator</span>
+                  <div className="text-sm font-extrabold text-slate-900">
+                    {currentUser.name}
+                  </div>
+                  <p className="text-[11px] text-slate-500 truncate font-mono">
+                    {school.adminEmail || currentUser.email}
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase">License Utilization</span>
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span>{allocatedSeats} / {school.totalSeats} Student Seats</span>
+                    <span className="text-slate-400 font-normal">Valid until {school.expiresAt}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-stone-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    sounds.click();
+                    setEditingUserProfile(currentUser);
+                  }}
+                  className="w-full py-2 px-3 rounded-xl bg-stone-50 hover:bg-stone-100 text-slate-800 border border-stone-200 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Update Principal or Standards</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* MODAL 1: CREATE CLASS (Preschool through Grade 6) */}
@@ -1526,21 +1844,59 @@ export default function SchoolPortal({
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-stone-700 uppercase tracking-wider mb-1">
+                    Assign Primary Lead Teacher *
+                  </label>
+                  <select
+                    value={newClassTeacherId}
+                    onChange={(e) => setNewClassTeacherId(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-stone-200 font-medium text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden"
+                  >
+                    {schoolTeachers.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({t.id})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-stone-700 uppercase tracking-wider mb-1">
+                    Assign Secondary Teacher (Optional)
+                  </label>
+                  <select
+                    value={newClassSecondaryTeacherId}
+                    onChange={(e) => setNewClassSecondaryTeacherId(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-stone-200 font-medium text-xs focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-hidden"
+                  >
+                    <option value="">-- No Secondary Teacher (Optional) --</option>
+                    {schoolTeachers.filter(t => t.id !== newClassTeacherId).map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({t.id})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div>
                 <label className="block font-bold text-stone-700 uppercase tracking-wider mb-1">
-                  Assign Lead Teacher *
+                  Classroom Curriculum Subject
                 </label>
                 <select
-                  value={newClassTeacherId}
-                  onChange={(e) => setNewClassTeacherId(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-stone-200 font-medium text-xs focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-hidden"
+                  value={newClassSubject}
+                  onChange={(e) => setNewClassSubject(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-stone-200 font-bold text-stone-800 text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden"
                 >
-                  {schoolTeachers.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} ({t.id})
-                    </option>
+                  {['Mathematics', 'Science', 'English Language', 'Logic & Puzzles', 'Social Studies', 'Art & Creativity'].map((sub) => (
+                    <option key={sub} value={sub}>{sub}</option>
                   ))}
                 </select>
+                <p className="text-[10px] text-stone-500 mt-1">
+                  Optional secondary teacher has co-teaching access to manage assignments and students if primary teacher is unavailable.
+                </p>
               </div>
 
               <div className="pt-3 border-t border-stone-100 flex justify-end gap-2">
@@ -1741,22 +2097,35 @@ export default function SchoolPortal({
                 <label className="block font-bold text-stone-700 uppercase tracking-wider mb-1">
                   Assigned Class
                 </label>
-                <select
-                  value={newStudentClassId}
-                  onChange={(e) => {
-                    const cid = e.target.value;
-                    setNewStudentClassId(cid);
-                    const selClass = schoolClasses.find(c => c.id === cid);
-                    if (selClass?.grade) setNewStudentGrade(selClass.grade);
-                  }}
-                  className="w-full p-2.5 rounded-xl border border-stone-200 font-medium"
-                >
-                  {schoolClasses.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.grade})
-                    </option>
-                  ))}
-                </select>
+                {(() => {
+                  const matchingClasses = schoolClasses.filter(c => c.grade === newStudentGrade);
+                  return (
+                    <select
+                      value={newStudentClassId}
+                      onChange={(e) => {
+                        const cid = e.target.value;
+                        setNewStudentClassId(cid);
+                        const selClass = schoolClasses.find(c => c.id === cid);
+                        if (selClass?.grade) setNewStudentGrade(selClass.grade);
+                      }}
+                      className="w-full p-2.5 rounded-xl border border-stone-200 font-medium"
+                    >
+                      <option value="">General Cohort / Unassigned ({newStudentGrade})</option>
+                      {matchingClasses.length === 0 ? (
+                        <option disabled value="">No active classes found for {newStudentGrade}</option>
+                      ) : (
+                        matchingClasses.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name} ({c.grade}) — Lead: {c.teacherName}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  );
+                })()}
+                <p className="text-[10px] text-stone-500 mt-1">
+                  Dynamically shows classrooms matching {newStudentGrade}.
+                </p>
               </div>
 
               <div>
@@ -1866,15 +2235,54 @@ export default function SchoolPortal({
           grades={grades}
           classes={schoolClasses}
           onClose={() => setEditingTeacher(null)}
-          onSave={(updatedTeacher, assignedClassIds) => {
+          onSave={(updatedTeacher, assignedClassIds, assignedClassRoles) => {
             if (onUpdateTeacher) {
               onUpdateTeacher(updatedTeacher);
             }
-            // Update class associations if specified
-            if (assignedClassIds && onUpdateClass) {
+            // Update class associations with multi-class primary/secondary support
+            if (assignedClassRoles && onUpdateClass) {
+              schoolClasses.forEach(cls => {
+                const roleObj = assignedClassRoles.find(a => a.classId === cls.id);
+                if (roleObj) {
+                  if (roleObj.role === 'primary') {
+                    onUpdateClass({
+                      ...cls,
+                      teacherId: updatedTeacher.id,
+                      teacherName: updatedTeacher.name,
+                      secondaryTeacherId: cls.secondaryTeacherId === updatedTeacher.id ? undefined : cls.secondaryTeacherId,
+                      secondaryTeacherName: cls.secondaryTeacherId === updatedTeacher.id ? undefined : cls.secondaryTeacherName
+                    });
+                  } else if (roleObj.role === 'secondary') {
+                    const wasPrimary = cls.teacherId === updatedTeacher.id;
+                    const fallbackTeacher = schoolTeachers.find(t => t.id !== updatedTeacher.id) || { id: currentUser.id, name: currentUser.name };
+                    onUpdateClass({
+                      ...cls,
+                      teacherId: wasPrimary ? fallbackTeacher.id : cls.teacherId,
+                      teacherName: wasPrimary ? fallbackTeacher.name : cls.teacherName,
+                      secondaryTeacherId: updatedTeacher.id,
+                      secondaryTeacherName: updatedTeacher.name
+                    });
+                  }
+                } else {
+                  // Teacher was unassigned from this class
+                  const wasPrimary = cls.teacherId === updatedTeacher.id;
+                  const wasSecondary = cls.secondaryTeacherId === updatedTeacher.id;
+                  if (wasPrimary || wasSecondary) {
+                    const fallbackTeacher = schoolTeachers.find(t => t.id !== updatedTeacher.id) || { id: currentUser.id, name: currentUser.name };
+                    onUpdateClass({
+                      ...cls,
+                      teacherId: wasPrimary ? fallbackTeacher.id : cls.teacherId,
+                      teacherName: wasPrimary ? fallbackTeacher.name : cls.teacherName,
+                      secondaryTeacherId: wasSecondary ? undefined : cls.secondaryTeacherId,
+                      secondaryTeacherName: wasSecondary ? undefined : cls.secondaryTeacherName
+                    });
+                  }
+                }
+              });
+            } else if (assignedClassIds && onUpdateClass) {
               schoolClasses.forEach(cls => {
                 const shouldBeAssigned = assignedClassIds.includes(cls.id);
-                const isCurrentlyAssigned = cls.teacherId === updatedTeacher.id;
+                const isCurrentlyAssigned = cls.teacherId === updatedTeacher.id || cls.secondaryTeacherId === updatedTeacher.id;
                 if (shouldBeAssigned && !isCurrentlyAssigned) {
                   onUpdateClass({
                     ...cls,
@@ -1885,7 +2293,9 @@ export default function SchoolPortal({
                   onUpdateClass({
                     ...cls,
                     teacherId: currentUser.id,
-                    teacherName: currentUser.name
+                    teacherName: currentUser.name,
+                    secondaryTeacherId: undefined,
+                    secondaryTeacherName: undefined
                   });
                 }
               });
@@ -1917,19 +2327,76 @@ export default function SchoolPortal({
         />
       )}
       {/* ========================================================================= */}
-      {/* MODAL 9: EDIT USER / STUDENT PROFILE MODAL */}
+      {/* MODAL 9: EDIT STUDENT & CLASS ASSIGNMENT / PROMOTION MODAL */}
       {/* ========================================================================= */}
-      {editingStudentUser && (
+      {editingStudentData && (
+        <EditStudentModal
+          student={editingStudentData.student}
+          studentUser={editingStudentData.user}
+          classes={schoolClasses}
+          grades={grades}
+          schoolName={school.name}
+          onClose={() => setEditingStudentData(null)}
+          onSave={(updatedStudent, updatedUser, targetClassId, previousClassId) => {
+            // 1. Update user profile and student progress
+            if (onUpdateUserProfile) {
+              onUpdateUserProfile(updatedUser);
+            }
+
+            // 2. If student is reassigned from previous class, remove from old class
+            if (previousClassId && previousClassId !== targetClassId && onUpdateClass) {
+              const prevClass = schoolClasses.find(c => c.id === previousClassId);
+              if (prevClass) {
+                onUpdateClass({
+                  ...prevClass,
+                  studentIds: (prevClass.studentIds || []).filter(id => id !== updatedStudent.studentId)
+                });
+              }
+            }
+
+            // 3. If student is assigned to a target class, add to new class
+            if (targetClassId && targetClassId !== previousClassId && onUpdateClass) {
+              const newClass = schoolClasses.find(c => c.id === targetClassId);
+              if (newClass) {
+                onUpdateClass({
+                  ...newClass,
+                  studentIds: Array.from(new Set([...(newClass.studentIds || []), updatedStudent.studentId]))
+                });
+              }
+            }
+
+            sounds.playLevelUp();
+            setEditingStudentData(null);
+            const targetClassObj = schoolClasses.find(c => c.id === targetClassId);
+            setSuccessBanner(`Updated "${updatedStudent.studentName}" — Master Grade: ${updatedStudent.grade} | Assigned Class: ${targetClassObj ? targetClassObj.name : 'General Cohort'}!`);
+            setTimeout(() => setSuccessBanner(''), 4000);
+          }}
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 10: EDIT SCHOOL ADMIN / USER PROFILE MODAL */}
+      {/* ========================================================================= */}
+      {editingUserProfile && (
         <EditUserProfileModal
-          isOpen={!!editingStudentUser}
-          onClose={() => setEditingStudentUser(null)}
-          user={editingStudentUser}
+          isOpen={!!editingUserProfile}
+          onClose={() => setEditingUserProfile(null)}
+          user={editingUserProfile}
           onSave={(updatedUser) => {
             if (onUpdateUserProfile) {
               onUpdateUserProfile(updatedUser);
             }
+            if (onUpdateSchool && (updatedUser.role === 'school' || updatedUser.id === currentUser.id)) {
+              onUpdateSchool({
+                ...school,
+                name: updatedUser.schoolName || school.name,
+                country: updatedUser.country || school.country,
+                state: updatedUser.state || school.state,
+                curriculum: updatedUser.curriculum || school.curriculum
+              });
+            }
             sounds.playLevelUp();
-            setEditingStudentUser(null);
+            setEditingUserProfile(null);
             setSuccessBanner(`Updated profile details for "${updatedUser.name}"!`);
             setTimeout(() => setSuccessBanner(''), 4000);
           }}

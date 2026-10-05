@@ -8,7 +8,8 @@ import {
   Sparkles, 
   X, 
   AlertCircle,
-  Compass
+  Compass,
+  Lock
 } from 'lucide-react';
 import { sounds } from '../utils/audio';
 import { COUNTRIES, COUNTRY_STATE_MAP, COUNTRY_CURRICULUM_MAP, COUNTRY_FLAG_MAP } from '../data/curriculumData';
@@ -75,6 +76,8 @@ export default function RegionSelectorModal({
     return COUNTRY_FLAG_MAP[c] || '🌐';
   };
 
+  const isProfileLocked = Boolean(currentUser && currentUser.id && currentUser.id !== 'GUEST');
+
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto overscroll-contain modal-scroll-container"
@@ -110,7 +113,54 @@ export default function RegionSelectorModal({
           </button>
         </div>
 
-        {/* Form Body */}
+        {/* Locked Profile View (Post-Registration) */}
+        {isProfileLocked ? (
+          <div className="p-5 sm:p-6 space-y-4 text-xs overflow-y-auto overscroll-contain modal-scroll-container flex-1">
+            <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 text-amber-900 space-y-2">
+              <div className="flex items-center gap-2 font-bold text-xs">
+                <Lock className="w-4 h-4 text-amber-700 shrink-0" />
+                <span>Regional Standards are Fixed (One-Time Selection)</span>
+              </div>
+              <p className="text-[11px] leading-relaxed text-amber-800">
+                Country, Region, and Curriculum were selected during registration and are permanently fixed for <strong>{currentUser.name}</strong> to preserve scoring calibration, diagnostic accuracy, and historical progress reports.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                Permanent Registered Framework
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3 bg-white rounded-xl border border-slate-200">
+                  <span className="text-[10px] text-slate-400 font-bold block mb-0.5 uppercase">Country & Region</span>
+                  <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                    <span>{getCountryFlag(currentUser.country || 'United States')}</span>
+                    <span>{currentUser.country || 'United States'}</span>
+                    {currentUser.state && <span className="text-slate-500 text-xs font-normal">({currentUser.state})</span>}
+                  </div>
+                </div>
+                <div className="p-3 bg-white rounded-xl border border-slate-200">
+                  <span className="text-[10px] text-slate-400 font-bold block mb-0.5 uppercase">Curriculum Standard</span>
+                  <div className="font-bold text-blue-900 text-xs flex items-center gap-1.5">
+                    <BookOpen className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span className="truncate">{currentUser.curriculum || 'US Common Core State Standards (CCSS)'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full py-3 px-4 rounded-xl font-bold text-sm bg-slate-950 hover:bg-slate-800 text-white transition cursor-pointer"
+              >
+                Close (Standards Fixed)
+              </button>
+            </div>
+          </div>
+        ) : (
+        /* Unregistered / Guest Form Body */
         <form onSubmit={handleSave} className="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto overscroll-contain modal-scroll-container flex-1">
           <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3.5 text-blue-900 flex items-start gap-2.5">
             <AlertCircle className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
@@ -231,6 +281,7 @@ export default function RegionSelectorModal({
             </button>
           </div>
         </form>
+      )}
       </div>
     </div>
   );

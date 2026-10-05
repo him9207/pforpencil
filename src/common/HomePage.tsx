@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import { 
   UserAccount, 
@@ -11,12 +11,6 @@ import {
 } from '../types';
 import { sounds } from '../utils/audio';
 import { 
-  COUNTRY_FLAG_MAP, 
-  COUNTRY_STATE_MAP, 
-  COUNTRY_CURRICULUM_MAP 
-} from '../data/curriculumData';
-import { 
-  Sparkles, 
   ArrowRight, 
   Check, 
   BookOpen, 
@@ -25,261 +19,286 @@ import {
   Flame, 
   Coins, 
   Zap, 
-  Database,
-  GraduationCap,
-  Users,
-  School,
-  FileCheck2,
-  TrendingUp,
-  BrainCircuit,
-  Calculator,
-  Shapes,
-  Clock,
-  PieChart,
-  BarChart3,
-  Layers,
-  HeartHandshake,
-  CheckCircle2,
-  ChevronRight,
-  Play,
-  RotateCcw,
-  Star,
-  Quote
+  GraduationCap, 
+  School, 
+  TrendingUp, 
+  BrainCircuit, 
+  Calculator, 
+  Shapes, 
+  Clock, 
+  PieChart, 
+  BarChart3, 
+  Layers, 
+  HeartHandshake, 
+  CheckCircle2, 
+  ChevronRight, 
+  Play, 
+  RotateCcw, 
+  Star, 
+  Sparkles,
+  Globe,
+  Settings,
+  Compass,
+  ArrowUpRight
 } from 'lucide-react';
 import PforPencilLogo from './PforPencilLogo';
 
-type GradeInfo = {
+interface GradeCurriculumSpec {
   id: string;
   name: string;
-  age: string;
-  short: string;
-  badgeBg: string;
-  badgeText: string;
-  borderColor: string;
-  focus: string;
-  skills: string[];
-  sampleQuestion: string;
+  shortLabel: string;
+  ageRange: string;
+  tagline: string;
+  overview: string;
+  keySkills: string[];
+  samplePrompt: string;
   sampleAnswer: string;
-};
+  sampleVisual: string;
+}
 
-const gradesData: GradeInfo[] = [
+const GRADE_SPECS: GradeCurriculumSpec[] = [
+  {
+    id: 'preschool',
+    name: 'Preschool & Early Years',
+    shortLabel: 'Pre-K',
+    ageRange: 'Ages 3–4',
+    tagline: 'Number discovery, spatial play, and sensory pattern recognition.',
+    overview: 'Nurtures foundational number awareness through counting everyday objects, identifying colors and basic shapes, and developing spatial orientation.',
+    keySkills: ['Visual Counting (1–10)', 'Sorting by Color & Shape', 'Big vs Small Comparisons', 'Sensory Matching Patterns'],
+    samplePrompt: 'How many apples are in the basket? 🍎 🍎 🍎',
+    sampleAnswer: '3 apples',
+    sampleVisual: '🍎 🍎 🍎'
+  },
   {
     id: 'foundation',
     name: 'Foundation (Kindergarten)',
-    age: 'Ages 4–5',
-    short: 'K',
-    badgeBg: 'bg-emerald-50',
-    badgeText: 'text-emerald-700',
-    borderColor: 'border-emerald-200',
-    focus: 'Early number sense, counting objects up to 20, 2D shapes, and basic comparison.',
-    skills: ['Counting & Cardinality', 'More vs Less Comparison', 'Shapes & Colors', 'Ten-Frame Visuals'],
-    sampleQuestion: 'Count the stars: ⭐ ⭐ ⭐ ⭐ ⭐',
-    sampleAnswer: '5 stars'
+    shortLabel: 'Kinder',
+    ageRange: 'Ages 4–5',
+    tagline: 'Counting fluency, ten-frame visualization, and comparing quantities.',
+    overview: 'Solidifies cardinal numbers up to 20, builds early subitizing skills using ten-frames, and introduces simple addition and subtraction with tactile manipulatives.',
+    keySkills: ['Counting & Cardinality to 20', 'Ten-Frame Visual Subitizing', 'More, Less & Equal Quantities', 'Basic 2D Shapes & Attributes'],
+    samplePrompt: 'Count the bright yellow stars: ⭐ ⭐ ⭐ ⭐ ⭐',
+    sampleAnswer: '5 stars',
+    sampleVisual: '⭐ ⭐ ⭐ ⭐ ⭐'
   },
   {
     id: 'grade-1',
     name: 'Grade 1',
-    age: 'Ages 5–6',
-    short: 'G1',
-    badgeBg: 'bg-blue-50',
-    badgeText: 'text-blue-700',
-    borderColor: 'border-blue-200',
-    focus: 'Addition & subtraction within 20, place value tens/ones, telling time to the hour.',
-    skills: ['Add & Subtract within 20', 'Place Value (Tens & Ones)', 'O\'Clock Time & Halves', 'Simple Bar Graphs'],
-    sampleQuestion: '7 + 5 = ?',
-    sampleAnswer: '12'
+    shortLabel: 'Grade 1',
+    ageRange: 'Ages 5–6',
+    tagline: 'Addition & subtraction fluency, place value fundamentals, and analog time.',
+    overview: 'Moves young mathematicians from direct counting to mental math strategies within 20, understanding tens and ones place value, and reading analog clocks to the hour.',
+    keySkills: ['Addition & Subtraction within 20', 'Place Value (Tens and Ones)', 'Analog Clock O\'Clock & Half-Past', 'Picture Graphs & Data Tallies'],
+    samplePrompt: 'What is 8 + 6?',
+    sampleAnswer: '14',
+    sampleVisual: '8 + 6 = (8 + 2) + 4 = 14'
   },
   {
     id: 'grade-2',
     name: 'Grade 2',
-    age: 'Ages 6–7',
-    short: 'G2',
-    badgeBg: 'bg-amber-50',
-    badgeText: 'text-amber-700',
-    borderColor: 'border-amber-200',
-    focus: 'Double-digit operations, skip counting by 2s, 5s & 10s, money coins, and measurement.',
-    skills: ['Double-digit Addition with Regrouping', 'Skip Counting & Odd/Even', 'Money & Coin Values', 'Analog Clocks (5-min intervals)'],
-    sampleQuestion: '34 + 28 = ?',
-    sampleAnswer: '62'
+    shortLabel: 'Grade 2',
+    ageRange: 'Ages 6–7',
+    tagline: 'Double-digit operations with regrouping, skip counting, and currency.',
+    overview: 'Empowers students with standard algorithms for double-digit addition and subtraction, skip-counting sequences (2s, 5s, 10s), money problem-solving, and measuring lengths.',
+    keySkills: ['2-Digit Addition with Regrouping', 'Skip Counting & Odd/Even Logic', 'Coin Values & Making Change', 'Measurement in Centimeters & Inches'],
+    samplePrompt: '34 + 28 = ?',
+    sampleAnswer: '62',
+    sampleVisual: '34 + 28 = (30 + 20) + (4 + 8) = 50 + 12 = 62'
   },
   {
     id: 'grade-3',
     name: 'Grade 3',
-    age: 'Ages 7–8',
-    short: 'G3',
-    badgeBg: 'bg-rose-50',
-    badgeText: 'text-rose-700',
-    borderColor: 'border-rose-200',
-    focus: 'Multiplication & division foundations, fractions as parts of a whole, area and perimeter.',
-    skills: ['Multiplication Tables (2–10)', 'Division as Equal Sharing', 'Visual Fraction Models', 'Area & Perimeter of Rectangles'],
-    sampleQuestion: '6 × 7 = ?',
-    sampleAnswer: '42'
+    shortLabel: 'Grade 3',
+    ageRange: 'Ages 7–8',
+    tagline: 'Multiplication arrays, equal-sharing division, and fraction models.',
+    overview: 'Introduces the core concepts of multiplication and division through arrays and groups, explores fractions as parts of a whole, and teaches area and perimeter of rectilinear shapes.',
+    keySkills: ['Multiplication Tables (2 to 10)', 'Division as Equal Grouping', 'Fractions on a Number Line', 'Area & Perimeter Calculations'],
+    samplePrompt: '7 × 8 = ?',
+    sampleAnswer: '56',
+    sampleVisual: '7 × 8 = 56 (7 rows of 8 dots)'
   },
   {
     id: 'grade-4',
     name: 'Grade 4',
-    age: 'Ages 8–9',
-    short: 'G4',
-    badgeBg: 'bg-purple-50',
-    badgeText: 'text-purple-700',
-    borderColor: 'border-purple-200',
-    focus: 'Multi-digit multiplication, equivalent fractions, decimals intro, angles and geometric symmetry.',
-    skills: ['Multi-digit Operations', 'Equivalent Fractions & Adding Liked Fractions', 'Decimal Place Value (Tenths/Hundredths)', 'Angles & Line Symmetry'],
-    sampleQuestion: '2/4 + 1/4 = ?',
-    sampleAnswer: '3/4'
+    shortLabel: 'Grade 4',
+    ageRange: 'Ages 8–9',
+    tagline: 'Multi-digit multiplication, equivalent fractions, and decimal tenths.',
+    overview: 'Expands computational mastery with multi-digit operations, decimal place values (tenths and hundredths), operations on fractions with like denominators, and classifying angles.',
+    keySkills: ['Multi-digit Long Operations', 'Equivalent Fractions & Mixed Numbers', 'Decimals & Money Conversions', 'Angles (Acute, Right, Obtuse)'],
+    samplePrompt: 'Which fraction is equivalent to 3/4?',
+    sampleAnswer: '6/8',
+    sampleVisual: '3/4 = (3 × 2) / (4 × 2) = 6/8'
   },
   {
     id: 'grade-5',
     name: 'Grade 5',
-    age: 'Ages 9–10',
-    short: 'G5',
-    badgeBg: 'bg-emerald-50',
-    badgeText: 'text-emerald-700',
-    borderColor: 'border-emerald-200',
-    focus: 'Fraction multiplication/division, decimals operations, 3D volume, and coordinate graphing.',
-    skills: ['Unlike Fractions & Mixed Numbers', 'Decimal Multiplication & Division', 'Volume of 3D Prisms', 'Coordinate Grid (x, y)'],
-    sampleQuestion: '0.4 × 0.5 = ?',
-    sampleAnswer: '0.2'
+    shortLabel: 'Grade 5',
+    ageRange: 'Ages 9–10',
+    tagline: 'Unlike fractions, decimal multiplication, 3D volume, and coordinates.',
+    overview: 'Prepares students for higher reasoning with unlike fraction addition/subtraction, decimal multiplication and division, calculating volume of rectangular prisms, and plotting (x, y) coordinates.',
+    keySkills: ['Adding Unlike Fractions', 'Decimal Multiplication & Division', 'Volume of 3D Rectangular Prisms', 'Coordinate Plane Graphing (x, y)'],
+    samplePrompt: 'What is 1/2 + 1/4?',
+    sampleAnswer: '3/4',
+    sampleVisual: '2/4 + 1/4 = 3/4'
   },
   {
     id: 'grade-6',
     name: 'Grade 6',
-    age: 'Ages 10–11',
-    short: 'G6',
-    badgeBg: 'bg-blue-50',
-    badgeText: 'text-blue-700',
-    borderColor: 'border-blue-200',
-    focus: 'Ratios & proportional relationships, negative integers, algebraic expressions and statistics.',
-    skills: ['Ratios, Rates & Percentages', 'Negative Integers on Number Line', 'One-step Algebraic Equations', 'Mean, Median, Range & Data Sets'],
-    sampleQuestion: 'If 3 pencils cost $6, what is the cost of 5 pencils?',
-    sampleAnswer: '$10'
+    shortLabel: 'Grade 6',
+    ageRange: 'Ages 10–11',
+    tagline: 'Ratios, negative integers, algebraic expressions, and statistical data.',
+    overview: 'Transitions primary learners to algebraic thinking through ratios and proportions, integers on extended number lines, single-variable equations, and statistical measures (mean, median).',
+    keySkills: ['Ratios, Unit Rates & Percentages', 'Negative Numbers & Absolute Value', 'One-Step Linear Equations', 'Mean, Median, Mode & Range'],
+    samplePrompt: 'If 4 notebooks cost $12, what is the price of 6 notebooks?',
+    sampleAnswer: '$18',
+    sampleVisual: 'Unit price = $12 ÷ 4 = $3. 6 × $3 = $18'
   }
 ];
 
-const topicCards = [
-  {
-    title: 'Numbers & Operations',
-    subtitle: 'From counting up to multi-digit arithmetic & negative numbers',
-    icon: Calculator,
-    iconColor: 'text-blue-600',
-    iconBg: 'bg-blue-50',
-    skillsCount: '240+ Skills',
-    highlights: ['Place Value & Expanded Form', 'Addition & Subtraction Fluency', 'Times Tables & Division Mastery', 'Order of Operations (PEMDAS)']
-  },
-  {
-    title: 'Fractions & Decimals',
-    subtitle: 'Visual part-whole models, decimal math & percentages',
-    icon: PieChart,
-    iconColor: 'text-rose-600',
-    iconBg: 'bg-rose-50',
-    skillsCount: '160+ Skills',
-    highlights: ['Visual Fraction Bars & Pies', 'Equivalent & Mixed Fractions', 'Decimal Conversions & Rounding', 'Percent of a Number']
-  },
-  {
-    title: 'Geometry & Shapes',
-    subtitle: '2D & 3D properties, angles, perimeter, area & volume',
-    icon: Shapes,
-    iconColor: 'text-emerald-600',
-    iconBg: 'bg-emerald-50',
-    skillsCount: '130+ Skills',
-    highlights: ['Polygons & 3D Polyhedra', 'Acute, Right & Obtuse Angles', 'Perimeter & Area Formulas', 'Symmetry & Rotations']
-  },
-  {
-    title: 'Measurement & Time',
-    subtitle: 'Clocks, calendar, metric & customary units, money calculation',
-    icon: Clock,
-    iconColor: 'text-amber-600',
-    iconBg: 'bg-amber-50',
-    skillsCount: '110+ Skills',
-    highlights: ['Analog Clocks & Elapsed Time', 'Metric (m, cm, kg, L) & Customary', 'Currency Exchange & Change', 'Unit Conversions']
-  },
-  {
-    title: 'Patterns & Pre-Algebra',
-    subtitle: 'Sequences, algebraic balance scales & functional equations',
-    icon: BrainCircuit,
-    iconColor: 'text-purple-600',
-    iconBg: 'bg-purple-50',
-    skillsCount: '95+ Skills',
-    highlights: ['Number & Shape Patterns', 'Unknown Variable Balance Scales', 'Input-Output Function Tables', 'Inequalities & Rules']
-  },
-  {
-    title: 'Data & Statistics',
-    subtitle: 'Tally marks, bar graphs, line plots, frequency & probability',
-    icon: BarChart3,
-    iconColor: 'text-sky-600',
-    iconBg: 'bg-sky-50',
-    skillsCount: '80+ Skills',
-    highlights: ['Picture & Bar Charts', 'Line Plots & Histograms', 'Mean, Median, Mode & Range', 'Chance & Probability Events']
-  }
-];
+interface LiveDemoChallenge {
+  id: number;
+  gradeBadge: string;
+  topic: string;
+  question: string;
+  modelClue: string;
+  options: string[];
+  answer: string;
+  explanation: string;
+}
 
-const interactiveDemoChallenges = [
+const DEMO_CHALLENGES: LiveDemoChallenge[] = [
   {
     id: 1,
-    grade: 'Grade 2 · Addition',
-    question: 'What is 14 + 18?',
-    visualHint: 'Break it down: (10 + 10) + (4 + 8) = 20 + 12',
-    options: ['28', '32', '34', '36'],
-    answer: '32',
-    explanation: '14 + 18 = 32. 4 + 8 makes 12, plus the two tens makes 32!'
+    gradeBadge: 'Grade 2',
+    topic: 'Mental Addition',
+    question: 'What is 26 + 17?',
+    modelClue: 'Decompose: (20 + 10) + (6 + 7) = 30 + 13',
+    options: ['39', '41', '43', '45'],
+    answer: '43',
+    explanation: '26 + 17 = 43. 6 + 7 equals 13, and adding that to the 30 gives 43!'
   },
   {
     id: 2,
-    grade: 'Grade 3 · Fractions',
-    question: 'Which fraction is equal to 1/2?',
-    visualHint: 'Look for half the numerator in the denominator',
-    options: ['2/3', '2/4', '3/8', '4/10'],
-    answer: '2/4',
-    explanation: '2/4 simplifies to 1/2 because both numerator and denominator divide by 2.'
+    gradeBadge: 'Grade 3',
+    topic: 'Fractions & Models',
+    question: 'Which fraction is equal to one half (1/2)?',
+    modelClue: 'Look for a numerator that is exactly half of the denominator',
+    options: ['2/3', '3/6', '4/10', '5/8'],
+    answer: '3/6',
+    explanation: '3/6 simplifies directly to 1/2 because 3 is half of 6.'
   },
   {
     id: 3,
-    grade: 'Grade 4 · Multiplication',
-    question: '8 × 7 = ?',
-    visualHint: 'Think: 8 × 5 = 40, plus 8 × 2 = 16',
-    options: ['48', '54', '56', '63'],
-    answer: '56',
-    explanation: '8 × 7 = 56. Master your 7 and 8 times tables for instant speed!'
+    gradeBadge: 'Grade 4',
+    topic: 'Multiplication Tables',
+    question: 'What is 8 × 9?',
+    modelClue: 'Think: 8 × 10 = 80, then subtract 8',
+    options: ['68', '72', '74', '76'],
+    answer: '72',
+    explanation: '8 × 9 = 72. Fast mental trick: 80 - 8 = 72!'
   },
   {
     id: 4,
-    grade: 'Grade 5 · Geometry',
-    question: 'What is the area of a rectangle with length 9 cm and width 6 cm?',
-    visualHint: 'Formula: Area = length × width',
-    options: ['30 cm²', '45 cm²', '54 cm²', '63 cm²'],
-    answer: '54 cm²',
-    explanation: 'Area = 9 cm × 6 cm = 54 cm².'
+    gradeBadge: 'Grade 5',
+    topic: 'Geometry & Area',
+    question: 'Find the area of a rectangle with length 8 cm and width 7 cm:',
+    modelClue: 'Formula: Area = Length × Width',
+    options: ['48 cm²', '54 cm²', '56 cm²', '64 cm²'],
+    answer: '56 cm²',
+    explanation: 'Area = 8 cm × 7 cm = 56 cm².'
   }
 ];
 
-const learningPillars = [
+const CURRICULUM_DOMAINS = [
   {
-    title: 'Concrete to Abstract',
-    description: 'Every abstract math concept begins with visual manipulatives, number lines, and step-by-step models before moving to mental math.',
-    icon: Layers,
-    color: 'text-blue-600',
-    bg: 'bg-blue-50'
+    title: 'Numbers & Operations',
+    shortDesc: 'From early counting and number bonds to multi-digit arithmetic and negative integers.',
+    icon: Calculator,
+    count: '240+ Competencies',
+    topics: ['Place Value & Expanded Form', 'Addition & Subtraction Fluency', 'Multiplication & Division Mastery', 'Order of Operations (PEMDAS)']
   },
   {
-    title: 'Instant Gentle Hints',
-    description: 'When a student gets stuck, they receive friendly breakdown clues rather than just a buzzer, building real problem-solving confidence.',
-    icon: Zap,
-    color: 'text-amber-600',
-    bg: 'bg-amber-50'
+    title: 'Fractions, Decimals & Ratios',
+    shortDesc: 'Visual part-whole bar models, decimal operations, percentages, and proportional reasoning.',
+    icon: PieChart,
+    count: '175+ Competencies',
+    topics: ['Visual Fraction Bars & Circles', 'Equivalent Fractions & Operations', 'Decimal Conversions & Rounding', 'Ratios, Rates & Percentages']
   },
   {
-    title: 'Daily Streak & Badges',
-    description: 'Celebrate consistent effort with daily learning streaks, animated badges, and avatar rewards that make practice a daily joy.',
-    icon: Flame,
-    color: 'text-rose-600',
-    bg: 'bg-rose-50'
+    title: 'Geometry & Spatial Sense',
+    shortDesc: '2D and 3D attributes, angles, symmetry, coordinate grids, perimeter, area, and volume.',
+    icon: Shapes,
+    count: '140+ Competencies',
+    topics: ['Polygons, Prisms & Pyramids', 'Angle Measurement & Rotation', 'Area, Perimeter & Volume Formulas', 'Coordinate Plane Navigation']
   },
   {
-    title: 'Diagnostic Mastery',
-    description: 'Teachers and parents view comprehensive skill breakdown reports, tracking exact strengths and targeted improvement areas.',
-    icon: TrendingUp,
-    color: 'text-emerald-600',
-    bg: 'bg-emerald-50'
+    title: 'Measurement & Time',
+    shortDesc: 'Analog and digital clocks, calendar intervals, metric and customary conversions, and money.',
+    icon: Clock,
+    count: '115+ Competencies',
+    topics: ['Analog Clock & Elapsed Time', 'Metric & Customary Standards', 'Currency, Coin Combinations & Change', 'Mass, Capacity & Length Units']
+  },
+  {
+    title: 'Patterns & Pre-Algebra',
+    shortDesc: 'Number sequences, geometric patterns, balance scale equations, and functional tables.',
+    icon: BrainCircuit,
+    count: '100+ Competencies',
+    topics: ['Arithmetic & Geometric Sequences', 'Balance Scale Unknowns', 'Input-Output Function Rules', 'Inequalities & One-Step Equations']
+  },
+  {
+    title: 'Data & Probability',
+    shortDesc: 'Picture charts, bar graphs, dot plots, statistical averages (mean/median), and probability.',
+    icon: BarChart3,
+    count: '85+ Competencies',
+    topics: ['Picture & Bar Graph Interpretation', 'Line Plots & Histograms', 'Mean, Median, Mode & Range', 'Predictive Chance & Experiments']
+  }
+];
+
+const PEDAGOGY_PILLARS = [
+  {
+    number: '01',
+    title: 'Concrete to Abstract (CPA)',
+    description: 'Every abstract mathematical concept starts with tactile and pictorial representations—number bonds, ten-frames, and visual fraction bars—before advancing to formal equations.',
+    icon: Layers
+  },
+  {
+    number: '02',
+    title: 'Intelligent Scaffolding',
+    description: 'When a child encounters difficulty, gentle step-by-step clues and visual decomposition appear automatically, transforming potential frustration into genuine problem-solving joy.',
+    icon: Zap
+  },
+  {
+    number: '03',
+    title: 'Daily Joyful Practice',
+    description: 'Bite-sized 10-minute daily challenge sessions with audio narration, celebratory confetti, streak fires, and avatar customization make math an anticipated daily highlight.',
+    icon: Flame
+  },
+  {
+    number: '04',
+    title: 'Diagnostic Mastery Insights',
+    description: 'Teachers and parents receive transparent, real-time analytics on specific skill gaps and curriculum progress, eliminating guesswork from homework and revision.',
+    icon: TrendingUp
+  }
+];
+
+const REVIEWS = [
+  {
+    quote: 'P for Pencil transformed our evening homework routine. The visual bar models helped my 7-year-old truly understand regrouping instead of just memorizing steps.',
+    name: 'Sarah Jenkins',
+    role: 'Parent of Grade 2 Student',
+    location: 'Sydney, Australia'
+  },
+  {
+    quote: 'The Master Question Bank and curriculum alignment give our teaching team complete flexibility. Creating targeted assignments takes minutes, and student engagement has soared.',
+    name: 'Marcus Vance',
+    role: 'Primary Mathematics Lead',
+    location: 'Oakridge International Academy'
+  },
+  {
+    quote: 'The audio read-aloud and gamified question cards enabled my young learners to practice independently. They genuinely look forward to earning their daily streak coins.',
+    name: 'Priya Sharma',
+    role: 'Foundation Year Educator',
+    location: 'New Delhi, India'
   }
 ];
 
@@ -313,25 +332,25 @@ export default function PForPencilHomePage({
 }: HomePageProps) {
   const [selectedGradeId, setSelectedGradeId] = useState<string>('grade-2');
   const [demoIndex, setDemoIndex] = useState(0);
-  const [selectedDemoAnswer, setSelectedDemoAnswer] = useState<string | null>(null);
-  const [demoScore, setDemoScore] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [showHint, setShowHint] = useState(false);
+  const [score, setScore] = useState(0);
 
   const activeGrade = useMemo(() => {
-    return gradesData.find(g => g.id === selectedGradeId) || gradesData[1];
+    return GRADE_SPECS.find((g) => g.id === selectedGradeId) || GRADE_SPECS[3];
   }, [selectedGradeId]);
 
-  const activeDemo = interactiveDemoChallenges[demoIndex];
+  const activeChallenge = DEMO_CHALLENGES[demoIndex];
 
-  const handleSelectDemoOption = (option: string) => {
-    if (selectedDemoAnswer) return;
-    setSelectedDemoAnswer(option);
-    if (option === activeDemo.answer) {
+  const handleSelectAnswer = (option: string) => {
+    if (selectedAnswer) return;
+    setSelectedAnswer(option);
+    if (option === activeChallenge.answer) {
       sounds.playCorrect();
-      setDemoScore(prev => prev + 10);
+      setScore((s) => s + 15);
       confetti({
-        particleCount: 30,
-        spread: 50,
+        particleCount: 36,
+        spread: 60,
         origin: { y: 0.6 }
       });
     } else {
@@ -339,435 +358,493 @@ export default function PForPencilHomePage({
     }
   };
 
-  const handleNextDemoQuestion = () => {
+  const handleNextChallenge = () => {
     sounds.playCorrect();
-    setSelectedDemoAnswer(null);
+    setSelectedAnswer(null);
     setShowHint(false);
-    setDemoIndex(prev => (prev + 1) % interactiveDemoChallenges.length);
+    setDemoIndex((idx) => (idx + 1) % DEMO_CHALLENGES.length);
   };
 
-  const handleResetDemo = () => {
+  const handleResetChallenge = () => {
+    sounds.click();
     setDemoIndex(0);
-    setSelectedDemoAnswer(null);
+    setSelectedAnswer(null);
     setShowHint(false);
-    setDemoScore(0);
+    setScore(0);
   };
 
-  const launchPracticeForGrade = (grade: GradeInfo) => {
+  const jumpToStudentPractice = (gradeId?: string) => {
     sounds.playCorrect();
-    confetti({
-      particleCount: 40,
-      spread: 60,
-      origin: { y: 0.6 }
-    });
-
+    confetti({ particleCount: 50, spread: 70, origin: { y: 0.55 } });
     if (currentUser.role === 'student') {
       onNavigateView('dashboard');
     } else {
-      const student = allUsers.find(u => u.role === 'student');
-      if (student) {
-        onSelectRoleUser(student);
+      const studentUser = allUsers.find((u) => u.role === 'student');
+      if (studentUser) {
+        onSelectRoleUser(studentUser);
       } else {
         onOpenAuthModal({ screen: 'signin', role: 'student' });
       }
     }
   };
 
-  const scrollToSection = (id: string) => {
+  const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
-    <div className="min-h-screen bg-white text-[#10246f] font-sans antialiased selection:bg-blue-100 selection:text-[#1a56db]">
+    <div className="min-h-screen bg-stone-50 text-slate-900 font-sans selection:bg-amber-200 selection:text-slate-950">
 
       {/* ========================================================================= */}
-      {/* 1. HERO SECTION */}
+      {/* 1. HERO SECTION: EDITORIAL, REFINED, PURPOSEFUL */}
       {/* ========================================================================= */}
-      <section className="relative overflow-hidden pt-10 pb-16 lg:pt-16 lg:pb-24 bg-gradient-to-b from-[#f8faff] via-white to-white border-b border-[#e1e6f1]">
-        
-        {/* Subtle background decorative shapes */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 pointer-events-none opacity-40 overflow-hidden">
-          <div className="absolute top-10 left-10 w-72 h-72 bg-blue-200/50 rounded-full blur-3xl" />
-          <div className="absolute top-20 right-10 w-80 h-80 bg-amber-100/60 rounded-full blur-3xl" />
-          <div className="absolute top-40 left-1/3 w-64 h-64 bg-emerald-100/50 rounded-full blur-3xl" />
-        </div>
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+      <section className="relative pt-12 pb-20 lg:pt-16 lg:pb-28 bg-white border-b border-stone-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center">
             
-            {/* Left Column: Value Proposition & CTAs */}
-            <div className="lg:col-span-7 space-y-6 text-left">
+            {/* Left Column: Mission & Core Offering */}
+            <div className="lg:col-span-7 space-y-6">
               
-              {/* Unboxed Metadata Tagline */}
-              <div className="flex items-center gap-2 text-xs font-bold text-[#1a56db]">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#1a56db]">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Foundational Mathematics (K – Grade 6)</span>
-                </span>
-                <span className="text-slate-300 hidden sm:inline">·</span>
-                <span className="text-slate-500 hidden sm:inline">Curriculum Aligned</span>
+              {/* Unboxed Metadata Header (Zero-Pill Compliance) */}
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 tracking-wide uppercase">
+                <span className="text-amber-700 font-bold">P for Pencil Academy</span>
+                <span aria-hidden="true" className="text-stone-300">/</span>
+                <span>Foundation to Grade 6</span>
+                <span aria-hidden="true" className="text-stone-300">/</span>
+                <span className="text-emerald-700 font-bold">Curriculum Aligned</span>
               </div>
 
-              {/* Master Headline */}
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-[#10246f] leading-[1.12]">
-                Small steps <br />
-                <span className="text-[#1a56db]">for a brighter</span>{' '}
-                <span className="text-[#f43f5e]">tomorrow.</span>
+              {/* Bold, Distinctive Display Headline */}
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-950 tracking-tight leading-[1.08] text-balance">
+                Master math through visual clarity and joyful daily practice.
               </h1>
 
-              {/* High-legibility Subtext */}
-              <p className="text-base sm:text-lg text-[#59627a] font-normal leading-relaxed max-w-xl">
-                Structured math practice that turns confusion into confidence. Engaging question challenges, visual tactile aids, and instant feedback for young learners.
+              {/* Authoritative Subtext */}
+              <p className="text-base sm:text-lg text-slate-600 font-normal leading-relaxed max-w-2xl">
+                Ground your child’s mathematical intuition in concrete manipulatives, pictorial models, and interactive challenges. Designed by primary educators to build lasting confidence from early counting through pre-algebra.
               </p>
 
-              {/* Action Buttons */}
+              {/* Functional CTA Button Group */}
               <div className="flex flex-wrap items-center gap-3 pt-2">
                 <button
-                  onClick={() => onOpenAuthModal({ screen: 'register', role: 'student' })}
-                  className="px-8 py-3.5 rounded-full bg-[#ffbf32] hover:bg-[#f59e0b] text-[#10246f] font-black text-sm sm:text-base shadow-md hover:shadow-lg transition-all transform hover:scale-102 active:scale-98 cursor-pointer flex items-center gap-2"
+                  type="button"
+                  onClick={() => jumpToStudentPractice()}
+                  className="px-7 py-3.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-white font-bold text-sm sm:text-base shadow-sm transition-all hover:-translate-y-0.5 active:translate-y-0 cursor-pointer inline-flex items-center gap-2.5"
                 >
                   <span>Start Free Practice</span>
-                  <ArrowRight className="w-4 h-4 text-[#10246f]" />
+                  <ArrowRight className="w-4 h-4 text-amber-400" />
                 </button>
 
                 <button
-                  onClick={() => scrollToSection('interactive-demo')}
-                  className="px-6 py-3.5 rounded-full bg-white hover:bg-slate-50 text-[#10246f] border border-[#e1e6f1] hover:border-blue-300 font-bold text-sm sm:text-base transition-colors cursor-pointer flex items-center gap-2 shadow-xs"
+                  type="button"
+                  onClick={() => scrollTo('interactive-lab')}
+                  className="px-6 py-3.5 rounded-xl bg-white hover:bg-stone-50 text-slate-800 border border-stone-300 hover:border-slate-400 font-bold text-sm sm:text-base transition-colors cursor-pointer inline-flex items-center gap-2 shadow-2xs"
                 >
-                  <Play className="w-4 h-4 text-blue-600 fill-blue-600" />
-                  <span>Try Demo Challenge</span>
+                  <Play className="w-4 h-4 text-amber-600 fill-amber-600" />
+                  <span>Try Challenge Demo</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => scrollTo('grade-roadmap')}
+                  className="px-5 py-3.5 rounded-xl text-slate-600 hover:text-slate-950 font-semibold text-sm transition-colors cursor-pointer"
+                >
+                  Explore Grades ↓
                 </button>
               </div>
 
-              {/* Trust Indicators */}
-              <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center gap-6 text-xs text-slate-600 font-medium">
+              {/* Trust & Accreditations Ribbon */}
+              <div className="pt-6 border-t border-stone-200/80 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-600">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>Curriculum Aligned (US, UK, CBSE, Singapore)</span>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Aligned to US Common Core, UK, ACARA & CBSE</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  <span>100% Safe, COPPA Compliant & Ad-Free</span>
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>100% Ad-Free, COPPA & Child-Safe Protected</span>
                 </div>
               </div>
 
             </div>
 
-            {/* Right Column: Live Interactive Math Card */}
-            <div className="lg:col-span-5" id="interactive-demo">
-              <div className="bg-white rounded-3xl border-2 border-[#e1e6f1] shadow-xl p-6 sm:p-7 space-y-5 relative">
+            {/* Right Column: Authentic Visual Anchor & Live Quick-Challenge */}
+            <div className="lg:col-span-5 space-y-4">
+              
+              {/* Card Container with Single Elevation */}
+              <div className="bg-stone-50 rounded-2xl border border-stone-200/80 p-5 sm:p-6 shadow-sm space-y-4">
                 
-                {/* Header of the Live Card */}
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-xs font-bold text-slate-700">{activeDemo.grade}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
-                    <Coins className="w-3.5 h-3.5 text-amber-500" />
-                    <span>+{demoScore} XP</span>
-                  </div>
-                </div>
-
-                {/* Question Prompt */}
-                <div className="text-center py-2 space-y-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full">
-                    Question {demoIndex + 1} of {interactiveDemoChallenges.length}
-                  </span>
-                  <h3 className="text-2xl sm:text-3xl font-black text-[#10246f] pt-1">
-                    {activeDemo.question}
-                  </h3>
-                </div>
-
-                {/* Visual Hint Toggle */}
-                {showHint && (
-                  <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-900 animate-in fade-in flex items-center gap-2">
-                    <span className="text-base">💡</span>
-                    <span>{activeDemo.visualHint}</span>
-                  </div>
-                )}
-
-                {/* Multiple Choice Grid */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  {activeDemo.options.map((option, optIdx) => {
-                    const isSelected = selectedDemoAnswer === option;
-                    const isCorrect = isSelected && option === activeDemo.answer;
-                    const isWrong = isSelected && option !== activeDemo.answer;
-
-                    return (
-                      <button
-                        key={`${option}-${optIdx}`}
-                        onClick={() => handleSelectDemoOption(option)}
-                        disabled={selectedDemoAnswer !== null}
-                        className={`h-12 rounded-xl text-base sm:text-lg font-bold border transition-all cursor-pointer flex items-center justify-center ${
-                          isCorrect 
-                            ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm scale-102 font-black' 
-                            : isWrong 
-                            ? 'bg-rose-50 border-rose-400 text-rose-700' 
-                            : selectedDemoAnswer && option === activeDemo.answer
-                            ? 'bg-emerald-50/70 border-emerald-300 text-emerald-700'
-                            : 'bg-white border-slate-200 text-[#10246f] hover:border-blue-400 hover:bg-blue-50/50'
-                        }`}
-                      >
-                        {option}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Answer Feedback Banner */}
-                <div className="min-h-[44px] flex items-center justify-center text-center">
-                  {selectedDemoAnswer === activeDemo.answer ? (
-                    <div className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full flex items-center gap-1.5 animate-in zoom-in-95">
-                      <Check className="w-4 h-4 text-emerald-600" />
-                      <span>Brilliant! {activeDemo.explanation}</span>
+                {/* Visual Header with Photography Anchor */}
+                <div className="relative rounded-xl overflow-hidden aspect-16/10 border border-stone-200 bg-stone-100">
+                  <img
+                    src="/hero-student.jpg"
+                    alt="Young student engaging happily with mathematics learning"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // Fallback if image path differs
+                      (e.target as HTMLImageElement).src = '/assets/hero-student.jpg';
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end p-4">
+                    <div className="text-white space-y-0.5">
+                      <p className="text-xs font-semibold text-amber-300">Hands-on Learning</p>
+                      <p className="text-sm font-bold text-white">Visual Manipulatives · Concrete Understanding</p>
                     </div>
-                  ) : selectedDemoAnswer ? (
-                    <div className="text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-full flex items-center gap-1.5 animate-in fade-in">
-                      <span>Correct answer is <strong>{activeDemo.answer}</strong></span>
+                  </div>
+                </div>
+
+                {/* Quick Interactive Mini-Test */}
+                <div className="bg-white rounded-xl border border-stone-200 p-4 space-y-3 shadow-2xs" id="interactive-lab">
+                  
+                  <div className="flex items-center justify-between text-xs pb-2 border-b border-stone-100">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="font-bold text-slate-800">{activeChallenge.gradeBadge}</span>
+                      <span className="text-stone-300">·</span>
+                      <span className="text-slate-500">{activeChallenge.topic}</span>
                     </div>
-                  ) : (
-                    <button
-                      onClick={() => setShowHint(!showHint)}
-                      className="text-xs text-slate-500 hover:text-blue-600 flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>💡 Need a hint? Click to reveal</span>
-                    </button>
+                    <span className="font-mono text-xs font-bold text-amber-800">
+                      +{score} XP
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-xs text-stone-400 font-mono">
+                      Question {demoIndex + 1} of {DEMO_CHALLENGES.length}
+                    </p>
+                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 leading-snug">
+                      {activeChallenge.question}
+                    </h3>
+                  </div>
+
+                  {showHint && (
+                    <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200/80 text-xs text-amber-950 font-medium">
+                      💡 <strong>Hint:</strong> {activeChallenge.modelClue}
+                    </div>
                   )}
-                </div>
 
-                {/* Next & Reset Bar */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                  <button
-                    onClick={handleResetDemo}
-                    className="text-xs font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1 cursor-pointer"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Reset</span>
-                  </button>
+                  {/* 4 Clean Option Tiles */}
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    {activeChallenge.options.map((option) => {
+                      const isSelected = selectedAnswer === option;
+                      const isCorrect = isSelected && option === activeChallenge.answer;
+                      const isWrong = isSelected && option !== activeChallenge.answer;
+                      const isSolution = selectedAnswer !== null && option === activeChallenge.answer;
 
-                  <button
-                    onClick={handleNextDemoQuestion}
-                    className="px-4 py-2 rounded-full bg-[#1a56db] hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
-                  >
-                    <span>Next Challenge</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
+                      return (
+                        <button
+                          key={option}
+                          type="button"
+                          disabled={selectedAnswer !== null}
+                          onClick={() => handleSelectAnswer(option)}
+                          className={`h-11 rounded-lg text-sm font-bold border transition-all cursor-pointer flex items-center justify-center ${
+                            isCorrect
+                              ? 'bg-emerald-50 border-emerald-500 text-emerald-900 ring-2 ring-emerald-200'
+                              : isWrong
+                              ? 'bg-rose-50 border-rose-400 text-rose-900'
+                              : isSolution
+                              ? 'bg-emerald-50 border-emerald-400 text-emerald-800 font-black'
+                              : 'bg-stone-50 border-stone-200 text-slate-800 hover:bg-stone-100 hover:border-slate-300'
+                          }`}
+                        >
+                          {option}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Feedback Strip */}
+                  <div className="min-h-[36px] flex items-center justify-between text-xs pt-1">
+                    {selectedAnswer === activeChallenge.answer ? (
+                      <span className="text-emerald-700 font-bold flex items-center gap-1.5">
+                        <Check className="w-4 h-4 text-emerald-600" />
+                        <span>Brilliant! {activeChallenge.explanation}</span>
+                      </span>
+                    ) : selectedAnswer ? (
+                      <span className="text-rose-700 font-bold">
+                        Correct answer: <strong>{activeChallenge.answer}</strong>. {activeChallenge.explanation}
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setShowHint(!showHint)}
+                        className="text-slate-500 hover:text-slate-800 font-medium cursor-pointer"
+                      >
+                        {showHint ? 'Hide Clue' : '💡 Need a visual clue?'}
+                      </button>
+                    )}
+
+                    <div className="flex items-center gap-2 ml-auto">
+                      <button
+                        type="button"
+                        onClick={handleResetChallenge}
+                        className="text-slate-400 hover:text-slate-700 p-1 rounded-md"
+                        title="Reset challenge"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleNextChallenge}
+                        className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors cursor-pointer inline-flex items-center gap-1"
+                      >
+                        <span>Next</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
                 </div>
 
               </div>
+
             </div>
 
           </div>
+
         </div>
       </section>
 
       {/* ========================================================================= */}
-      {/* 2. FOUR PORTAL GATEWAYS */}
+      {/* 2. DEDICATED PORTAL WORKSPACES (FOR ALL 5 ROLES) */}
       {/* ========================================================================= */}
-      <section className="py-14 bg-white border-b border-[#e1e6f1]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-16 bg-stone-100/70 border-b border-stone-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
           
-          <div className="text-center max-w-2xl mx-auto mb-10 space-y-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#1a56db]">
-              Dedicated Portals
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-[#10246f]">
-              Designed for every member of the learning team
-            </h2>
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div className="space-y-1.5 max-w-xl">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Seamless Collaboration
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
+                Tailored portals for every learning stakeholder
+              </h2>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500 max-w-md">
+              Switch roles seamlessly or sign in to experience the unified ecosystem connecting learners, teachers, parents, and school administrators.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             
-            {/* For Students */}
+            {/* Student Card */}
             <div 
-              onClick={() => {
-                const s = allUsers.find(u => u.role === 'student');
-                if (s) onSelectRoleUser(s);
-                else onOpenAuthModal({ screen: 'signin', role: 'student' });
-              }}
-              className="p-6 rounded-2xl bg-blue-50/50 border border-blue-200 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between space-y-4"
+              onClick={() => jumpToStudentPractice()}
+              className="p-6 rounded-2xl bg-white border border-stone-200 hover:border-slate-400 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between space-y-5"
             >
-              <div>
-                <div className="w-12 h-12 rounded-xl bg-white border border-blue-200 flex items-center justify-center text-blue-600 mb-4 group-hover:scale-105 transition-transform shadow-xs">
-                  <GraduationCap className="w-6 h-6" />
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200/80 flex items-center justify-center text-amber-800">
+                  <GraduationCap className="w-5 h-5" />
                 </div>
-                <h3 className="text-lg font-bold text-[#10246f]">For Students</h3>
-                <p className="text-xs text-[#59627a] mt-1.5 leading-relaxed">
-                  Interactive question challenges, streak fires, coins, ID card, audio read-aloud and fun leaderboard ranks.
-                </p>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 group-hover:text-amber-800 transition-colors">
+                    Student Arena
+                  </h3>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                    Interactive math challenges, audio read-aloud, streak fires, collectible avatars, and joy-filled mastery.
+                  </p>
+                </div>
               </div>
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 group-hover:translate-x-1 transition-transform">
-                <span>Enter Student Arena</span>
-                <ChevronRight className="w-4 h-4" />
-              </span>
+              <div className="pt-2 border-t border-stone-100 flex items-center justify-between text-xs font-bold text-slate-900 group-hover:text-amber-700">
+                <span>Enter Practice Mode</span>
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              </div>
             </div>
 
-            {/* For Teachers */}
+            {/* Teacher Card */}
             <div 
               onClick={() => onOpenAuthModal({ screen: 'signin', role: 'teacher' })}
-              className="p-6 rounded-2xl bg-rose-50/50 border border-rose-200 hover:border-rose-400 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between space-y-4"
+              className="p-6 rounded-2xl bg-white border border-stone-200 hover:border-slate-400 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between space-y-5"
             >
-              <div>
-                <div className="w-12 h-12 rounded-xl bg-white border border-rose-200 flex items-center justify-center text-rose-600 mb-4 group-hover:scale-105 transition-transform shadow-xs">
-                  <BookOpen className="w-6 h-6" />
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200/80 flex items-center justify-center text-blue-800">
+                  <BookOpen className="w-5 h-5" />
                 </div>
-                <h3 className="text-lg font-bold text-[#10246f]">For Teachers</h3>
-                <p className="text-xs text-[#59627a] mt-1.5 leading-relaxed">
-                  Master question bank, skill categorization, classroom assignment creation and auto-generated report cards.
-                </p>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-800 transition-colors">
+                    Teacher Workspace
+                  </h3>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                    Curriculum question builder, bulk spreadsheet import, classroom assignments, and automated report cards.
+                  </p>
+                </div>
               </div>
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-600 group-hover:translate-x-1 transition-transform">
-                <span>Teacher Workspace</span>
-                <ChevronRight className="w-4 h-4" />
-              </span>
+              <div className="pt-2 border-t border-stone-100 flex items-center justify-between text-xs font-bold text-slate-900 group-hover:text-blue-700">
+                <span>Open Teacher Desk</span>
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              </div>
             </div>
 
-            {/* For Parents */}
+            {/* Parent Card */}
             <div 
               onClick={() => onOpenAuthModal({ screen: 'signin', role: 'parent' })}
-              className="p-6 rounded-2xl bg-amber-50/50 border border-amber-200 hover:border-amber-400 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between space-y-4"
+              className="p-6 rounded-2xl bg-white border border-stone-200 hover:border-slate-400 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between space-y-5"
             >
-              <div>
-                <div className="w-12 h-12 rounded-xl bg-white border border-amber-200 flex items-center justify-center text-amber-600 mb-4 group-hover:scale-105 transition-transform shadow-xs">
-                  <HeartHandshake className="w-6 h-6" />
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-800">
+                  <HeartHandshake className="w-5 h-5" />
                 </div>
-                <h3 className="text-lg font-bold text-[#10246f]">For Parents</h3>
-                <p className="text-xs text-[#59627a] mt-1.5 leading-relaxed">
-                  Daily practice tracking, accuracy insights, pin-protected child safety, and celebrating milestone badges.
-                </p>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 group-hover:text-emerald-800 transition-colors">
+                    Parent Dashboard
+                  </h3>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                    Real-time practice time, accuracy breakdown by topic, PIN-protected security, and milestone celebration.
+                  </p>
+                </div>
               </div>
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 group-hover:translate-x-1 transition-transform">
-                <span>Parent Dashboard</span>
-                <ChevronRight className="w-4 h-4" />
-              </span>
+              <div className="pt-2 border-t border-stone-100 flex items-center justify-between text-xs font-bold text-slate-900 group-hover:text-emerald-700">
+                <span>View Parent Insights</span>
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              </div>
             </div>
 
-            {/* For Schools */}
+            {/* School Card */}
             <div 
               onClick={() => onOpenAuthModal({ screen: 'register', role: 'school' })}
-              className="p-6 rounded-2xl bg-emerald-50/50 border border-emerald-200 hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between space-y-4"
+              className="p-6 rounded-2xl bg-white border border-stone-200 hover:border-slate-400 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between space-y-5"
             >
-              <div>
-                <div className="w-12 h-12 rounded-xl bg-white border border-emerald-200 flex items-center justify-center text-emerald-600 mb-4 group-hover:scale-105 transition-transform shadow-xs">
-                  <School className="w-6 h-6" />
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-200/80 flex items-center justify-center text-purple-800">
+                  <School className="w-5 h-5" />
                 </div>
-                <h3 className="text-lg font-bold text-[#10246f]">For Schools</h3>
-                <p className="text-xs text-[#59627a] mt-1.5 leading-relaxed">
-                  Whole-grade curriculum standards alignment, multi-class roster administration, and bulk student onboarding.
-                </p>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 group-hover:text-purple-800 transition-colors">
+                    School & Admin
+                  </h3>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                    Whole-school curriculum pacing, multi-class roster administration, teacher vouchers, and audit trails.
+                  </p>
+                </div>
               </div>
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 group-hover:translate-x-1 transition-transform">
-                <span>School Administration</span>
-                <ChevronRight className="w-4 h-4" />
-              </span>
+              <div className="pt-2 border-t border-stone-100 flex items-center justify-between text-xs font-bold text-slate-900 group-hover:text-purple-700">
+                <span>School Enterprise</span>
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              </div>
             </div>
 
           </div>
+
         </div>
       </section>
 
       {/* ========================================================================= */}
-      {/* 3. INTERACTIVE GRADE PATHWAY EXPLORER */}
+      {/* 3. INTERACTIVE GRADE ROADMAP: FOUNDATION TO GRADE 6 */}
       {/* ========================================================================= */}
-      <section className="py-16 bg-[#f8faff] border-b border-[#e1e6f1]" id="grades">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+      <section className="py-20 bg-white border-b border-stone-200/80" id="grades">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
           
-          <div className="text-center space-y-2 max-w-2xl mx-auto">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#1a56db]">
-              Structured Grade Roadmap
+          <div className="text-center space-y-3 max-w-2xl mx-auto">
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-800">
+              Grade-by-Grade Progression
             </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-[#10246f]">
-              Targeted Math for Foundation to Grade 6
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight">
+              Curriculum standards from early years to pre-algebra
             </h2>
-            <p className="text-xs sm:text-sm text-[#59627a]">
-              Select a grade level below to explore core competencies, focus areas, and sample practice problems.
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Every level is structured around internationally recognized developmental milestones, ensuring children never jump to abstract algorithms before mastering concrete concepts.
             </p>
           </div>
 
-          {/* Grade Selector Pills / Tabs */}
-          <div className="flex flex-wrap items-center justify-center gap-2 p-1.5 bg-white border border-slate-200 rounded-2xl max-w-3xl mx-auto shadow-xs">
-            {gradesData.map((grade) => {
-              const isActive = grade.id === selectedGradeId;
+          {/* Clean Segmented Grade Filter (Functional Buttons with Active State) */}
+          <div className="flex flex-wrap items-center justify-center gap-1.5 p-1.5 bg-stone-100 rounded-xl max-w-4xl mx-auto border border-stone-200">
+            {GRADE_SPECS.map((spec) => {
+              const isSelected = spec.id === selectedGradeId;
               return (
                 <button
-                  key={grade.id}
+                  key={spec.id}
+                  type="button"
                   onClick={() => {
-                    setSelectedGradeId(grade.id);
-                    sounds.playCorrect();
+                    setSelectedGradeId(spec.id);
+                    sounds.click();
                   }}
-                  className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-                    isActive 
-                      ? 'bg-[#10246f] text-white shadow-sm' 
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+                    isSelected
+                      ? 'bg-white text-slate-950 shadow-sm border border-stone-200/60'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
                   }`}
                 >
-                  <span>{grade.name.split(' (')[0]}</span>
+                  {spec.shortLabel}
                 </button>
               );
             })}
           </div>
 
-          {/* Active Grade Deep Dive Card */}
-          <div className="bg-white rounded-3xl border-2 border-[#e1e6f1] p-6 sm:p-8 shadow-sm max-w-4xl mx-auto space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+          {/* Detailed Grade Showcase Card */}
+          <div className="bg-stone-50 rounded-2xl border border-stone-200/90 p-6 sm:p-8 max-w-4xl mx-auto space-y-6">
+            
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-200 pb-5">
               <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${activeGrade.badgeBg} ${activeGrade.badgeText}`}>
-                    {activeGrade.age}
-                  </span>
-                  <span className="text-xs font-bold text-slate-400">·</span>
-                  <span className="text-xs font-bold text-slate-600">Curriculum Standard</span>
+                <div className="flex items-center gap-2 text-xs text-slate-500 font-semibold">
+                  <span className="text-amber-800 font-bold">{activeGrade.ageRange}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>Primary Milestone</span>
                 </div>
-                <h3 className="text-2xl font-black text-[#10246f]">{activeGrade.name}</h3>
+                <h3 className="text-2xl font-black text-slate-950">
+                  {activeGrade.name}
+                </h3>
+                <p className="text-xs text-slate-600 font-medium">
+                  {activeGrade.tagline}
+                </p>
               </div>
 
               <button
-                onClick={() => launchPracticeForGrade(activeGrade)}
-                className="px-6 py-3 rounded-full bg-[#1a56db] hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                type="button"
+                onClick={() => jumpToStudentPractice(activeGrade.id)}
+                className="px-5 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm shadow-xs transition-colors inline-flex items-center justify-center gap-2 cursor-pointer shrink-0"
               >
-                <span>Jump into {activeGrade.name.split(' (')[0]}</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>Practice {activeGrade.shortLabel}</span>
+                <ArrowRight className="w-4 h-4 text-amber-400" />
               </button>
             </div>
 
-            {/* Focus & Key Competencies */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Overview & Key Competencies Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Core Learning Focus
-                </h4>
-                <p className="text-sm text-[#10246f] leading-relaxed font-medium">
-                  {activeGrade.focus}
-                </p>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                    Pedagogical Focus
+                  </h4>
+                  <p className="text-sm text-slate-700 leading-relaxed">
+                    {activeGrade.overview}
+                  </p>
+                </div>
 
-                <div className="pt-2">
-                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                      Sample Challenge
-                    </span>
-                    <p className="text-sm font-bold text-[#10246f]">
-                      {activeGrade.sampleQuestion}
+                <div className="p-4 rounded-xl bg-white border border-stone-200 space-y-1.5 shadow-2xs">
+                  <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">
+                    Interactive Sample Problem
+                  </span>
+                  <p className="text-base font-bold text-slate-900">
+                    {activeGrade.samplePrompt}
+                  </p>
+                  <p className="text-xs text-emerald-700 font-semibold pt-1">
+                    ✓ Verified Solution: <strong>{activeGrade.sampleAnswer}</strong>
+                  </p>
+                  {activeGrade.sampleVisual && (
+                    <p className="text-xs font-mono text-slate-500 bg-stone-50 p-2 rounded-md mt-1 border border-stone-100">
+                      Visual Model: {activeGrade.sampleVisual}
                     </p>
-                    <p className="text-xs text-emerald-700 font-semibold pt-1">
-                      ✓ Answer: {activeGrade.sampleAnswer}
-                    </p>
-                  </div>
+                  )}
                 </div>
               </div>
 
               <div className="space-y-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Key Math Competencies
+                  Key Curriculum Competencies
                 </h4>
                 <div className="space-y-2">
-                  {activeGrade.skills.map((skill, idx) => (
-                    <div key={idx} className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                      <div className="w-5 h-5 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0">
-                        <Check className="w-3 h-3" />
+                  {activeGrade.keySkills.map((skill, sIdx) => (
+                    <div 
+                      key={sIdx} 
+                      className="p-3 rounded-xl bg-white border border-stone-200/80 flex items-start gap-3 shadow-2xs"
+                    >
+                      <div className="w-5 h-5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+                        <Check className="w-3.5 h-3.5" />
                       </div>
-                      <span>{skill}</span>
+                      <span className="text-xs font-semibold text-slate-800 leading-snug">
+                        {skill}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -781,63 +858,66 @@ export default function PForPencilHomePage({
       </section>
 
       {/* ========================================================================= */}
-      {/* 4. CURRICULUM TOPICS SHOWCASE */}
+      {/* 4. CURRICULUM STRANDS & MATHEMATICAL MASTERY */}
       {/* ========================================================================= */}
-      <section className="py-16 bg-white border-b border-[#e1e6f1]" id="topics">
+      <section className="py-20 bg-stone-100/60 border-b border-stone-200/80" id="topics">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
           
-          <div className="text-center space-y-2 max-w-2xl mx-auto">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">
-              Mastery Strands
+          <div className="text-center space-y-3 max-w-2xl mx-auto">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Core Math Pillars
             </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-[#10246f]">
-              Comprehensive Mathematical Strands
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight">
+              Six comprehensive mathematical strands
             </h2>
-            <p className="text-xs sm:text-sm text-[#59627a]">
-              Every concept is built on concrete visual scaffolding and interactive practice questions.
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Every topic is engineered with rich visual clipart, tap-to-count objects, bucket sorting, and multi-choice challenges to ensure multi-sensory retention.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {topicCards.map((topic) => {
-              const IconComponent = topic.icon;
+            {CURRICULUM_DOMAINS.map((domain) => {
+              const Icon = domain.icon;
               return (
                 <div 
-                  key={topic.title}
-                  className="p-6 rounded-2xl border border-[#e1e6f1] bg-white hover:border-blue-400 hover:shadow-md transition-all space-y-4 flex flex-col justify-between"
+                  key={domain.title}
+                  className="p-6 rounded-2xl bg-white border border-stone-200 hover:border-slate-400 hover:shadow-md transition-all flex flex-col justify-between space-y-5"
                 >
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <div className={`w-12 h-12 rounded-2xl ${topic.iconBg} flex items-center justify-center ${topic.iconColor} border border-slate-100`}>
-                        <IconComponent className="w-6 h-6" />
+                      <div className="w-10 h-10 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center text-slate-800">
+                        <Icon className="w-5 h-5" />
                       </div>
-                      <span className="text-xs font-bold text-slate-500 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-200">
-                        {topic.skillsCount}
+                      <span className="text-xs font-mono font-semibold text-slate-500">
+                        {domain.count}
                       </span>
                     </div>
 
-                    <h3 className="text-lg font-bold text-[#10246f]">
-                      {topic.title}
-                    </h3>
-                    <p className="text-xs text-[#59627a] leading-relaxed">
-                      {topic.subtitle}
-                    </p>
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900">
+                        {domain.title}
+                      </h3>
+                      <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                        {domain.shortDesc}
+                      </p>
+                    </div>
 
-                    <div className="pt-2 border-t border-slate-100 space-y-1.5">
-                      {topic.highlights.map((h, i) => (
-                        <div key={i} className="flex items-center gap-2 text-xs text-slate-600 font-medium">
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                          <span>{h}</span>
+                    <div className="pt-3 border-t border-stone-100 space-y-1.5">
+                      {domain.topics.map((t, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-xs text-slate-700">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                          <span>{t}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   <button
-                    onClick={() => onOpenAuthModal({ screen: 'signin', role: 'student' })}
-                    className="w-full py-2.5 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-600 text-[#10246f] text-xs font-bold border border-slate-200 transition-colors cursor-pointer text-center"
+                    type="button"
+                    onClick={() => jumpToStudentPractice()}
+                    className="w-full py-2.5 rounded-xl bg-stone-50 hover:bg-slate-950 hover:text-white text-slate-800 text-xs font-bold border border-stone-200 transition-colors cursor-pointer text-center"
                   >
-                    Practice {topic.title}
+                    Practice {domain.title}
                   </button>
                 </div>
               );
@@ -848,35 +928,40 @@ export default function PForPencilHomePage({
       </section>
 
       {/* ========================================================================= */}
-      {/* 5. WHY P FOR PENCIL WORKS */}
+      {/* 5. PEDAGOGY: WHY P FOR PENCIL WORKS */}
       {/* ========================================================================= */}
-      <section className="py-16 bg-[#f8faff] border-b border-[#e1e6f1]">
+      <section className="py-20 bg-white border-b border-stone-200/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
           
-          <div className="text-center space-y-2 max-w-2xl mx-auto">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#1a56db]">
-              Proven Methodology
+          <div className="text-center space-y-3 max-w-2xl mx-auto">
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-800">
+              Evidence-Based Pedagogy
             </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-[#10246f]">
-              Why children thrive with P for Pencil
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight">
+              Designed around how young minds actually learn
             </h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {learningPillars.map((pillar) => {
-              const PillarIcon = pillar.icon;
+            {PEDAGOGY_PILLARS.map((pillar) => {
+              const Icon = pillar.icon;
               return (
                 <div 
                   key={pillar.title}
-                  className="p-6 rounded-2xl bg-white border border-[#e1e6f1] shadow-xs space-y-3"
+                  className="p-6 rounded-2xl bg-stone-50 border border-stone-200/90 space-y-3"
                 >
-                  <div className={`w-10 h-10 rounded-xl ${pillar.bg} ${pillar.color} flex items-center justify-center`}>
-                    <PillarIcon className="w-5 h-5" />
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono font-bold text-slate-400">
+                      {pillar.number}
+                    </span>
+                    <div className="w-8 h-8 rounded-lg bg-white border border-stone-200 flex items-center justify-center text-slate-800">
+                      <Icon className="w-4 h-4" />
+                    </div>
                   </div>
-                  <h4 className="text-base font-bold text-[#10246f]">
+                  <h4 className="text-base font-bold text-slate-900 pt-1">
                     {pillar.title}
                   </h4>
-                  <p className="text-xs text-[#59627a] leading-relaxed">
+                  <p className="text-xs text-slate-600 leading-relaxed">
                     {pillar.description}
                   </p>
                 </div>
@@ -888,126 +973,166 @@ export default function PForPencilHomePage({
       </section>
 
       {/* ========================================================================= */}
-      {/* 6. CALL TO ACTION BANNER */}
+      {/* 6. SOCIAL PROOF & EDUCATOR TESTIMONIALS */}
       {/* ========================================================================= */}
-      <section className="py-16 bg-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="p-8 sm:p-12 rounded-3xl bg-[#10246f] text-white text-center space-y-6 shadow-xl relative overflow-hidden">
-            
-            {/* Background sparkle accents */}
-            <div className="absolute top-4 left-6 text-2xl opacity-40">✨</div>
-            <div className="absolute bottom-4 right-8 text-2xl opacity-40">🌟</div>
+      <section className="py-20 bg-stone-100/60 border-b border-stone-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+          
+          <div className="text-center space-y-2 max-w-2xl mx-auto">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Community Voices
+            </span>
+            <h2 className="text-3xl font-black text-slate-950 tracking-tight">
+              Trusted by parents and primary educators worldwide
+            </h2>
+          </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {REVIEWS.map((rev, idx) => (
+              <div 
+                key={idx}
+                className="p-6 rounded-2xl bg-white border border-stone-200 flex flex-col justify-between space-y-4 shadow-2xs"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center gap-1 text-amber-500 text-xs">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    ))}
+                  </div>
+                  <p className="text-xs sm:text-sm text-slate-700 leading-relaxed italic">
+                    "{rev.quote}"
+                  </p>
+                </div>
+
+                <div className="pt-3 border-t border-stone-100 text-xs">
+                  <p className="font-bold text-slate-900">{rev.name}</p>
+                  <p className="text-slate-500">{rev.role} · {rev.location}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 7. HIGH-CONVERTING CLOSING INVITATION */}
+      {/* ========================================================================= */}
+      <section className="py-20 bg-white">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="p-8 sm:p-14 rounded-3xl bg-slate-950 text-white text-center space-y-6 shadow-xl relative overflow-hidden">
+            
             <div className="relative z-10 max-w-2xl mx-auto space-y-4">
-              <span className="inline-block text-xs font-bold uppercase tracking-wider text-[#ffbf32]">
-                Start Today · Free Access
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                Start Today · No Credit Card Required
               </span>
               <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-white leading-tight">
-                Give every child the confidence to excel in math.
+                Give your child the gift of mathematical confidence.
               </h2>
-              <p className="text-xs sm:text-sm text-slate-200 max-w-lg mx-auto">
-                Join students, teachers, and parents transforming daily math practice with joyful mastery.
+              <p className="text-sm text-slate-300 max-w-xl mx-auto leading-relaxed">
+                Join thousands of students turning daily math anxiety into joyful problem-solving mastery with P for Pencil.
               </p>
-              <div className="pt-2 flex flex-wrap justify-center gap-3">
+
+              <div className="pt-4 flex flex-wrap justify-center gap-3">
                 <button
+                  type="button"
                   onClick={() => onOpenAuthModal({ screen: 'register', role: 'student' })}
-                  className="px-8 py-3.5 rounded-full bg-[#ffbf32] hover:bg-[#f59e0b] text-[#10246f] font-black text-sm shadow-md transition-all transform hover:scale-102 cursor-pointer"
+                  className="px-8 py-3.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm shadow-sm transition-all hover:scale-102 cursor-pointer"
                 >
-                  Get Started Free
+                  Create Free Student Account
                 </button>
                 <button
+                  type="button"
                   onClick={onOpenPricing}
-                  className="px-6 py-3.5 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-sm border border-white/20 transition-colors cursor-pointer"
+                  className="px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm border border-white/20 transition-colors cursor-pointer"
                 >
-                  View Membership Plans
+                  View School & Family Plans
                 </button>
               </div>
             </div>
+
           </div>
         </div>
       </section>
 
       {/* ========================================================================= */}
-      {/* 7. CLEAN FOOTER */}
+      {/* 8. FOOTER WITH ACCESSIBLE NAVIGATION */}
       {/* ========================================================================= */}
-      <footer className="bg-[#f8faff] border-t border-[#e1e6f1] py-12 text-[#59627a]">
+      <footer className="bg-stone-100 border-t border-stone-200 py-12 text-slate-600">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-8 mb-10">
             
-            {/* Brand column */}
             <div className="md:col-span-2 space-y-3">
               <PforPencilLogo size="md" showSubtitle={true} />
-              <p className="text-xs text-[#59627a] max-w-sm pt-2 leading-relaxed">
-                Structured math practice designed to build deep foundational understanding and lasting learning confidence for primary students.
+              <p className="text-xs text-slate-500 max-w-sm pt-2 leading-relaxed">
+                P for Pencil is a primary mathematics learning platform dedicated to making foundational concepts clear, tactile, and joyful for every child.
               </p>
             </div>
 
-            {/* Column: Platform */}
             <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[#10246f]">Platform</h4>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">Curriculum</h4>
               <ul className="space-y-1.5 text-xs">
-                <li><button onClick={() => scrollToSection('grades')} className="hover:text-[#10246f] cursor-pointer">Grade Standards</button></li>
-                <li><button onClick={() => scrollToSection('topics')} className="hover:text-[#10246f] cursor-pointer">Curriculum Strands</button></li>
-                <li><button onClick={onOpenPricing} className="hover:text-[#10246f] cursor-pointer">Pricing Plans</button></li>
-                <li><button onClick={onOpenRegionModal} className="hover:text-[#10246f] cursor-pointer">Country & Region Scope</button></li>
+                <li><button type="button" onClick={() => scrollTo('grades')} className="hover:text-slate-950 cursor-pointer">Grade Progression</button></li>
+                <li><button type="button" onClick={() => scrollTo('topics')} className="hover:text-slate-950 cursor-pointer">Math Strands</button></li>
+                <li><button type="button" onClick={onOpenRegionModal} className="hover:text-slate-950 cursor-pointer">National Standards Scope</button></li>
+                <li><button type="button" onClick={onOpenPricing} className="hover:text-slate-950 cursor-pointer">Subscription Plans</button></li>
               </ul>
             </div>
 
-            {/* Column: Portals */}
             <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[#10246f]">Portals</h4>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">Portals</h4>
               <ul className="space-y-1.5 text-xs">
-                <li><button onClick={() => onOpenAuthModal({ screen: 'signin', role: 'student' })} className="hover:text-[#10246f] cursor-pointer">Student Practice</button></li>
-                <li><button onClick={() => onOpenAuthModal({ screen: 'signin', role: 'teacher' })} className="hover:text-[#10246f] cursor-pointer">Teacher Workspace</button></li>
-                <li><button onClick={() => onOpenAuthModal({ screen: 'signin', role: 'parent' })} className="hover:text-[#10246f] cursor-pointer">Parent Hub</button></li>
-                <li><button onClick={() => onOpenAuthModal({ screen: 'signin', role: 'school' })} className="hover:text-[#10246f] cursor-pointer">School Admin</button></li>
+                <li><button type="button" onClick={() => onOpenAuthModal({ screen: 'signin', role: 'student' })} className="hover:text-slate-950 cursor-pointer">Student Arena</button></li>
+                <li><button type="button" onClick={() => onOpenAuthModal({ screen: 'signin', role: 'teacher' })} className="hover:text-slate-950 cursor-pointer">Teacher Workspace</button></li>
+                <li><button type="button" onClick={() => onOpenAuthModal({ screen: 'signin', role: 'parent' })} className="hover:text-slate-950 cursor-pointer">Parent Hub</button></li>
+                <li><button type="button" onClick={() => onOpenAuthModal({ screen: 'signin', role: 'school' })} className="hover:text-slate-950 cursor-pointer">School Admin</button></li>
               </ul>
             </div>
 
-            {/* Column: Compliance */}
             <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[#10246f]">Trust & Database</h4>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">Infrastructure</h4>
               <ul className="space-y-1.5 text-xs">
-                <li><button onClick={onOpenSupabaseModal} className="hover:text-[#10246f] cursor-pointer font-semibold text-emerald-700">Supabase Database Hub</button></li>
-                <li><span className="text-xs text-slate-500">100% Ad-Free & Kid-Safe</span></li>
-                <li><span className="text-xs text-slate-500">COPPA & Privacy Compliant</span></li>
+                <li><button type="button" onClick={onOpenSupabaseModal} className="hover:text-emerald-800 font-semibold text-emerald-700 cursor-pointer">Supabase Database Hub</button></li>
+                <li><span className="text-slate-400">COPPA & Child Safe</span></li>
+                <li><span className="text-slate-400">100% Ad-Free Guarantee</span></li>
               </ul>
             </div>
 
           </div>
 
-          <div className="pt-6 border-t border-[#e1e6f1] flex flex-col sm:flex-row items-center justify-between text-xs text-[#59627a] gap-3">
-            <span>© 2026 P for Pencil. All rights reserved.</span>
-            <span className="font-semibold text-[#10246f]">Small Steps. A Brighter Tomorrow.</span>
+          <div className="pt-6 border-t border-stone-200 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-3">
+            <span>© 2026 P for Pencil Academy. All rights reserved.</span>
+            <span className="font-semibold text-slate-800">Small steps for a brighter tomorrow.</span>
           </div>
         </div>
       </footer>
 
-      {/* Floating tester sandbox button */}
-      <aside className="fixed bottom-3 right-3 z-50 bg-white rounded-2xl shadow-lg border border-[#e1e6f1] p-2 flex items-center gap-1.5 text-xs font-bold text-[#10246f]">
-        <span className="text-[10px] text-[#59627a] font-extrabold uppercase tracking-wider pl-1">🎭 Portal:</span>
+      {/* Floating Demo Role Switcher Tool */}
+      <aside className="fixed bottom-3 right-3 z-50 bg-white/95 backdrop-blur-md rounded-xl shadow-lg border border-stone-200/90 p-1.5 flex items-center gap-1 text-xs">
+        <span className="text-[10px] text-slate-400 font-mono uppercase tracking-wider pl-1.5">Portal:</span>
         {allUsers.filter((u) => ['student', 'parent', 'teacher', 'school', 'admin'].includes(u.role)).slice(0, 5).map((user) => (
           <button
             key={user.id}
+            type="button"
             onClick={() => {
               onSelectRoleUser(user);
               sounds.playCorrect();
             }}
-            className={`px-2 py-0.5 rounded-lg transition-all capitalize cursor-pointer text-[11px] ${
+            className={`px-2 py-1 rounded-md transition-all capitalize cursor-pointer text-[11px] font-semibold ${
               currentUser.id === user.id 
-                ? 'bg-[#10246f] text-white shadow-2xs font-black' 
-                : 'hover:bg-[#f8faff] text-[#59627a]'
+                ? 'bg-slate-950 text-white shadow-2xs' 
+                : 'text-slate-600 hover:text-slate-950 hover:bg-stone-100'
             }`}
           >
             {user.role}
           </button>
         ))}
         <button
+          type="button"
           onClick={onOpenSupabaseModal}
-          className="px-2 py-0.5 rounded-lg hover:bg-[#ecfdf5] text-[#16c47f] border border-[#a7f3d0] font-bold transition-colors cursor-pointer text-[11px] flex items-center gap-1"
-          title="Open Supabase Database Hub to test connection and live data sync"
+          className="px-2 py-1 rounded-md text-emerald-700 hover:bg-emerald-50 border border-emerald-200/70 font-bold transition-colors cursor-pointer text-[11px] flex items-center gap-1"
+          title="Open Database Hub"
         >
-          <span>🗄️</span>
           <span>DB Hub</span>
         </button>
       </aside>

@@ -372,11 +372,17 @@ export default function App() {
   const [supabaseModalOpen, setSupabaseModalOpen] = useState<boolean>(false);
   const [regionModalOpen, setRegionModalOpen] = useState<boolean>(false);
 
-  // Update user regional and curriculum preferences
+  // Update user regional and curriculum preferences (One-time selection during registration)
   const handleSaveRegion = (country: string, state: string, curriculum: string, grade?: string) => {
     try {
       localStorage.setItem('pforpencil_active_region', JSON.stringify({ country, state, curriculum }));
     } catch {}
+
+    // If account is already created, Country, Region and Curriculum are permanently locked (one-time selection at registration)
+    if (currentUser && currentUser.id && currentUser.id !== 'GUEST') {
+      return;
+    }
+
     const updatedUser: UserAccount = {
       ...currentUser,
       country,
@@ -930,8 +936,9 @@ export default function App() {
         schoolName: updatedUser.schoolName,
         status: updatedUser.status || u.status,
         phone: updatedUser.phone,
-        country: updatedUser.country,
-        state: updatedUser.state
+        country: u.country,
+        state: u.state,
+        curriculum: u.curriculum
       } : u))
     );
 
@@ -946,8 +953,9 @@ export default function App() {
         grade: updatedUser.grade,
         schoolName: updatedUser.schoolName,
         phone: updatedUser.phone,
-        country: updatedUser.country,
-        state: updatedUser.state
+        country: prev.country,
+        state: prev.state,
+        curriculum: prev.curriculum
       }));
     }
 
@@ -1668,6 +1676,7 @@ export default function App() {
                 grades={grades}
                 subjects={subjects}
                 onAddClass={handleAddClass}
+                onUpdateClass={handleUpdateClass}
                 onAddStudent={handleAddStudent}
                 onCreateAssignment={handleCreateAssignment}
                 onAddQuestion={handleAddQuestion}

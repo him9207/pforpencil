@@ -322,8 +322,12 @@ export interface ClassRoom {
   grade: GradeLevel;
   section?: string;
   room?: string;
-  teacherId: string;
-  teacherName: string;
+  teacherId: string; // Primary / Lead teacher ID
+  teacherName: string; // Primary / Lead teacher name
+  secondaryTeacherId?: string; // Optional Secondary / Co-teacher ID
+  secondaryTeacherName?: string; // Optional Secondary / Co-teacher name
+  subject?: Subject; // Optional primary subject
+  subjects?: Subject[]; // Optional assigned subjects
   schoolId: string;
   studentIds: string[];
   averageScore: number;

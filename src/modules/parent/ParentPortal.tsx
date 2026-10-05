@@ -31,11 +31,12 @@ import {
   BookOpen,
   Lock,
   Edit3,
-  RotateCcw
+  RotateCcw,
+  Users
 } from 'lucide-react';
 import { sounds } from '../../utils/audio';
 import { generateStudentUsername, getNextRoleId } from '../../utils/idAndUsernameGenerator';
-import { COUNTRIES, COUNTRY_STATE_MAP, COUNTRY_CURRICULUM_MAP } from '../../data/curriculumData';
+import { COUNTRIES, COUNTRY_STATE_MAP, COUNTRY_CURRICULUM_MAP, COUNTRY_FLAG_MAP } from '../../data/curriculumData';
 import StudentReportCardModal from '../student/StudentReportCardModal';
 import ResetCredentialsModal from '../auth/ResetCredentialsModal';
 import EditUserProfileModal from '../admin/components/EditUserProfileModal';
@@ -109,9 +110,6 @@ export default function ParentPortal({
   const [newChildUsername, setNewChildUsername] = useState('');
   const [isCustomUsername, setIsCustomUsername] = useState(false);
   const [customUsername, setCustomUsername] = useState('');
-  const [newChildCountry, setNewChildCountry] = useState<string>(currentUser.country || 'United States');
-  const [newChildState, setNewChildState] = useState<string>(currentUser.state || 'California');
-  const [newChildCurriculum, setNewChildCurriculum] = useState<string>(currentUser.curriculum || 'Common Core (US)');
 
   // Real-time validation for 6 to 13 character custom child username
   const customUsernameValidation = useMemo(() => {
@@ -208,9 +206,9 @@ export default function ParentPortal({
       pin: newChildPin.trim() || '7392',
       avatar: newChildAvatar,
       grade: newChildGrade,
-      country: newChildCountry,
-      state: newChildState,
-      curriculum: newChildCurriculum,
+      country: currentUser.country || 'United States',
+      state: currentUser.state || 'California',
+      curriculum: currentUser.curriculum || 'US Common Core State Standards (CCSS)',
       parentId: currentUser.id,
       parentName: currentUser.name,
       enrolledAt: new Date().toISOString().split('T')[0],
@@ -223,9 +221,9 @@ export default function ParentPortal({
       studentName: newChildName.trim(),
       avatar: newChildAvatar,
       grade: newChildGrade,
-      country: newChildCountry,
-      state: newChildState,
-      curriculum: newChildCurriculum,
+      country: currentUser.country || 'United States',
+      state: currentUser.state || 'California',
+      curriculum: currentUser.curriculum || 'US Common Core State Standards (CCSS)',
       schoolOrParent: 'parent',
       parentName: currentUser.name,
       parentId: currentUser.id,
@@ -256,84 +254,182 @@ export default function ParentPortal({
     setTimeout(() => setAssignSuccessMessage(''), 5000);
   };
 
+  const parentCountry = currentUser.country || 'United States';
+  const parentState = currentUser.state || '';
+  const parentCurriculum = currentUser.curriculum || 'US Common Core State Standards (CCSS)';
+  const parentFlag = COUNTRY_FLAG_MAP[parentCountry] || '🌐';
+
   return (
-    <div className="space-y-8 pb-12">
-      {/* Parent Header Banner */}
-      <div className="bg-white rounded-3xl border border-stone-200 p-6 sm:p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-3xl">
-            👨‍👧‍👦
-          </div>
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-900 text-[11px] font-bold uppercase tracking-wider mb-1">
-              <Heart className="w-3 h-3 text-rose-600" />
-              Parent Guardian Portal
+    <div className="space-y-6 pb-12">
+      {/* 1. Parent Guardian Profile Section - Neat, Clean, Spacious & Beautiful */}
+      <div className="bg-white rounded-3xl border border-stone-200/90 p-5 sm:p-6 shadow-xs space-y-5">
+        {/* Top Header Row: Identity & Clean Action Buttons */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-rose-50 border border-rose-200/80 flex items-center justify-center text-3xl shrink-0 shadow-2xs">
+              {currentUser.avatar || '👨‍👧‍👦'}
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">
-              Parents: {currentUser.name}
-            </h1>
-            <div className="flex flex-wrap items-center gap-2 mt-1">
+            <div className="min-w-0 space-y-0.5">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-800 text-[10px] font-bold uppercase tracking-wider border border-rose-200/60">
+                <Heart className="w-3 h-3 text-rose-600" />
+                <span>Parent Guardian Account</span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight truncate">
+                {currentUser.name}
+              </h1>
               <p className="text-xs text-stone-500 font-mono">
-                Parent ID: <span className="font-bold text-stone-800">{currentUser.id}</span> • Enrolled Children: {myChildren.length} of 3 Allowed
+                Parent ID: <strong className="text-stone-800">{currentUser.id}</strong>
+                {currentUser.email && <> • <span className="font-sans text-stone-600">{currentUser.email}</span></>}
+                {!currentUser.email && currentUser.username && <> • <span className="font-sans text-stone-600">@{currentUser.username}</span></>}
               </p>
-              <button
-                type="button"
-                onClick={() => {
-                  sounds.click();
-                  setEditingUser(currentUser);
-                }}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-[11px] font-bold border border-stone-200 cursor-pointer transition"
-                title="Edit Parent Name & Avatar"
-              >
-                <Edit3 className="w-3 h-3 text-stone-600" />
-                <span>Edit My Profile</span>
-              </button>
             </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => {
+                sounds.click();
+                setEditingUser(currentUser);
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold border border-stone-200 cursor-pointer transition shadow-2xs"
+              title="Edit Profile Details"
+            >
+              <Edit3 className="w-3.5 h-3.5 text-stone-600" />
+              <span>Edit Profile</span>
+            </button>
+            <button
+              type="button"
+              onClick={onOpenPricing}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-xs font-bold transition shadow-2xs cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>Family Plan</span>
+            </button>
           </div>
         </div>
 
-        {/* Child Selector Tabs & Add Child Button */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-[#eef4ff] p-1.5 rounded-full border border-[#d7def0]">
-            {myChildren.map((child) => (
-              <button
-                key={child.studentId}
-                id={`select-child-${child.studentId}`}
-                onClick={() => {
-                  setSelectedChildId(child.studentId);
-                  sounds.playCorrect();
-                }}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  child.studentId === activeChild?.studentId
-                    ? 'bg-[#10246f] text-white shadow-xs'
-                    : 'text-[#59627a] hover:text-[#10246f] hover:bg-white'
-                }`}
-              >
-                <span>{child.avatar}</span>
-                <span>{child.studentName}</span>
-                <span className={`text-[10px] font-mono ${child.studentId === activeChild?.studentId ? 'text-white/80' : 'text-[#59627a]'}`}>
-                  ({child.studentUsername})
-                </span>
-              </button>
-            ))}
+        {/* 3 Clear, Balanced Metadata Cards */}
+        <div className="pt-4 border-t border-stone-100 grid grid-cols-1 sm:grid-cols-3 gap-3.5 text-xs">
+          {/* Card 1: Country & Region (Fixed One-Time Selection at Registration) */}
+          <div className="p-3.5 rounded-2xl bg-stone-50/80 border border-stone-200/80 flex flex-col justify-between space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 flex items-center gap-1">
+                <Globe className="w-3 h-3 text-amber-600" />
+                <span>Region & Jurisdiction</span>
+              </span>
+              <span className="text-[10px] font-bold text-amber-900 bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-200/60 flex items-center gap-1">
+                <Lock className="w-2.5 h-2.5" />
+                <span>Fixed at Registration</span>
+              </span>
+            </div>
+            <div className="font-bold text-stone-900 text-sm flex items-center gap-2 truncate">
+              <span className="text-lg shrink-0">{parentFlag}</span>
+              <span className="truncate">{parentCountry}</span>
+              {parentState && (
+                <span className="text-stone-500 font-semibold text-xs shrink-0">({parentState})</span>
+              )}
+            </div>
+            <p className="text-[10px] text-stone-500">
+              One-time selection preserved for academic consistency
+            </p>
           </div>
 
-          {/* Add Child Button (Up to 3 children) */}
-          {myChildren.length < 3 ? (
-            <button
-              onClick={handleOpenAddChildModal}
-              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-[#10246f] hover:bg-[#0c1a52] text-white text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-105 active:scale-95"
-              title="Add child (up to 3)"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Child ({myChildren.length}/3)</span>
-            </button>
+          {/* Card 2: Educational Curriculum Standard */}
+          <div className="p-3.5 rounded-2xl bg-blue-50/50 border border-blue-100/90 flex flex-col justify-between space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 flex items-center gap-1">
+                <BookOpen className="w-3 h-3 text-blue-600" />
+                <span>Curriculum Standard</span>
+              </span>
+              <span className="text-[10px] font-bold text-blue-800 bg-blue-100/80 px-2 py-0.5 rounded-full border border-blue-200/60">
+                Official
+              </span>
+            </div>
+            <div className="font-bold text-blue-950 text-xs flex items-center gap-1.5 truncate" title={parentCurriculum}>
+              <span className="truncate">{parentCurriculum}</span>
+            </div>
+            <p className="text-[10px] text-blue-700/80">
+              All enrolled children automatically map to this framework
+            </p>
+          </div>
+
+          {/* Card 3: Family Enrollment Capacity */}
+          <div className="p-3.5 rounded-2xl bg-stone-50/80 border border-stone-200/80 flex flex-col justify-between space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 flex items-center gap-1">
+                <Users className="w-3 h-3 text-rose-500" />
+                <span>Enrolled Children</span>
+              </span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                myChildren.length >= 3 
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+                  : 'bg-stone-200/80 text-stone-700 border-stone-300'
+              }`}>
+                {myChildren.length} / 3 Active
+              </span>
+            </div>
+            <div className="font-black text-stone-900 text-sm">
+              {myChildren.length === 0 ? 'No Children Enrolled Yet' : `${myChildren.length} of 3 Children Enrolled`}
+            </div>
+            <p className="text-[10px] text-stone-500">
+              {myChildren.length < 3 ? `${3 - myChildren.length} child enrollment slot${3 - myChildren.length > 1 ? 's' : ''} available` : 'Family account at maximum capacity'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Children Learning Profiles Selector Bar (Separated & Uncluttered) */}
+      <div className="bg-white rounded-2xl border border-stone-200 p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold text-stone-700 uppercase tracking-wider mr-1">
+            Child Profiles:
+          </span>
+          {myChildren.length === 0 ? (
+            <span className="text-xs text-stone-400 italic">No child profiles enrolled yet</span>
           ) : (
-            <span className="px-4 py-2 rounded-full bg-[#ecfdf5] text-[#065f46] text-xs font-bold border border-[#a7f3d0]">
-              ✓ Family Max (3/3 Children)
-            </span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {myChildren.map((child) => (
+                <button
+                  key={child.studentId}
+                  id={`select-child-${child.studentId}`}
+                  onClick={() => {
+                    setSelectedChildId(child.studentId);
+                    sounds.playCorrect();
+                  }}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    child.studentId === activeChild?.studentId
+                      ? 'bg-slate-950 text-white shadow-xs'
+                      : 'text-stone-600 hover:text-slate-950 hover:bg-stone-100 bg-stone-50 border border-stone-200/60'
+                  }`}
+                >
+                  <span className="text-sm">{child.avatar}</span>
+                  <span>{child.studentName}</span>
+                  <span className={`text-[10px] font-mono ${child.studentId === activeChild?.studentId ? 'text-white/80' : 'text-stone-400'}`}>
+                    ({child.studentUsername})
+                  </span>
+                </button>
+              ))}
+            </div>
           )}
         </div>
+
+        {/* Add Child Button */}
+        {myChildren.length < 3 ? (
+          <button
+            onClick={handleOpenAddChildModal}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-102 active:scale-98 shrink-0 self-start sm:self-auto"
+            title="Add child (up to 3)"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Child ({myChildren.length}/3)</span>
+          </button>
+        ) : (
+          <span className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200 shrink-0 self-start sm:self-auto">
+            ✓ Family Max (3/3 Children)
+          </span>
+        )}
       </div>
 
       {/* Success Notification Banner */}
@@ -831,64 +927,41 @@ export default function ParentPortal({
                 </div>
               </div>
 
-              {/* Country, State & Curriculum for Child */}
-              <div className="space-y-2.5 pt-1 border-t border-stone-100">
-                <div>
-                  <label className="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1 flex items-center gap-1">
+              {/* Family Academic Standards (Inherited & Locked • One-Time Registration) */}
+              <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200/80 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-stone-700 uppercase tracking-wider flex items-center gap-1.5">
                     <Globe className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Country</span>
-                  </label>
-                  <select
-                    value={newChildCountry}
-                    onChange={(e) => {
-                      const c = e.target.value;
-                      setNewChildCountry(c);
-                      const sts = COUNTRY_STATE_MAP[c] || ['National Standard / All States'];
-                      const crs = COUNTRY_CURRICULUM_MAP[c] || ['Universal Foundational'];
-                      setNewChildState(sts[0] || 'National Standard / All States');
-                      setNewChildCurriculum(crs[0] || 'Universal Foundational');
-                    }}
-                    className="w-full p-2.5 rounded-xl border border-stone-200 font-bold text-xs bg-stone-50"
-                  >
-                    {COUNTRIES.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
+                    <span>Academic Standards (Family Inherited)</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200/60">
+                    <Lock className="w-2.5 h-2.5" />
+                    <span>Locked to Family</span>
+                  </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1 flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-rose-500" />
-                      <span>State / Province</span>
-                    </label>
-                    <select
-                      value={newChildState}
-                      onChange={(e) => setNewChildState(e.target.value)}
-                      className="w-full p-2 rounded-xl border border-stone-200 font-bold text-xs bg-stone-50"
-                    >
-                      {(COUNTRY_STATE_MAP[newChildCountry] || ['National Standard / All States']).map((st) => (
-                        <option key={st} value={st}>{st}</option>
-                      ))}
-                    </select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div className="p-2.5 rounded-xl bg-white border border-stone-200/80">
+                    <span className="text-[10px] font-bold text-stone-400 block uppercase">Country & Region</span>
+                    <div className="font-bold text-stone-900 text-xs flex items-center gap-1.5 truncate mt-0.5">
+                      <span className="text-base shrink-0">{parentFlag}</span>
+                      <span className="truncate">{parentCountry}</span>
+                      {parentState && <span className="text-stone-500 font-semibold text-[11px]">({parentState})</span>}
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1 flex items-center gap-1">
-                      <BookOpen className="w-3 h-3 text-blue-600" />
-                      <span>Curriculum</span>
-                    </label>
-                    <select
-                      value={newChildCurriculum}
-                      onChange={(e) => setNewChildCurriculum(e.target.value)}
-                      className="w-full p-2 rounded-xl border border-stone-200 font-bold text-xs bg-stone-50"
-                    >
-                      {(COUNTRY_CURRICULUM_MAP[newChildCountry] || ['Universal Foundational']).map((cr) => (
-                        <option key={cr} value={cr}>{cr}</option>
-                      ))}
-                    </select>
+                  <div className="p-2.5 rounded-xl bg-white border border-stone-200/80">
+                    <span className="text-[10px] font-bold text-stone-400 block uppercase">Curriculum Framework</span>
+                    <div className="font-bold text-blue-900 text-xs flex items-center gap-1.5 truncate mt-0.5" title={parentCurriculum}>
+                      <BookOpen className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span className="truncate">{parentCurriculum}</span>
+                    </div>
                   </div>
                 </div>
+
+                <p className="text-[10px] text-stone-500 leading-normal">
+                  🔒 Fixed at registration: Child profiles automatically inherit the family's registered academic standard to maintain unified reporting.
+                </p>
               </div>
 
               {/* 4-Digit PIN */}

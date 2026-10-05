@@ -1,4 +1,4 @@
-import React, { useState, useMemo, FormEvent } from 'react';
+import React, { useState, useEffect, useMemo, FormEvent } from 'react';
 import { 
   UserAccount, 
   ClassRoom, 
@@ -38,7 +38,8 @@ import {
   Edit3,
   Shuffle,
   Globe,
-  Coins
+  Coins,
+  ArrowRightLeft
 } from 'lucide-react';
 import { sounds } from '../../utils/audio';
 import { getNextQuestionId, getSchoolPrefix, generateSchoolStudentUsername, getNextRoleId } from '../../utils/idAndUsernameGenerator';
@@ -46,6 +47,7 @@ import { COUNTRIES, COUNTRY_STATE_MAP, COUNTRY_CURRICULUM_MAP } from '../../data
 import StudentReportCardModal from '../student/StudentReportCardModal';
 import ResetCredentialsModal from '../auth/ResetCredentialsModal';
 import EditUserProfileModal from '../admin/components/EditUserProfileModal';
+import EditStudentModal from '../school/components/EditStudentModal';
 import { useBodyScrollLock } from '../../utils/useBodyScrollLock';
 
 interface TeacherPortalProps {
@@ -60,6 +62,7 @@ interface TeacherPortalProps {
   grades?: CurriculumGrade[];
   subjects?: CurriculumSubject[];
   onAddClass: (cls: ClassRoom) => void;
+  onUpdateClass?: (cls: ClassRoom) => void;
   onAddStudent: (student: UserAccount, progress: StudentProgress) => void;
   onCreateAssignment: (assignment: ClassAssignment) => void;
   onAddQuestion?: (q: Question) => void;
@@ -79,6 +82,7 @@ export default function TeacherPortal({
   grades = [],
   subjects = [],
   onAddClass,
+  onUpdateClass,
   onAddStudent,
   onCreateAssignment,
   onAddQuestion,
@@ -102,24 +106,42 @@ export default function TeacherPortal({
   const effectiveCurriculum = linkedSchool?.curriculum || currentUser.curriculum || 'Common Core (US)';
   const schoolPrefix = getSchoolPrefix(effectiveSchoolName || effectiveSchoolId);
 
-  // Strict isolation of classes belonging to this teacher or teacher's school
+  // Strict isolation: ONLY classes explicitly assigned to this teacher as Primary Lead or Secondary Co-Teacher
   const teacherClasses = classes.filter((cls) => 
     cls.teacherId === currentUser.id ||
+    cls.secondaryTeacherId === currentUser.id ||
     cls.teacherName === currentUser.name ||
-    (effectiveSchoolId && cls.schoolId === effectiveSchoolId)
+    cls.secondaryTeacherName === currentUser.name
   );
 
-  // Dynamic active curriculum grades (reads directly from active curriculum: Preschool, Foundation, Grade 1 to 6)
-  const activeCurriculumGrades: GradeLevel[] = (grades && grades.length > 0)
-    ? (grades.filter((g) => g.active).map((g) => g.name as GradeLevel))
-    : ['Preschool', 'Foundation', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
+  // Strict scope isolation: Only grades and subjects from teacher's assigned classes are accessible
+  const assignedClassGrades: GradeLevel[] = Array.from(new Set(
+    teacherClasses.map((c) => c.grade).filter(Boolean)
+  ));
+  const effectiveTeacherGrades: GradeLevel[] = assignedClassGrades.length > 0
+    ? assignedClassGrades
+    : (currentUser.grade ? [currentUser.grade as GradeLevel] : ['Grade 1']);
 
-  // Distinct grades from existing classes in this school
-  const existingClassGrades: GradeLevel[] = Array.from(new Set(teacherClasses.map((c) => c.grade)));
-  const enrollmentGrades: GradeLevel[] = existingClassGrades.length > 0 ? existingClassGrades : activeCurriculumGrades;
+  const assignedClassSubjects: Subject[] = Array.from(new Set(
+    teacherClasses.flatMap((c) => (c.subjects && c.subjects.length > 0 ? c.subjects : [c.subject || 'Mathematics'])).filter(Boolean)
+  ));
+  const effectiveTeacherSubjects: Subject[] = assignedClassSubjects.length > 0
+    ? assignedClassSubjects
+    : ['Mathematics'];
 
-  const [selectedClassId, setSelectedClassId] = useState<string>(teacherClasses[0]?.id || classes[0]?.id || 'CLS001');
+  // Keep activeCurriculumGrades aligned with assigned grades for teacher profile
+  const activeCurriculumGrades: GradeLevel[] = effectiveTeacherGrades;
+  const enrollmentGrades: GradeLevel[] = effectiveTeacherGrades;
+
+  const [selectedClassId, setSelectedClassId] = useState<string>(teacherClasses[0]?.id || '');
   const [activeTab, setActiveTab] = useState<'students' | 'assignments' | 'questions' | 'activities'>('students');
+
+  // Automatically update selectedClassId if current selection is invalid or classes change
+  useEffect(() => {
+    if (teacherClasses.length > 0 && (!selectedClassId || !teacherClasses.some(c => c.id === selectedClassId))) {
+      setSelectedClassId(teacherClasses[0].id);
+    }
+  }, [teacherClasses, selectedClassId]);
 
   // Modals
   const [showCreateClassModal, setShowCreateClassModal] = useState(false);
@@ -129,6 +151,7 @@ export default function TeacherPortal({
   const [selectedReportStudent, setSelectedReportStudent] = useState<StudentProgress | null>(null);
   const [resettingUser, setResettingUser] = useState<UserAccount | null>(null);
   const [editingUser, setEditingUser] = useState<UserAccount | null>(null);
+  const [editingStudentData, setEditingStudentData] = useState<{ student: StudentProgress; user?: UserAccount } | null>(null);
 
   // Lock body scroll while any teacher modal is open
   useBodyScrollLock(Boolean(
@@ -138,37 +161,37 @@ export default function TeacherPortal({
     showCreateQuestionModal || 
     selectedReportStudent || 
     resettingUser || 
-    editingUser
+    editingUser ||
+    editingStudentData
   ));
 
   // Class Form State
   const [newClassName, setNewClassName] = useState('');
-  const [newClassGrade, setNewClassGrade] = useState<GradeLevel>(() => activeCurriculumGrades[0] || 'Grade 1');
+  const [newClassGrade, setNewClassGrade] = useState<GradeLevel>(() => effectiveTeacherGrades[0] || 'Grade 1');
   const [newClassSection, setNewClassSection] = useState('');
   const [newClassRoom, setNewClassRoom] = useState('');
 
   // Student Form State
   const [newStudentName, setNewStudentName] = useState('');
-  const [newStudentGrade, setNewStudentGrade] = useState<GradeLevel>(() => enrollmentGrades[0] || 'Grade 1');
+  const [newStudentGrade, setNewStudentGrade] = useState<GradeLevel>(() => effectiveTeacherGrades[0] || 'Grade 1');
   const [newStudentPin, setNewStudentPin] = useState('7392');
 
   // Assignment from Question Bank Form State
   const [assignmentTitle, setAssignmentTitle] = useState('');
-  const [assignmentSubject, setAssignmentSubject] = useState<Subject>('Mathematics');
-  const [assignmentGrade, setAssignmentGrade] = useState<GradeLevel>(() => activeCurriculumGrades[0] || 'Grade 1');
+  const [assignmentSubject, setAssignmentSubject] = useState<Subject>(() => effectiveTeacherSubjects[0] || 'Mathematics');
+  const [assignmentGrade, setAssignmentGrade] = useState<GradeLevel>(() => effectiveTeacherGrades[0] || 'Grade 1');
   const [assignmentDueDate, setAssignmentDueDate] = useState('2025-04-25');
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>([]);
   const [bankSearchQuery, setBankSearchQuery] = useState('');
 
-  // Custom Question Form State
-  const [customSubject, setCustomSubject] = useState<Subject>('Mathematics');
-  const [customGrade, setCustomGrade] = useState<GradeLevel>(() => activeCurriculumGrades[0] || 'Grade 1');
+  // Custom Question Form State (Region & Curriculum strictly fixed to School profile)
+  const [customSubject, setCustomSubject] = useState<Subject>(() => effectiveTeacherSubjects[0] || 'Mathematics');
+  const [customGrade, setCustomGrade] = useState<GradeLevel>(() => effectiveTeacherGrades[0] || 'Grade 1');
   const [customCategory, setCustomCategory] = useState('Numbers & Operations');
   const [customSkill, setCustomSkill] = useState('Problem Solving');
-  const [customCountry, setCustomCountry] = useState<string>(() => effectiveCountry);
-  const [customState, setCustomState] = useState<string>(() => effectiveState);
-  const [customCurriculum, setCustomCurriculum] = useState<string>(() => effectiveCurriculum);
-  const [showRegionOverride, setShowRegionOverride] = useState(false);
+  const customCountry = effectiveCountry;
+  const customState = effectiveState;
+  const customCurriculum = effectiveCurriculum;
   const [customPrompt, setCustomPrompt] = useState('');
   const [customClipart, setCustomClipart] = useState('');
   const [customOpt0, setCustomOpt0] = useState('');
@@ -181,10 +204,7 @@ export default function TeacherPortal({
   const [customPoints, setCustomPoints] = useState(25);
   const [customDifficulty, setCustomDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>('Easy');
 
-  // Question Bank Tab Filters
-  const [qCountryFilter, setQCountryFilter] = useState<string>('All');
-  const [qStateFilter, setQStateFilter] = useState<string>('All');
-  const [qCurriculumFilter, setQCurriculumFilter] = useState<string>('All');
+  // Question Bank Tab Filters (Region/Curriculum is fixed to school registration; only assigned subject/grade filters)
   const [qSubjectFilter, setQSubjectFilter] = useState<string>('All');
   const [qGradeFilter, setQGradeFilter] = useState<string>('All');
   const [qSearchQuery, setQSearchQuery] = useState<string>('');
@@ -199,9 +219,13 @@ export default function TeacherPortal({
 
   const currentClass = teacherClasses.find((c) => c.id === selectedClassId) || teacherClasses[0];
 
-  // Filtered Interactive Activities
+  // Filtered Interactive Activities strictly restricted to teacher's assigned grades and subjects
   const filteredActivities = useMemo(() => {
     return activities.filter((act) => {
+      const isAssignedGrade = !act.grade || effectiveTeacherGrades.includes(act.grade as GradeLevel);
+      const isAssignedSubject = !act.subject || effectiveTeacherSubjects.includes(act.subject as Subject);
+      if (!isAssignedGrade || !isAssignedSubject) return false;
+
       const matchGrade = activityGradeFilter === 'All' || !act.grade || act.grade === activityGradeFilter;
       const matchSubject = activitySubjectFilter === 'All' || act.subject === activitySubjectFilter;
       const matchType = activityTypeFilter === 'All' || act.type === activityTypeFilter;
@@ -212,19 +236,17 @@ export default function TeacherPortal({
         (act.grade || '').toLowerCase().includes(activitySearchQuery.toLowerCase());
       return matchGrade && matchSubject && matchType && matchQuery;
     });
-  }, [activities, activityGradeFilter, activitySubjectFilter, activityTypeFilter, activitySearchQuery]);
+  }, [activities, activityGradeFilter, activitySubjectFilter, activityTypeFilter, activitySearchQuery, effectiveTeacherGrades, effectiveTeacherSubjects]);
 
-  // Strict isolation: Students belonging to this teacher's active class or school
+  // Strict isolation: Students belonging to this teacher's active assigned class
   const classStudents = students.filter((s) => {
-    if (currentClass?.studentIds?.includes(s.studentId)) return true;
+    if (!currentClass) return false;
+    if (currentClass.studentIds?.includes(s.studentId)) return true;
     const isSameSchool =
       (effectiveSchoolName && s.schoolName && s.schoolName.toLowerCase().trim() === effectiveSchoolName.toLowerCase().trim()) ||
       (currentUser.schoolName && s.schoolName && s.schoolName.toLowerCase().trim() === currentUser.schoolName.toLowerCase().trim());
     if (!isSameSchool) return false;
-    if (currentClass) {
-      return s.grade === currentClass.grade;
-    }
-    return true;
+    return s.grade === currentClass.grade;
   });
 
   // Assignments for current class
@@ -239,13 +261,23 @@ export default function TeacherPortal({
     return q.schoolId === mySchoolId; // This school's exclusive custom question
   });
 
-  // Filtered list for the Question Bank Tab
+  // Filtered list for the Question Bank Tab strictly restricted to School's fixed region/curriculum AND teacher's assigned grades & subjects
   const filteredQuestions = accessibleQuestions.filter((q) => {
-    const matchCountry = qCountryFilter === 'All' || !q.country || q.country === 'Global' || q.country === qCountryFilter;
-    const matchState = qStateFilter === 'All' || !q.state || q.state === 'National Standard / All States' || q.state === qStateFilter;
-    const matchCurriculum = qCurriculumFilter === 'All' || !q.curriculum || q.curriculum === qCurriculumFilter;
+    // Fixed strictly to school's registered country, state, curriculum
+    const matchCountry = !q.country || q.country === 'Global' || q.country === effectiveCountry;
+    const matchState = !q.state || q.state === 'National Standard / All States' || q.state === effectiveState;
+    const matchCurriculum = !q.curriculum || q.curriculum === effectiveCurriculum;
+
+    // Subject strictly restricted to teacher's assigned subjects
+    const isSubjectAssigned = effectiveTeacherSubjects.includes(q.subject);
+    if (!isSubjectAssigned) return false;
     const matchSub = qSubjectFilter === 'All' || q.subject === qSubjectFilter;
+
+    // Grade strictly restricted to teacher's assigned grades
+    const isGradeAssigned = effectiveTeacherGrades.includes(q.grade as GradeLevel);
+    if (!isGradeAssigned) return false;
     const matchGrd = qGradeFilter === 'All' || q.grade === qGradeFilter;
+
     const matchQuery = qSearchQuery === '' || 
       q.id.toLowerCase().includes(qSearchQuery.toLowerCase()) ||
       q.prompt.toLowerCase().includes(qSearchQuery.toLowerCase()) ||
@@ -254,7 +286,7 @@ export default function TeacherPortal({
     return matchCountry && matchState && matchCurriculum && matchSub && matchGrd && matchQuery;
   });
 
-  // Questions available for assignment creation
+  // Questions available for assignment creation (must match assigned subject & grade)
   const availableQuestions = accessibleQuestions.filter((q) => {
     const matchSub = q.subject === assignmentSubject;
     const matchGrd = q.grade === assignmentGrade;
@@ -265,9 +297,7 @@ export default function TeacherPortal({
     return matchSub && matchGrd && matchQuery;
   });
 
-  const allSubjects: Subject[] = [
-    'Mathematics'
-  ];
+  const allSubjects: Subject[] = effectiveTeacherSubjects;
 
   // Handle Create Class
   const handleCreateClass = (e: FormEvent) => {
@@ -512,6 +542,10 @@ export default function TeacherPortal({
           </button>
           <button
             onClick={() => {
+              if (teacherClasses.length === 0) {
+                alert('No classroom is assigned to you yet. Please wait for your school administrator to assign you to a classroom first.');
+                return;
+              }
               if (currentClass?.grade) setNewStudentGrade(currentClass.grade);
               setNewStudentPin(String(Math.floor(1000 + Math.random() * 9000)));
               setShowCreateStudentModal(true);
@@ -546,44 +580,58 @@ export default function TeacherPortal({
           <span className="text-xs font-bold text-[#59627a] uppercase tracking-wider mr-1">
             Assigned Classes:
           </span>
-          {teacherClasses.map((cls) => {
-            const isSelected = cls.id === currentClass?.id;
-            return (
-              <button
-                key={cls.id}
-                onClick={() => {
-                  setSelectedClassId(cls.id);
-                  sounds.playCorrect();
-                }}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  isSelected
-                    ? 'bg-[#10246f] text-white shadow-xs'
-                    : 'bg-[#eef4ff] text-[#10246f] hover:bg-[#d7def0]'
-                }`}
-              >
-                <span>{cls.name}</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold ${
-                  isSelected ? 'bg-white/20 text-white' : 'bg-white text-[#10246f] border border-[#d7def0]'
-                }`}>
-                  {cls.grade}
-                </span>
-                {cls.section && (
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
-                    isSelected ? 'bg-white/20 text-white' : 'bg-white text-[#13b7ad]'
+          {teacherClasses.length === 0 ? (
+            <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full font-bold">
+              ⚠️ No classrooms assigned yet by school administrator
+            </span>
+          ) : (
+            teacherClasses.map((cls) => {
+              const isSelected = cls.id === currentClass?.id;
+              const isPrimary = cls.teacherId === currentUser.id || cls.teacherName === currentUser.name;
+              return (
+                <button
+                  key={cls.id}
+                  onClick={() => {
+                    setSelectedClassId(cls.id);
+                    sounds.playCorrect();
+                  }}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    isSelected
+                      ? 'bg-[#10246f] text-white shadow-xs'
+                      : 'bg-[#eef4ff] text-[#10246f] hover:bg-[#d7def0]'
+                  }`}
+                >
+                  <span>{cls.name}</span>
+                  <span className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${
+                    isPrimary 
+                      ? (isSelected ? 'bg-blue-400/30 text-white' : 'bg-blue-100 text-blue-800')
+                      : (isSelected ? 'bg-purple-400/30 text-white' : 'bg-purple-100 text-purple-800')
                   }`}>
-                    {cls.section}
+                    {isPrimary ? 'Lead' : 'Co-Teacher'}
                   </span>
-                )}
-                {cls.room && (
-                  <span className={`text-[9px] px-1 py-0.2 rounded font-mono opacity-80 ${
-                    isSelected ? 'text-white/80' : 'text-[#59627a]'
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold ${
+                    isSelected ? 'bg-white/20 text-white' : 'bg-white text-[#10246f] border border-[#d7def0]'
                   }`}>
-                    🚪 {cls.room}
+                    {cls.grade}
                   </span>
-                )}
-              </button>
-            );
-          })}
+                  {cls.section && (
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
+                      isSelected ? 'bg-white/20 text-white' : 'bg-white text-[#13b7ad]'
+                    }`}>
+                      {cls.section}
+                    </span>
+                  )}
+                  {cls.room && (
+                    <span className={`text-[9px] px-1 py-0.2 rounded font-mono opacity-80 ${
+                      isSelected ? 'text-white/80' : 'text-[#59627a]'
+                    }`}>
+                      🚪 {cls.room}
+                    </span>
+                  )}
+                </button>
+              );
+            })
+          )}
         </div>
 
         {/* View Tabs */}
@@ -692,8 +740,36 @@ export default function TeacherPortal({
                             {s.studentUsername}
                           </span>
                         </td>
-                        <td className="p-4 font-bold text-stone-900">
-                          {s.grade}
+                        <td className="p-4">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-stone-900">{currentClass?.name || s.grade}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                sounds.click();
+                                const targetUser: UserAccount = studentUser || {
+                                  id: s.studentId,
+                                  name: s.studentName,
+                                  username: s.studentUsername,
+                                  role: 'student' as const,
+                                  pin: currentPin,
+                                  avatar: s.avatar,
+                                  grade: s.grade,
+                                  organizationId: currentUser.organizationId,
+                                  schoolName: currentUser.schoolName,
+                                  status: 'active' as const,
+                                  enrolledAt: '2025-09-01'
+                                };
+                                setEditingStudentData({ student: s, user: targetUser });
+                              }}
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-stone-100 hover:bg-amber-100 hover:text-amber-900 text-stone-600 text-[10px] font-bold border border-stone-200 transition cursor-pointer"
+                              title="Change assigned class or promote grade"
+                            >
+                              <ArrowRightLeft className="w-2.5 h-2.5" />
+                              <span>Reassign</span>
+                            </button>
+                          </div>
+                          <div className="text-[10px] text-stone-500 font-medium">Mapped Grade: {s.grade}</div>
                         </td>
                         <td className="p-4">
                           <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
@@ -736,13 +812,13 @@ export default function TeacherPortal({
                                   status: 'active' as const,
                                   enrolledAt: '2025-09-01'
                                 };
-                                setEditingUser(targetUser);
+                                setEditingStudentData({ student: s, user: targetUser });
                               }}
                               className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
-                              title="Edit Student Basic Details"
+                              title="Edit Student, Promote Grade & Reassign Class"
                             >
                               <Edit3 className="w-3 h-3 text-blue-600" />
-                              <span>Edit</span>
+                              <span>Edit & Reassign</span>
                             </button>
 
                             {/* Reset PIN Button */}
@@ -810,6 +886,10 @@ export default function TeacherPortal({
             </div>
             <button
               onClick={() => {
+                if (teacherClasses.length === 0) {
+                  alert('No classroom is assigned to you yet. Please wait for your school administrator to assign you to a classroom first.');
+                  return;
+                }
                 setSelectedQuestionIds([]);
                 setShowCreateAssignmentModal(true);
               }}
@@ -902,73 +982,39 @@ export default function TeacherPortal({
             </div>
           </div>
 
-          {/* Regional & Pedagogical Filter Bar */}
-          <div className="bg-slate-50 border border-slate-200 rounded-3xl p-4 shadow-xs grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 flex items-center gap-1">
-                <Globe className="w-3 h-3 text-blue-600" />
-                <span>Country / Region</span>
-              </label>
-              <select
-                value={qCountryFilter}
-                onChange={(e) => {
-                  setQCountryFilter(e.target.value);
-                  setQStateFilter('All');
-                  setQCurriculumFilter('All');
-                }}
-                className="w-full px-3 py-1.5 rounded-xl border border-stone-200 text-xs font-bold text-stone-700 bg-white"
-              >
-                <option value="All">🌍 All Countries</option>
-                {COUNTRIES.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+          {/* Fixed School Academic Standards (Locked to School Registration) */}
+          <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-3.5 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm shadow-2xs shrink-0">
+                <Lock className="w-4 h-4 text-emerald-400" />
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5 text-xs font-black text-slate-900">
+                  <span>School Curriculum Standard (Fixed)</span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 text-[10px] font-bold">
+                    Immutable • School Registration Scope
+                  </span>
+                </div>
+                <div className="text-xs text-slate-600 font-medium flex flex-wrap items-center gap-2 mt-0.5">
+                  <span className="font-bold text-slate-800">{effectiveCountry}</span>
+                  <span>•</span>
+                  <span>{effectiveState}</span>
+                  <span>•</span>
+                  <span className="font-mono bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-900 font-bold text-[11px]">
+                    {effectiveCurriculum}
+                  </span>
+                  <span>•</span>
+                  <span className="text-slate-500">{effectiveSchoolName} ({mySchoolId})</span>
+                </div>
+              </div>
             </div>
-
-            <div>
-              <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1">
-                State / Province
-              </label>
-              <select
-                value={qStateFilter}
-                onChange={(e) => setQStateFilter(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-xl border border-stone-200 text-xs font-bold text-stone-700 bg-white"
-              >
-                <option value="All">📍 All States / Regions</option>
-                {qCountryFilter !== 'All' && COUNTRY_STATE_MAP[qCountryFilter]
-                  ? COUNTRY_STATE_MAP[qCountryFilter].map(st => (
-                      <option key={st} value={st}>{st}</option>
-                    ))
-                  : Array.from(new Set(Object.values(COUNTRY_STATE_MAP).flat())).map(st => (
-                      <option key={st} value={st}>{st}</option>
-                    ))
-                }
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1">
-                Curriculum Standard
-              </label>
-              <select
-                value={qCurriculumFilter}
-                onChange={(e) => setQCurriculumFilter(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-xl border border-stone-200 text-xs font-bold text-stone-700 bg-white"
-              >
-                <option value="All">📚 All Curricula</option>
-                {qCountryFilter !== 'All' && COUNTRY_CURRICULUM_MAP[qCountryFilter]
-                  ? COUNTRY_CURRICULUM_MAP[qCountryFilter].map(curr => (
-                      <option key={curr} value={curr}>{curr}</option>
-                    ))
-                  : Array.from(new Set(Object.values(COUNTRY_CURRICULUM_MAP).flat())).map(curr => (
-                      <option key={curr} value={curr}>{curr}</option>
-                    ))
-                }
-              </select>
+            <div className="text-[11px] text-slate-600 bg-white px-3 py-1 rounded-xl border border-slate-200 font-bold flex items-center gap-1 shadow-2xs">
+              <Lock className="w-3 h-3 text-emerald-600" />
+              <span>Standard Fixed to School Profile</span>
             </div>
           </div>
 
-          {/* Standard Subject / Grade / Search Filter Bar */}
+          {/* Teacher Assigned Subject / Grade / Search Filter Bar */}
           <div className="bg-white rounded-2xl border border-stone-200 p-4 shadow-xs flex flex-wrap items-center gap-3">
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
@@ -989,8 +1035,8 @@ export default function TeacherPortal({
                 onChange={(e) => setQSubjectFilter(e.target.value)}
                 className="px-3 py-1.5 rounded-xl border border-stone-200 text-xs font-bold text-stone-700 bg-stone-50"
               >
-                <option value="All">All Subjects</option>
-                {allSubjects.map(sub => (
+                <option value="All">All Assigned Subjects ({effectiveTeacherSubjects.length})</option>
+                {effectiveTeacherSubjects.map(sub => (
                   <option key={sub} value={sub}>{sub}</option>
                 ))}
               </select>
@@ -1000,8 +1046,8 @@ export default function TeacherPortal({
                 onChange={(e) => setQGradeFilter(e.target.value)}
                 className="px-3 py-1.5 rounded-xl border border-stone-200 text-xs font-bold text-stone-700 bg-stone-50"
               >
-                <option value="All">All Grades</option>
-                {activeCurriculumGrades.map(g => (
+                <option value="All">All Assigned Grades ({effectiveTeacherGrades.length})</option>
+                {effectiveTeacherGrades.map(g => (
                   <option key={g} value={g}>{g}</option>
                 ))}
               </select>
@@ -1762,111 +1808,60 @@ export default function TeacherPortal({
             </div>
 
             <form onSubmit={handleCreateCustomQuestion} className="space-y-3.5">
-              {/* Region & Curriculum Auto-Inherited Scope from School */}
-              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm shadow-2xs">
-                      🏫
+              {/* Region & Curriculum Auto-Inherited Scope from School (Strictly Locked) */}
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm shadow-2xs">
+                    🏫
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5 text-[11px] font-black text-slate-900 uppercase">
+                      <Lock className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Academic Standards (Locked to {effectiveSchoolName})</span>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-1.5 text-[11px] font-black text-slate-900 uppercase">
-                        <Globe className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Curriculum Scope (Auto-Inherited from {effectiveSchoolName})</span>
-                      </div>
-                      <div className="text-[11px] text-slate-700 font-medium flex flex-wrap items-center gap-1.5 mt-0.5">
-                        <span className="font-bold">{customCountry}</span>
-                        <span>•</span>
-                        <span>{customState}</span>
-                        <span>•</span>
-                        <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-[10px] text-slate-900 font-bold">
-                          {customCurriculum}
-                        </span>
-                      </div>
+                    <div className="text-[11px] text-slate-700 font-medium flex flex-wrap items-center gap-1.5 mt-0.5">
+                      <span className="font-bold">{customCountry}</span>
+                      <span>•</span>
+                      <span>{customState}</span>
+                      <span>•</span>
+                      <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-[10px] text-slate-900 font-bold">
+                        {customCurriculum}
+                      </span>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowRegionOverride(!showRegionOverride)}
-                    className="px-2.5 py-1 text-[10px] font-bold text-slate-700 hover:text-slate-950 bg-white rounded-lg border border-slate-200 shadow-2xs transition-colors cursor-pointer"
-                  >
-                    {showRegionOverride ? 'Hide Custom' : 'Override Scope'}
-                  </button>
                 </div>
-
-                {showRegionOverride && (
-                  <div className="pt-2 border-t border-amber-200/60 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <div>
-                      <label className="block text-[9px] font-bold text-stone-600 uppercase mb-0.5">Country</label>
-                      <select
-                        value={customCountry}
-                        onChange={(e) => {
-                          const newC = e.target.value;
-                          setCustomCountry(newC);
-                          const states = COUNTRY_STATE_MAP[newC] || ['National Standard / All States'];
-                          setCustomState(states[0] || 'National Standard / All States');
-                          const currs = COUNTRY_CURRICULUM_MAP[newC] || ['Standard / Global'];
-                          setCustomCurriculum(currs[0] || 'Standard / Global');
-                        }}
-                        className="w-full p-1.5 rounded-xl border border-stone-200 bg-white font-bold text-xs"
-                      >
-                        {COUNTRIES.map((c) => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[9px] font-bold text-stone-600 uppercase mb-0.5">State / Province</label>
-                      <select
-                        value={customState}
-                        onChange={(e) => setCustomState(e.target.value)}
-                        className="w-full p-1.5 rounded-xl border border-stone-200 bg-white font-bold text-xs"
-                      >
-                        {(COUNTRY_STATE_MAP[customCountry] || ['National Standard / All States']).map((st) => (
-                          <option key={st} value={st}>{st}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[9px] font-bold text-stone-600 uppercase mb-0.5">Curriculum</label>
-                      <select
-                        value={customCurriculum}
-                        onChange={(e) => setCustomCurriculum(e.target.value)}
-                        className="w-full p-1.5 rounded-xl border border-stone-200 bg-white font-bold text-xs"
-                      >
-                        {(COUNTRY_CURRICULUM_MAP[customCountry] || ['Standard / Global']).map((curr) => (
-                          <option key={curr} value={curr}>{curr}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                )}
+                <div className="px-2.5 py-1 text-[10px] font-bold text-slate-600 bg-white rounded-lg border border-slate-200 shadow-2xs flex items-center gap-1">
+                  <Lock className="w-3 h-3 text-emerald-600" />
+                  <span>Fixed</span>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-bold text-stone-600 uppercase mb-1">Subject</label>
+                  <label className="block text-[10px] font-bold text-stone-600 uppercase mb-1">
+                    Assigned Subject
+                  </label>
                   <select
                     value={customSubject}
                     onChange={(e) => setCustomSubject(e.target.value as Subject)}
                     className="w-full p-2 rounded-xl border border-stone-200 font-bold text-xs"
                   >
-                    {allSubjects.map(sub => (
+                    {effectiveTeacherSubjects.map(sub => (
                       <option key={sub} value={sub}>{sub}</option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-stone-600 uppercase mb-1">Grade Level</label>
+                  <label className="block text-[10px] font-bold text-stone-600 uppercase mb-1">
+                    Assigned Grade Level
+                  </label>
                   <select
                     value={customGrade}
                     onChange={(e) => setCustomGrade(e.target.value as GradeLevel)}
                     className="w-full p-2 rounded-xl border border-stone-200 font-bold text-xs"
                   >
-                    {activeCurriculumGrades.map(g => (
+                    {effectiveTeacherGrades.map(g => (
                       <option key={g} value={g}>{g}</option>
                     ))}
                   </select>
@@ -2058,7 +2053,7 @@ export default function TeacherPortal({
         />
       )}
       {/* ========================================================================= */}
-      {/* MODAL 7: EDIT USER / STUDENT / TEACHER PROFILE MODAL */}
+      {/* MODAL 7: EDIT USER / TEACHER PROFILE MODAL */}
       {/* ========================================================================= */}
       {editingUser && (
         <EditUserProfileModal
@@ -2072,6 +2067,49 @@ export default function TeacherPortal({
           }}
           availableGrades={activeCurriculumGrades}
           canEditStatus={false}
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 8: EDIT STUDENT & CLASS ASSIGNMENT / PROMOTION MODAL */}
+      {/* ========================================================================= */}
+      {editingStudentData && (
+        <EditStudentModal
+          student={editingStudentData.student}
+          studentUser={editingStudentData.user}
+          classes={teacherClasses}
+          grades={grades}
+          schoolName={effectiveSchoolName}
+          onClose={() => setEditingStudentData(null)}
+          onSave={(updatedStudent, updatedUser, targetClassId, previousClassId) => {
+            onUpdateUserProfile?.(updatedUser);
+
+            if (previousClassId && previousClassId !== targetClassId && onUpdateClass) {
+              const prevClass = classes.find(c => c.id === previousClassId);
+              if (prevClass) {
+                onUpdateClass({
+                  ...prevClass,
+                  studentIds: (prevClass.studentIds || []).filter(id => id !== updatedStudent.studentId)
+                });
+              }
+            }
+
+            if (targetClassId && targetClassId !== previousClassId && onUpdateClass) {
+              const newClass = classes.find(c => c.id === targetClassId);
+              if (newClass) {
+                onUpdateClass({
+                  ...newClass,
+                  studentIds: Array.from(new Set([...(newClass.studentIds || []), updatedStudent.studentId]))
+                });
+              }
+            }
+
+            sounds.playLevelUp();
+            setEditingStudentData(null);
+            const targetClassObj = classes.find(c => c.id === targetClassId);
+            setNotification(`Updated "${updatedStudent.studentName}" — Master Grade: ${updatedStudent.grade} | Assigned Class: ${targetClassObj ? targetClassObj.name : 'General Cohort'}!`);
+            setTimeout(() => setNotification(''), 4000);
+          }}
         />
       )}
     </div>

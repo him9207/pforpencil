@@ -3,12 +3,17 @@ import { UserAccount, GradeLevel, CurriculumGrade, ClassRoom } from '../../../ty
 import { X, GraduationCap, Mail, Power, Calendar, Clock, Layers } from 'lucide-react';
 import { useBodyScrollLock } from '../../../utils/useBodyScrollLock';
 
+export interface TeacherClassRoleAssignment {
+  classId: string;
+  role: 'primary' | 'secondary';
+}
+
 interface EditTeacherModalProps {
   teacher: UserAccount;
   grades?: CurriculumGrade[];
   classes?: ClassRoom[];
   onClose: () => void;
-  onSave: (updated: UserAccount, assignedClassIds?: string[]) => void;
+  onSave: (updated: UserAccount, assignedClassIds?: string[], assignedClassRoles?: TeacherClassRoleAssignment[]) => void;
 }
 
 export default function EditTeacherModal({
@@ -21,10 +26,22 @@ export default function EditTeacherModal({
   const [name, setName] = useState(teacher.name);
   const [email, setEmail] = useState(teacher.email || '');
   const [grade, setGrade] = useState<GradeLevel>((teacher.grade as GradeLevel) || 'Grade 1');
-  const [selectedClassId, setSelectedClassId] = useState<string>(() => {
-    const existing = classes.find(c => c.teacherId === teacher.id || c.teacherName === teacher.name);
-    return existing?.id || '';
+  
+  // Map of classId -> role ('none' | 'primary' | 'secondary')
+  const [classRoleMap, setClassRoleMap] = useState<Record<string, 'none' | 'primary' | 'secondary'>>(() => {
+    const map: Record<string, 'none' | 'primary' | 'secondary'> = {};
+    classes.forEach(c => {
+      if (c.teacherId === teacher.id || c.teacherName === teacher.name) {
+        map[c.id] = 'primary';
+      } else if (c.secondaryTeacherId === teacher.id || c.secondaryTeacherName === teacher.name) {
+        map[c.id] = 'secondary';
+      } else {
+        map[c.id] = 'none';
+      }
+    });
+    return map;
   });
+
   const [status, setStatus] = useState<'active' | 'suspended'>(
     teacher.status === 'suspended' ? 'suspended' : 'active'
   );
@@ -43,14 +60,18 @@ export default function EditTeacherModal({
     ? grades.filter(g => g.active).map(g => g.name as GradeLevel)
     : ['Preschool', 'Foundation', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
 
-  const handleClassSelectionChange = (classId: string) => {
-    setSelectedClassId(classId);
-    if (classId) {
-      const targetClass = classes.find(c => c.id === classId);
-      if (targetClass?.grade) {
-        setGrade(targetClass.grade);
+  const handleSetClassRole = (classId: string, role: 'none' | 'primary' | 'secondary') => {
+    setClassRoleMap(prev => {
+      const next = { ...prev, [classId]: role };
+      // If setting a primary or secondary class, update teacher specialty grade if needed
+      if (role !== 'none') {
+        const cls = classes.find(c => c.id === classId);
+        if (cls?.grade) {
+          setGrade(cls.grade);
+        }
       }
-    }
+      return next;
+    });
   };
 
   const handlePresetChange = (days: string) => {
@@ -86,7 +107,17 @@ export default function EditTeacherModal({
       validityDuration: validityLabel
     };
 
-    onSave(updated, selectedClassId ? [selectedClassId] : []);
+    const assignedRolesList: TeacherClassRoleAssignment[] = [];
+    const assignedClassIds: string[] = [];
+
+    Object.entries(classRoleMap).forEach(([cid, role]) => {
+      if (role === 'primary' || role === 'secondary') {
+        assignedRolesList.push({ classId: cid, role });
+        assignedClassIds.push(cid);
+      }
+    });
+
+    onSave(updated, assignedClassIds, assignedRolesList);
   };
 
   // Lock body scroll while edit teacher modal is open
@@ -192,41 +223,108 @@ export default function EditTeacherModal({
 
             <div>
               <label className="block font-bold text-stone-700 uppercase tracking-wider mb-1">
-                Assign Custom Class
+                Default Grade Specialty
               </label>
-              <div className="relative">
-                <select
-                  value={selectedClassId}
-                  onChange={(e) => handleClassSelectionChange(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-stone-200 font-bold text-stone-800 text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-hidden"
-                >
-                  <option value="">-- No Specific Class / Floating --</option>
-                  {classes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.grade})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <span className="text-[10px] text-stone-500 mt-0.5 block">
-                Assigns teacher directly to school custom class & mapped grade.
-              </span>
+              <select
+                value={grade}
+                onChange={(e) => setGrade(e.target.value as GradeLevel)}
+                className="w-full p-2.5 rounded-xl border border-stone-200 font-bold text-stone-800 text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-hidden"
+              >
+                {availableGrades.map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
             </div>
           </div>
 
-          <div>
-            <label className="block font-bold text-stone-700 uppercase tracking-wider mb-1">
-              Curriculum Grade Specialty (Mapped Master Grade)
-            </label>
-            <select
-              value={grade}
-              onChange={(e) => setGrade(e.target.value as GradeLevel)}
-              className="w-full p-2.5 rounded-xl border border-stone-200 font-bold text-stone-800 text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-hidden"
-            >
-              {availableGrades.map((g) => (
-                <option key={g} value={g}>{g}</option>
-              ))}
-            </select>
+          {/* Multi-Classroom Primary & Secondary Assignment Section */}
+          <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-blue-600" />
+                <div>
+                  <span className="font-bold text-stone-900 text-xs block">
+                    Classroom Assignments (Multi-Class Support)
+                  </span>
+                  <span className="text-[10px] text-stone-500">
+                    Assign this teacher to multiple classes as Primary Lead or Secondary Co-Teacher.
+                  </span>
+                </div>
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold">
+                {Object.values(classRoleMap).filter(r => r !== 'none').length} Assigned
+              </span>
+            </div>
+
+            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+              {classes.length === 0 ? (
+                <p className="text-[11px] text-stone-400 italic py-2 text-center">No classrooms created in school yet.</p>
+              ) : (
+                classes.map((cls) => {
+                  const currentRole = classRoleMap[cls.id] || 'none';
+                  return (
+                    <div 
+                      key={cls.id}
+                      className={`p-2.5 rounded-xl border transition-all flex flex-wrap items-center justify-between gap-2 ${
+                        currentRole === 'primary'
+                          ? 'bg-blue-50/70 border-blue-200 text-blue-950'
+                          : currentRole === 'secondary'
+                          ? 'bg-purple-50/70 border-purple-200 text-purple-950'
+                          : 'bg-white border-stone-200 text-stone-700'
+                      }`}
+                    >
+                      <div className="min-w-[140px]">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-xs">{cls.name}</span>
+                          <span className="px-1.5 py-0.2 rounded bg-stone-100 text-stone-700 text-[9px] font-bold">
+                            {cls.grade}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-stone-400 block font-mono">
+                          ID: {cls.id}{cls.room ? ` • ${cls.room}` : ''}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1 text-[10px] font-bold">
+                        <button
+                          type="button"
+                          onClick={() => handleSetClassRole(cls.id, 'none')}
+                          className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${
+                            currentRole === 'none'
+                              ? 'bg-stone-200 text-stone-800 shadow-2xs'
+                              : 'text-stone-400 hover:text-stone-700'
+                          }`}
+                        >
+                          None
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetClassRole(cls.id, 'primary')}
+                          className={`px-2 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                            currentRole === 'primary'
+                              ? 'bg-blue-600 text-white shadow-2xs'
+                              : 'text-blue-700 hover:bg-blue-100/60'
+                          }`}
+                        >
+                          Primary Lead
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetClassRole(cls.id, 'secondary')}
+                          className={`px-2 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                            currentRole === 'secondary'
+                              ? 'bg-purple-600 text-white shadow-2xs'
+                              : 'text-purple-700 hover:bg-purple-100/60'
+                          }`}
+                        >
+                          Secondary Co-Teacher
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
 
           {/* Teacher Faculty Validity Section */}

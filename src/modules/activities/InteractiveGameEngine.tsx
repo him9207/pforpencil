@@ -726,8 +726,8 @@ function BalloonPopGame({ task, question, done, onComplete }: Props) {
           )}
         </div>
 
-        {/* Clipart Visual Stage (if present) */}
-        {question?.visualClipart && (
+        {/* Clipart Visual Stage (if present and not redundant with floating balloons) */}
+        {question?.visualClipart && !question.visualClipart.includes('🎈') && !question.visualClipart.toLowerCase().includes('balloon') && (
           <div className="p-3.5 mb-4 rounded-2xl bg-white/90 border border-sky-200 flex flex-wrap items-center justify-between gap-3 shadow-xs">
             <div className="flex items-center gap-2 text-xs font-black text-sky-900">
               <Sparkles className="w-4 h-4 text-amber-500 animate-spin" />

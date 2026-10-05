@@ -576,8 +576,8 @@ export default function InteractiveQuestionCard({
         </div>
       )}
 
-      {/* Prominent Visual Clipart Illustration Showcase - only for non-select_objects questions (for select_objects, the items are the interactive buttons in the arena below) */}
-      {type !== 'select_objects' && question.visualClipart && (() => {
+      {/* Prominent Visual Clipart Illustration Showcase - only for non-select_objects and non-image_choice questions (for select_objects and image_choice, the items are already the visual options in the arena below) */}
+      {type !== 'select_objects' && type !== 'image_choice' && question.visualClipart && (() => {
         let items = resolveMultipleClipartItems(question.visualClipart);
         if (items.length === 0) {
           const single = resolveClipartItem(question.visualClipart);

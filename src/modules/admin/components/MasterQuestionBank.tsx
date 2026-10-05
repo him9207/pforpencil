@@ -1103,7 +1103,7 @@ export default function MasterQuestionBank({
           {visibleQuestions.length > 0 ? (
             <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-2xs">
               {/* Table Header (Hidden on extra small screens) */}
-              <div className="hidden md:grid grid-cols-[44px_140px_1fr_130px_90px_120px_110px] items-center gap-3 px-4 py-3 bg-stone-50 border-b border-stone-200 text-[11px] font-black text-stone-600 uppercase tracking-wider">
+              <div className="hidden md:grid grid-cols-[44px_200px_1fr_110px_85px_95px_110px] items-center gap-3 px-4 py-3 bg-stone-50 border-b border-stone-200 text-[11px] font-black text-stone-600 uppercase tracking-wider">
                 <div className="flex justify-center">
                   <input
                     type="checkbox"
@@ -1113,7 +1113,7 @@ export default function MasterQuestionBank({
                     title="Select All Questions"
                   />
                 </div>
-                <div># & QID</div>
+                <div className="font-black text-stone-700"># & QID</div>
                 <div>Question & Answer Preview</div>
                 <div>Type</div>
                 <div>Difficulty</div>
@@ -1153,7 +1153,7 @@ export default function MasterQuestionBank({
                       }`}
                     >
                       {/* Main compact row */}
-                      <div className="p-3 sm:px-4 sm:py-2.5 flex flex-col md:grid md:grid-cols-[44px_140px_1fr_130px_90px_120px_110px] items-start md:items-center gap-2 md:gap-3">
+                      <div className="p-3 sm:px-4 sm:py-2.5 flex flex-col md:grid md:grid-cols-[44px_200px_1fr_110px_85px_95px_110px] items-start md:items-center gap-2 md:gap-3">
                         {/* 1. Checkbox */}
                         <div className="flex items-center justify-between w-full md:w-auto md:justify-center">
                           <input
@@ -1164,8 +1164,11 @@ export default function MasterQuestionBank({
                           />
                           {/* Mobile-only inline tags */}
                           <div className="flex md:hidden items-center gap-1.5">
-                            <span className="font-mono text-xs font-bold text-stone-700 bg-stone-100 px-1.5 py-0.5 rounded">
+                            <span className="font-mono text-xs font-bold text-stone-800 bg-stone-100 px-1.5 py-0.5 rounded border border-stone-200">
                               #{idx + 1}
+                            </span>
+                            <span className="font-mono text-[11px] font-bold text-[#10246f] bg-[#eef4ff] px-1.5 py-0.5 rounded border border-[#c7d6f7]">
+                              {q.id}
                             </span>
                             <button
                               onClick={() => onEditQuestion?.({ ...q, status: isDraft ? 'Published' : 'Draft' })}
@@ -1181,15 +1184,16 @@ export default function MasterQuestionBank({
                         </div>
 
                         {/* 2. # & ID */}
-                        <div className="hidden md:flex flex-col">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-xs text-stone-900 font-mono">
-                              #{idx + 1}
-                            </span>
-                            <span className="text-[11px] font-mono text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded border border-stone-200 truncate max-w-[95px]" title={q.id}>
-                              {q.id}
-                            </span>
-                          </div>
+                        <div className="hidden md:flex items-center gap-2 min-w-0">
+                          <span className="font-mono font-black text-xs text-stone-900 bg-stone-100 px-2 py-0.5 rounded border border-stone-200 shrink-0 shadow-2xs">
+                            #{idx + 1}
+                          </span>
+                          <span 
+                            className="font-mono text-xs font-bold text-[#10246f] bg-[#eef4ff] px-2 py-0.5 rounded-lg border border-[#c7d6f7] select-all whitespace-nowrap" 
+                            title={`Full Question ID: ${q.id}`}
+                          >
+                            {q.id}
+                          </span>
                         </div>
 
                         {/* 3. Question Prompt & Answer Preview */}

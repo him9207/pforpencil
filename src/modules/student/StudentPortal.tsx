@@ -1463,30 +1463,44 @@ export default function StudentPortal({
             {!quizFinished && currentQ ? (
               <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6 flex flex-col">
                 
-                {/* Topic & Difficulty Chips */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-indigo-50 text-indigo-800 border border-indigo-200">
-                    {currentQ.category || 'Mathematics'}
-                  </span>
-                  {currentQ.skill && (
-                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
-                      {currentQ.skill}
+                {/* Topic, Question Number & Difficulty Chips */}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-black px-3 py-1 rounded-xl bg-[#10246f] text-white shadow-xs inline-flex items-center gap-1.5">
+                      <span>Question {currentQuestionIndex + 1}</span>
+                      <span className="text-blue-200 text-[10px]">of {activeQuestions.length}</span>
+                    </span>
+                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-indigo-50 text-indigo-800 border border-indigo-200">
+                      {currentQ.category || 'Mathematics'}
+                    </span>
+                    {currentQ.skill && (
+                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
+                        {currentQ.skill}
+                      </span>
+                    )}
+                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-lg border ${
+                      currentQ.difficulty === 'Easy' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                      currentQ.difficulty === 'Hard' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                      'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}>
+                      {currentQ.difficulty || 'Medium'}
+                    </span>
+                  </div>
+                  {currentQ.id && (
+                    <span className="text-[11px] font-mono font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                      #{currentQ.id}
                     </span>
                   )}
-                  <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-lg border ${
-                    currentQ.difficulty === 'Easy' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                    currentQ.difficulty === 'Hard' ? 'bg-purple-50 text-purple-700 border-purple-200' :
-                    'bg-amber-50 text-amber-700 border-amber-200'
-                  }`}>
-                    {currentQ.difficulty || 'Medium'}
-                  </span>
                 </div>
 
                 {/* Question Prompt */}
                 <div className="space-y-1.5">
                   <div className="flex items-start justify-between gap-4">
-                    <h2 className="text-xl sm:text-2xl font-black text-slate-900 leading-snug tracking-tight">
-                      {currentQ.prompt}
+                    <h2 className="text-xl sm:text-2xl font-black text-slate-900 leading-snug tracking-tight flex items-start gap-2.5">
+                      <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-xl bg-blue-100 text-blue-900 font-mono text-sm sm:text-base font-black shrink-0 mt-0.5 border border-blue-200 shadow-2xs">
+                        Q{currentQuestionIndex + 1}
+                      </span>
+                      <span>{currentQ.prompt}</span>
                     </h2>
                     <button
                       type="button"

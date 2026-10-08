@@ -65,26 +65,26 @@ export default function StudentIDCard({
         </div>
 
         {/* The Printable Student ID Card Body */}
-        <div className="p-6 bg-slate-50">
-          <div className="relative rounded-2xl border-2 border-slate-300 bg-white p-5 shadow-xs overflow-hidden">
+        <div className="p-6 bg-gradient-to-b from-blue-50/50 to-amber-50/30">
+          <div className="relative rounded-3xl border-2 border-blue-200 bg-white p-5 shadow-lg overflow-hidden">
             {/* Top Card Branding */}
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
+            <div className="flex items-center justify-between border-b border-stone-200 pb-3 mb-4">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-sm shadow-xs">
-                  FL
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-700 via-indigo-600 to-amber-500 text-white flex items-center justify-center font-black text-sm shadow-sm ring-2 ring-blue-100">
+                  <span>P✏️</span>
                 </div>
                 <div>
-                  <h3 className="text-xs font-black tracking-wider uppercase text-slate-900 leading-tight">
+                  <h3 className="text-xs font-black tracking-wider uppercase text-stone-900 leading-tight">
                     {affiliatedSchool}
                   </h3>
-                  <span className="text-[10px] text-slate-500 font-semibold">
-                    Junior Math Scholar Pass • 2025–2026
+                  <span className="text-[10px] text-blue-600 font-bold">
+                    PforPencil Scholar Pass • 2025–2026
                   </span>
                 </div>
               </div>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[10px] font-black uppercase tracking-wider border border-emerald-200 flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3" />
-                Active
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[10px] font-black uppercase tracking-wider border border-emerald-200 flex items-center gap-1 shadow-2xs">
+                <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                Active Student
               </span>
             </div>
 
@@ -92,56 +92,56 @@ export default function StudentIDCard({
             <div className="flex items-start gap-4">
               {/* Student Avatar */}
               <div className="shrink-0 text-center">
-                <div className="w-20 h-20 rounded-2xl bg-slate-50 border-2 border-slate-300 shadow-xs flex items-center justify-center text-4xl mx-auto">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-b from-amber-50 to-blue-50 border-2 border-amber-200 shadow-sm flex items-center justify-center text-4xl mx-auto ring-2 ring-amber-100/60">
                   {avatar}
                 </div>
                 <div className="mt-1.5">
-                  <span className="inline-block px-2 py-0.5 rounded-md bg-slate-900 text-white text-[10px] font-black font-mono">
+                  <span className="inline-block px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-blue-700 to-indigo-700 text-white text-[10px] font-black font-mono shadow-2xs">
                     {grade}
                   </span>
                 </div>
               </div>
 
               {/* Student Metadata */}
-              <div className="flex-1 min-w-0 space-y-1.5">
+              <div className="flex-1 min-w-0 space-y-2">
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-500 block">Student Name</span>
-                  <h2 className="text-base font-black text-slate-900 truncate leading-tight">
+                  <span className="text-[9px] uppercase font-bold text-stone-400 block tracking-wider">Student Learner</span>
+                  <h2 className="text-base font-black text-stone-900 truncate leading-tight">
                     {studentName}
                   </h2>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
-                    <span className="text-[9px] uppercase font-bold text-slate-500 block">Student ID</span>
-                    <span className="font-mono font-bold text-slate-800 text-[11px]">{studentId}</span>
+                  <div className="bg-blue-50/70 p-2 rounded-xl border border-blue-100">
+                    <span className="text-[9px] uppercase font-bold text-blue-600 block">Student ID</span>
+                    <span className="font-mono font-black text-stone-800 text-[11px]">{studentId}</span>
                   </div>
-                  <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
-                    <span className="text-[9px] uppercase font-bold text-slate-500 block">Username</span>
-                    <span className="font-mono font-bold text-blue-700 text-[11px]">@{username}</span>
+                  <div className="bg-indigo-50/70 p-2 rounded-xl border border-indigo-100">
+                    <span className="text-[9px] uppercase font-bold text-indigo-600 block">Username</span>
+                    <span className="font-mono font-black text-blue-700 text-[11px]">@{username}</span>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+                  <div className="bg-amber-50/70 p-2 rounded-xl border border-amber-200/70">
                     <div className="flex items-center justify-between">
-                      <span className="text-[9px] uppercase font-bold text-slate-500 block">Secret PIN</span>
+                      <span className="text-[9px] uppercase font-bold text-amber-700 block">Secret PIN</span>
                       <button
                         type="button"
                         onClick={() => setShowPin(!showPin)}
-                        className="text-slate-400 hover:text-slate-700 p-0.5 print:hidden cursor-pointer"
+                        className="text-stone-400 hover:text-stone-700 p-0.5 print:hidden cursor-pointer"
                         title={showPin ? "Hide PIN" : "Reveal PIN"}
                       >
-                        {showPin ? <EyeOff className="w-3 h-3 text-blue-600" /> : <Eye className="w-3 h-3 text-slate-500" />}
+                        {showPin ? <EyeOff className="w-3 h-3 text-blue-600" /> : <Eye className="w-3 h-3 text-stone-500" />}
                       </button>
                     </div>
-                    <span className="font-mono font-black text-slate-900 tracking-widest text-[11px]">
+                    <span className="font-mono font-black text-stone-900 tracking-widest text-[11px]">
                       {showPin ? pin : '••••'}
                     </span>
                   </div>
-                  <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
-                    <span className="text-[9px] uppercase font-bold text-slate-500 block">Valid Until</span>
-                    <span className="font-bold text-slate-700 text-[10px]">{validUntil}</span>
+                  <div className="bg-emerald-50/70 p-2 rounded-xl border border-emerald-200/70">
+                    <span className="text-[9px] uppercase font-bold text-emerald-700 block">Valid Until</span>
+                    <span className="font-bold text-emerald-950 text-[10px]">{validUntil}</span>
                   </div>
                 </div>
               </div>

@@ -36,7 +36,7 @@ export interface CurriculumMasterData {
 }
 
 export const CURRICULUM_MASTER_STORAGE_KEY = 'pforpencil_curriculum_master_v1';
-export const LEGACY_CURRICULUM_MASTER_STORAGE_KEY = 'funlearn_curriculum_master_v1';
+export const LEGACY_CURRICULUM_MASTER_STORAGE_KEY = 'pforpencil_curriculum_master_legacy';
 
 export const DEFAULT_CURRICULUM_MASTER: CurriculumMasterData = {
   countries: [

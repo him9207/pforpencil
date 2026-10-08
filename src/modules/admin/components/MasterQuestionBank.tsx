@@ -692,10 +692,10 @@ export default function MasterQuestionBank({
       try {
         localStorage.removeItem('pforpencil_question_bank_v1');
         localStorage.removeItem('pforpencil_question_bank_v2');
-        localStorage.removeItem('funlearn_question_bank_v3');
+        localStorage.removeItem('pforpencil_question_bank_v3');
         localStorage.removeItem('pforpencil_question_bank_masters_v1');
         localStorage.removeItem('pforpencil_question_bank_masters_v2');
-        localStorage.removeItem('funlearn_question_bank_masters_v3');
+        localStorage.removeItem('pforpencil_question_bank_masters_v3');
       } catch {}
 
       onSuccessMessage?.('All questions, categories, and skills have been completely erased from database and local memory. Ready for fresh testing!');

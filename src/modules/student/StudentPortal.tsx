@@ -5,7 +5,9 @@ import {
   Activity, 
   StudentProgress,
   Subject,
-  GradeLevel 
+  GradeLevel,
+  ClassRoom,
+  ClassAssignment
 } from '../../types';
 import { 
   Flame, 
@@ -312,6 +314,8 @@ interface StudentPortalProps {
   studentProgressMap?: Record<string, StudentProgress>;
   questions: Question[];
   activities: Activity[];
+  classes?: ClassRoom[];
+  assignments?: ClassAssignment[];
   onUpdateProgress: (updated: StudentProgress) => void;
 }
 
@@ -321,6 +325,8 @@ export default function StudentPortal({
   studentProgressMap,
   questions,
   activities,
+  classes = [],
+  assignments = [],
   onUpdateProgress
 }: StudentPortalProps) {
   // Navigation Tabs - Skill Practice & Tests is the primary default focus
@@ -331,11 +337,9 @@ export default function StudentPortal({
   useEffect(() => {
     const handleMasterUpdate = () => setMasterDataVersion(v => v + 1);
     window.addEventListener('pforpencil_master_data_updated', handleMasterUpdate);
-    window.addEventListener('funlearn_master_data_updated', handleMasterUpdate);
     window.addEventListener('storage', handleMasterUpdate);
     return () => {
       window.removeEventListener('pforpencil_master_data_updated', handleMasterUpdate);
-      window.removeEventListener('funlearn_master_data_updated', handleMasterUpdate);
       window.removeEventListener('storage', handleMasterUpdate);
     };
   }, []);
@@ -383,6 +387,44 @@ export default function StudentPortal({
       return true;
     });
   }, [questions, studentGrade, studentCountry, currentUser.organizationId]);
+
+  // Resolve assigned classroom and active teacher assignments dynamically
+  const assignedClass = useMemo(() => {
+    if (!classes || classes.length === 0) return null;
+    return classes.find(c => 
+      c.studentIds?.includes(currentUser.id) || 
+      c.studentIds?.includes(studentProgress.studentId)
+    ) || null;
+  }, [classes, currentUser.id, studentProgress.studentId]);
+
+  const assignedClassHomework = useMemo(() => {
+    if (!assignments || assignments.length === 0) return [];
+    if (assignedClass) {
+      return assignments.filter(a => a.classId === assignedClass.id && a.status === 'active');
+    }
+    return assignments.filter(a => a.grade === studentGrade && a.status === 'active');
+  }, [assignments, assignedClass, studentGrade]);
+
+  const handleStartClassAssignment = (asg: ClassAssignment) => {
+    sounds.playCorrect();
+    const matchedQs = questions.filter(q => asg.questionIds.includes(q.id));
+    const finalQIds = matchedQs.length > 0 ? matchedQs.map(q => q.id) : asg.questionIds;
+
+    const asgActivity: Activity = {
+      id: asg.id,
+      type: 'challenge',
+      title: asg.title,
+      description: `Class assignment for ${asg.className || assignedClass?.name || studentGrade} due on ${asg.dueDate}.`,
+      subject: asg.subject,
+      grade: asg.grade,
+      questionIds: finalQIds.length > 0 ? finalQIds : gradeLockedQuestions.slice(0, 5).map(q => q.id),
+      rewardXP: asg.questionIds.length * 25,
+      rewardCoins: asg.questionIds.length * 5,
+      durationMinutes: 10,
+      unlocked: true
+    };
+    handleStartActivity(asgActivity);
+  };
 
   // Activity Category, Subject & Search filter states (strictly locked to student's grade)
   const [activityCategoryFilter, setActivityCategoryFilter] = useState<string>('All');
@@ -1195,17 +1237,18 @@ export default function StudentPortal({
 
   return (
     <div className="space-y-4 pb-10">
-      {/* Kid Welcome & Gamification Bar - Sleek, Compact & Professional */}
-      <div className="bg-white border border-[#e1e6f1] rounded-2xl p-4 sm:p-5 shadow-2xs relative overflow-hidden">
+      {/* Kid Welcome & Gamification Bar - Vibrant, Playful & High Energy */}
+      <div className="bg-gradient-to-r from-blue-50 via-indigo-50/40 to-amber-50/50 border-2 border-blue-200/80 rounded-3xl p-4 sm:p-6 shadow-md relative overflow-hidden">
         {/* Soft colorful backdrop accents */}
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 rounded-full bg-blue-50/50 pointer-events-none blur-2xl" />
-        <div className="absolute bottom-0 left-1/3 -mb-10 w-32 h-32 rounded-full bg-[#eaf8f5]/60 pointer-events-none blur-xl" />
+        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 rounded-full bg-amber-200/30 pointer-events-none blur-2xl" />
+        <div className="absolute bottom-0 left-1/3 -mb-10 w-40 h-40 rounded-full bg-emerald-200/30 pointer-events-none blur-xl" />
+        <div className="absolute top-1/2 left-0 -ml-8 w-24 h-24 rounded-full bg-purple-200/30 pointer-events-none blur-lg" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           {/* Avatar & Student Name */}
           <div className="flex items-center gap-3.5">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#eef4ff] border border-[#10246f]/15 p-1 shadow-2xs flex items-center justify-center shrink-0">
-              <div className="w-full h-full rounded-xl bg-white flex items-center justify-center text-3xl sm:text-4xl shadow-inner">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-gradient-to-tr from-amber-400 via-orange-400 to-pink-500 p-1 shadow-md flex items-center justify-center shrink-0 ring-4 ring-white">
+              <div className="w-full h-full rounded-2xl bg-white flex items-center justify-center text-4xl sm:text-5xl shadow-inner">
                 {studentProgress.avatar}
               </div>
             </div>
@@ -1215,83 +1258,83 @@ export default function StudentPortal({
                   <select
                     value={studentGrade}
                     onChange={(e) => setActiveGrade(e.target.value as GradeLevel)}
-                    className="text-[11px] font-bold pl-2.5 pr-6 py-0.5 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 uppercase tracking-wider cursor-pointer appearance-none transition focus:outline-none focus:ring-1 focus:ring-indigo-400 shadow-2xs"
+                    className="text-[11px] font-black pl-3 pr-7 py-1 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white uppercase tracking-wider cursor-pointer appearance-none transition focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-sm"
                     title="Switch Grade Level"
                   >
-                    <option value="Preschool">Preschool</option>
-                    <option value="Foundation">Foundation</option>
-                    <option value="Grade 1">Grade 1</option>
-                    <option value="Grade 2">Grade 2</option>
-                    <option value="Grade 3">Grade 3</option>
-                    <option value="Grade 4">Grade 4</option>
-                    <option value="Grade 5">Grade 5</option>
-                    <option value="Grade 6">Grade 6</option>
+                    <option value="Preschool" className="bg-white text-stone-900 font-bold">Preschool</option>
+                    <option value="Foundation" className="bg-white text-stone-900 font-bold">Foundation</option>
+                    <option value="Grade 1" className="bg-white text-stone-900 font-bold">Grade 1</option>
+                    <option value="Grade 2" className="bg-white text-stone-900 font-bold">Grade 2</option>
+                    <option value="Grade 3" className="bg-white text-stone-900 font-bold">Grade 3</option>
+                    <option value="Grade 4" className="bg-white text-stone-900 font-bold">Grade 4</option>
+                    <option value="Grade 5" className="bg-white text-stone-900 font-bold">Grade 5</option>
+                    <option value="Grade 6" className="bg-white text-stone-900 font-bold">Grade 6</option>
                   </select>
-                  <ChevronDown className="w-3 h-3 text-indigo-600 absolute right-2 pointer-events-none" />
+                  <ChevronDown className="w-3.5 h-3.5 text-white/90 absolute right-2.5 pointer-events-none" />
                 </div>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#eaf8f5] text-[#13b7ad] border border-[#a7f3d0] flex items-center gap-1 shadow-2xs">
+                <span className="text-[11px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 shadow-2xs">
                   <span>{studentCountry === 'India' ? '🇮🇳' : studentCountry === 'United Kingdom' ? '🇬🇧' : studentCountry === 'Canada' ? '🇨🇦' : studentCountry === 'Australia' ? '🇦🇺' : '🇺🇸'}</span>
                   <span>{studentState}</span>
                 </span>
-                <span className="text-[11px] font-mono bg-[#eef4ff] border border-[#d7def0] text-[#10246f] px-2 py-0.5 rounded-full font-bold">
+                <span className="text-[11px] font-mono bg-white/90 border border-blue-200 text-blue-900 px-2.5 py-1 rounded-full font-black shadow-2xs">
                   ID: {studentProgress.studentUsername}
                 </span>
               </div>
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-[#10246f] mt-0.5 flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-stone-900 mt-1 flex items-center gap-2">
                 <span>{studentProgress.studentName}</span>
-                <span className="text-lg">🌟</span>
+                <span className="text-xl animate-bounce">🌟</span>
               </h1>
-              <div className="flex items-center gap-2 text-xs text-[#59627a] font-medium">
-                <span>
+              <div className="flex items-center gap-2 text-xs text-stone-600 font-semibold mt-0.5">
+                <span className="bg-white/80 px-2 py-0.5 rounded-lg border border-stone-200/70 text-stone-800">
                   {studentProgress.schoolOrParent === 'school' 
                     ? (studentProgress.schoolName || currentUser.schoolName || 'School') 
                     : `Family of ${studentProgress.parentName || currentUser.parentName || 'Parent'}`}
                 </span>
-                <span className="text-[#13b7ad] font-semibold">· {studentCurriculum}</span>
+                <span className="text-indigo-600 font-bold">· {studentCurriculum}</span>
                 <button
                   type="button"
                   id="open-student-id-card-btn"
                   onClick={() => setIsIdCardOpen(true)}
-                  className="inline-flex items-center gap-1 text-[11px] font-bold text-[#10246f] hover:underline cursor-pointer ml-1"
+                  className="inline-flex items-center gap-1 text-[11px] font-black text-blue-700 hover:text-blue-900 bg-blue-100/80 hover:bg-blue-200 px-2 py-0.5 rounded-lg border border-blue-300 transition cursor-pointer ml-1 shadow-2xs"
                 >
-                  <Award className="w-3 h-3 text-[#10246f]" />
-                  <span>ID Card</span>
+                  <Award className="w-3.5 h-3.5 text-blue-700" />
+                  <span>View ID Card</span>
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Gamification Stats - Compact Badges */}
-          <div className="grid grid-cols-3 gap-2 bg-[#f8faff] border border-[#e1e6f1] p-2.5 rounded-2xl shadow-2xs">
+          {/* Gamification Stats - Colorful Cards */}
+          <div className="grid grid-cols-3 gap-2.5 bg-white/90 backdrop-blur-xs border-2 border-blue-100 p-2.5 rounded-2xl shadow-sm">
             {/* Level Card */}
-            <div className="text-center px-2.5 py-1.5 rounded-xl bg-indigo-50/70 border border-indigo-200">
-              <div className="flex items-center justify-center gap-1 text-indigo-700 text-[11px] font-bold">
-                <Zap className="w-3 h-3 fill-indigo-600 text-indigo-600" />
+            <div className="text-center px-3 py-2 rounded-xl bg-gradient-to-b from-indigo-50 to-blue-50 border-2 border-indigo-200 shadow-2xs hover:scale-105 transition-transform">
+              <div className="flex items-center justify-center gap-1 text-indigo-700 text-[11px] font-black">
+                <Zap className="w-3.5 h-3.5 fill-indigo-600 text-indigo-600 animate-pulse" />
                 <span>Level {studentProgress.level}</span>
               </div>
-              <span className="block text-base sm:text-lg font-black text-[#10246f]">
-                {studentProgress.xp} <span className="text-[10px] font-bold text-indigo-600">XP</span>
+              <span className="block text-base sm:text-xl font-black text-indigo-950 mt-0.5">
+                {studentProgress.xp} <span className="text-[10px] font-black text-indigo-600">XP</span>
               </span>
             </div>
 
             {/* Streak Card */}
-            <div className="text-center px-2.5 py-1.5 rounded-xl bg-[#FFF9E8] border border-[#ffbf32]/30">
-              <div className="flex items-center justify-center gap-1 text-amber-700 text-[11px] font-bold">
-                <Flame className="w-3 h-3 fill-amber-500 text-amber-500" />
+            <div className="text-center px-3 py-2 rounded-xl bg-gradient-to-b from-amber-50 to-orange-50 border-2 border-amber-300 shadow-2xs hover:scale-105 transition-transform">
+              <div className="flex items-center justify-center gap-1 text-orange-700 text-[11px] font-black">
+                <Flame className="w-3.5 h-3.5 fill-orange-500 text-orange-500 animate-pulse" />
                 <span>Streak</span>
               </div>
-              <span className="block text-base sm:text-lg font-black text-[#10246f]">
-                {studentProgress.streakDays} <span className="text-[10px] font-bold text-amber-700">Days</span>
+              <span className="block text-base sm:text-xl font-black text-orange-950 mt-0.5">
+                {studentProgress.streakDays} <span className="text-[10px] font-black text-orange-600">Days</span>
               </span>
             </div>
 
             {/* Coins Card */}
-            <div className="text-center px-2.5 py-1.5 rounded-xl bg-[#EAFBF2] border border-[#16c47f]/30">
-              <div className="flex items-center justify-center gap-1 text-[#16c47f] text-[11px] font-bold">
-                <Coins className="w-3 h-3 fill-[#16c47f] text-[#16c47f]" />
+            <div className="text-center px-3 py-2 rounded-xl bg-gradient-to-b from-emerald-50 to-teal-50 border-2 border-emerald-300 shadow-2xs hover:scale-105 transition-transform">
+              <div className="flex items-center justify-center gap-1 text-emerald-700 text-[11px] font-black">
+                <Coins className="w-3.5 h-3.5 fill-emerald-600 text-emerald-600" />
                 <span>Coins</span>
               </div>
-              <span className="block text-base sm:text-lg font-black text-[#10246f] flex items-center justify-center gap-1">
+              <span className="block text-base sm:text-xl font-black text-emerald-950 mt-0.5 flex items-center justify-center gap-1">
                 <span>🪙</span>
                 <span>{studentProgress.coins}</span>
               </span>
@@ -1300,18 +1343,18 @@ export default function StudentPortal({
         </div>
 
         {/* Level XP Progress Bar */}
-        <div className="mt-3 pt-3 border-t border-[#e1e6f1] flex items-center justify-between gap-3 text-xs font-semibold text-[#59627a]">
-          <span className="font-bold text-[#10246f] text-[11px] flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping" />
-            <span>Level {studentProgress.level} Explorer</span>
+        <div className="mt-3.5 pt-3 border-t border-blue-200/60 flex items-center justify-between gap-3 text-xs font-bold text-stone-600">
+          <span className="font-black text-blue-900 text-[11px] flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
+            <span>Level {studentProgress.level} Scholar</span>
           </span>
-          <div className="flex-1 max-w-sm bg-[#eef4ff] border border-[#e1e6f1] h-2.5 rounded-full overflow-hidden p-0.5">
+          <div className="flex-1 max-w-sm bg-white border-2 border-blue-200 h-3 rounded-full overflow-hidden p-0.5 shadow-inner">
             <div 
-              className="bg-gradient-to-r from-blue-600 via-indigo-600 to-[#16c47f] h-full rounded-full transition-all duration-500"
+              className="bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 h-full rounded-full transition-all duration-500 shadow-xs"
               style={{ width: `${(studentProgress.xp % 500) / 5}%` }}
             />
           </div>
-          <span className="text-indigo-600 text-[11px] font-bold">{500 - (studentProgress.xp % 500)} XP to next level</span>
+          <span className="text-indigo-700 text-[11px] font-black">{500 - (studentProgress.xp % 500)} XP to next level</span>
         </div>
       </div>
 
@@ -1321,6 +1364,50 @@ export default function StudentPortal({
         dailyQuizActivity={dailyQuizActivity}
         onStartDailyQuiz={handleStartDailyQuiz}
       />
+
+      {/* ASSIGNED CLASSROOM & TEACHER HOMEWORK CARD */}
+      {assignedClass && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center text-lg font-black shadow-xs">
+              🏫
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-blue-900">
+                  {assignedClass.name}
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold">
+                  {assignedClass.grade}
+                </span>
+              </div>
+              <p className="text-xs text-stone-600">
+                Lead Teacher: <strong>{assignedClass.teacherName}</strong>
+                {assignedClass.secondaryTeacherName ? ` • Co-Teacher: ${assignedClass.secondaryTeacherName}` : ''}
+              </p>
+            </div>
+          </div>
+
+          {assignedClassHomework.length > 0 ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-indigo-900">
+                📝 {assignedClassHomework.length} Active Assignment{assignedClassHomework.length === 1 ? '' : 's'}
+              </span>
+              <button
+                onClick={() => handleStartClassAssignment(assignedClassHomework[0])}
+                className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <span>Start Homework</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <span className="text-[11px] font-medium text-blue-700 bg-white/70 px-2.5 py-1 rounded-lg border border-blue-100">
+              ✓ All homework up to date
+            </span>
+          )}
+        </div>
+      )}
 
       {/* PORTAL NAVIGATION TABS: 1. Skill Practice & Tests (First focus), 2. Interactive Activities, 3. Leaderboard, 4. Analytics */}
       <div className="flex items-center gap-2 border-b border-[#e1e6f1] pb-2 overflow-x-auto scrollbar-none">

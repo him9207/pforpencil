@@ -2,7 +2,7 @@ import { Activity, ActivityDatabase, ActivityMasterRecord, ActivityStep } from '
 import { INITIAL_ACTIVITIES } from '../mockData';
 
 export const ACTIVITY_DATABASE_STORAGE_KEY = 'pforpencil_activity_database_v1';
-export const LEGACY_ACTIVITY_DATABASE_STORAGE_KEY = 'funlearn_activity_database_v3';
+export const LEGACY_ACTIVITY_DATABASE_STORAGE_KEY = 'pforpencil_activity_database_legacy';
 export const ACTIVITY_ID_PATTERN = /^ACT\d{6}$/;
 
 const emptyDatabase = (): ActivityDatabase => ({
@@ -138,7 +138,7 @@ export function loadActivityDatabase(): ActivityDatabase {
 
   // Migrate the previous flat activity store into the dedicated Activity database.
   try {
-    const legacy = localStorage.getItem('funlearn_interactive_activities_v1');
+    const legacy = localStorage.getItem('pforpencil_interactive_activities_v1');
     const legacyActivities = legacy ? JSON.parse(legacy) : INITIAL_ACTIVITIES;
     const db = databaseFromActivities(Array.isArray(legacyActivities) ? legacyActivities : INITIAL_ACTIVITIES);
     localStorage.setItem(ACTIVITY_DATABASE_STORAGE_KEY, JSON.stringify(db));
@@ -156,7 +156,7 @@ export function saveActivityDatabase(activities: Activity[], existing?: Activity
   try {
     localStorage.setItem(ACTIVITY_DATABASE_STORAGE_KEY, JSON.stringify(db));
     // Keep legacy readers from breaking during migration, but the v2 DB is authoritative.
-    localStorage.removeItem('funlearn_interactive_activities_v1');
+    localStorage.removeItem('pforpencil_interactive_activities_v1');
   } catch {
     // local-only persistence is best effort
   }

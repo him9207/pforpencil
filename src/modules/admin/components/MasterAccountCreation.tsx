@@ -16,10 +16,14 @@ import {
   Hash,
   Eye,
   EyeOff,
-  Lock
+  Lock,
+  Globe,
+  MapPin,
+  BookOpen
 } from 'lucide-react';
 import { sounds } from '../../../utils/audio';
 import { getNextRoleId, generateStudentUsername, generateSchoolStudentUsername, generateSchoolCode, getSchoolPrefix, ensureUniqueUsername } from '../../../utils/idAndUsernameGenerator';
+import { COUNTRIES, COUNTRY_STATE_MAP, COUNTRY_CURRICULUM_MAP, COUNTRY_FLAG_MAP } from '../../../data/curriculumData';
 
 interface MasterAccountCreationProps {
   schools: SchoolOrganization[];
@@ -77,6 +81,19 @@ export default function MasterAccountCreation({
 
   // Content Manager specific
   const [cmSubject, setCmSubject] = useState('Mathematics');
+
+  // Regional Scope & Learning Standards
+  const [selectedCountry, setSelectedCountry] = useState('United States');
+  const [selectedState, setSelectedState] = useState('California');
+  const [selectedCurriculum, setSelectedCurriculum] = useState('Common Core (US)');
+
+  const handleCountryChange = (newC: string) => {
+    setSelectedCountry(newC);
+    const defaultState = COUNTRY_STATE_MAP[newC]?.[0] || 'General';
+    setSelectedState(defaultState);
+    const defaultCurr = COUNTRY_CURRICULUM_MAP[newC]?.[0] || 'Universal Foundational';
+    setSelectedCurriculum(defaultCurr);
+  };
 
   // Account Validity / Contract Duration
   const [validityDuration, setValidityDuration] = useState<
@@ -137,6 +154,9 @@ export default function MasterAccountCreation({
         pin: pin.trim() || '1234',
         avatar,
         grade: studentGrade,
+        country: selectedCountry,
+        state: selectedState,
+        curriculum: selectedCurriculum,
         parentId: isParent ? selectedParentId : undefined,
         organizationId: !isParent ? selectedSchoolId : undefined,
         schoolName: !isParent ? (linkedSchool?.name || 'School Organization') : undefined,
@@ -156,6 +176,9 @@ export default function MasterAccountCreation({
         name: name.trim(),
         email: email.trim() || `${name.toLowerCase().replace(/\s+/g, '.')}@${schoolDomain}.edu`,
         avatar: avatar || '👩‍🏫',
+        country: selectedCountry,
+        state: selectedState,
+        curriculum: selectedCurriculum,
         organizationId: teacherSchoolId,
         schoolName: linkedSchool?.name || 'School Organization',
         schoolCode: schoolCodeToUse,
@@ -173,6 +196,9 @@ export default function MasterAccountCreation({
         name: name.trim(),
         email: email.trim() || `principal@${name.toLowerCase().replace(/[^a-z0-9]/g, '')}.edu`,
         avatar: '🏫',
+        country: selectedCountry,
+        state: selectedState,
+        curriculum: selectedCurriculum,
         schoolName: name.trim(),
         schoolCode,
         organizationId: nextId,
@@ -188,6 +214,9 @@ export default function MasterAccountCreation({
         name: name.trim(),
         email: email.trim() || `${name.toLowerCase().replace(/\s+/g, '.')}@gmail.com`,
         avatar: avatar || '👨‍👩‍👧',
+        country: selectedCountry,
+        state: selectedState,
+        curriculum: selectedCurriculum,
         studentIds: [],
         enrolledAt: new Date().toISOString().slice(0, 10),
         status: 'active',
@@ -201,6 +230,9 @@ export default function MasterAccountCreation({
         name: name.trim(),
         email: email.trim() || `${name.toLowerCase().replace(/\s+/g, '.')}@pforpencil.com`,
         avatar,
+        country: selectedCountry,
+        state: selectedState,
+        curriculum: selectedCurriculum,
         enrolledAt: new Date().toISOString().slice(0, 10),
         status: 'active',
         validityDuration: validityDuration,
@@ -393,6 +425,58 @@ export default function MasterAccountCreation({
                     </option>
                   ))}
                 </select>
+              </div>
+            </div>
+
+            {/* Regional Scope & Educational Standards */}
+            <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-stone-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <Globe className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Country, State & Educational Standard</span>
+                </span>
+                <span className="text-base">{COUNTRY_FLAG_MAP[selectedCountry] || '🌐'}</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div>
+                  <label className="block text-[11px] font-bold text-stone-600 mb-1">Country</label>
+                  <select
+                    value={selectedCountry}
+                    onChange={(e) => handleCountryChange(e.target.value)}
+                    className="w-full p-2 rounded-xl border border-stone-300 font-medium bg-white text-xs focus:ring-2 focus:ring-stone-900 outline-none"
+                  >
+                    {COUNTRIES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-stone-600 mb-1">State / Province</label>
+                  <select
+                    value={selectedState}
+                    onChange={(e) => setSelectedState(e.target.value)}
+                    className="w-full p-2 rounded-xl border border-stone-300 font-medium bg-white text-xs focus:ring-2 focus:ring-stone-900 outline-none"
+                  >
+                    {(COUNTRY_STATE_MAP[selectedCountry] || ['General Region']).map((st) => (
+                      <option key={st} value={st}>{st}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-stone-600 mb-1">Curriculum Standard</label>
+                  <select
+                    value={selectedCurriculum}
+                    onChange={(e) => setSelectedCurriculum(e.target.value)}
+                    className="w-full p-2 rounded-xl border border-stone-300 font-medium bg-white text-xs focus:ring-2 focus:ring-stone-900 outline-none"
+                  >
+                    {(COUNTRY_CURRICULUM_MAP[selectedCountry] || ['Universal Foundational Standards']).map((curr) => (
+                      <option key={curr} value={curr}>{curr}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 

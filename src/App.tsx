@@ -150,10 +150,10 @@ export default function App() {
       // Clear legacy storage keys to ensure a completely fresh start as requested
       localStorage.removeItem('pforpencil_question_bank_v1');
       localStorage.removeItem('pforpencil_question_bank_v2');
-      localStorage.removeItem('funlearn_question_bank_v3');
+      localStorage.removeItem('pforpencil_question_bank_v3');
       localStorage.removeItem('pforpencil_question_bank_masters_v1');
       localStorage.removeItem('pforpencil_question_bank_masters_v2');
-      localStorage.removeItem('funlearn_question_bank_masters_v3');
+      localStorage.removeItem('pforpencil_question_bank_masters_v3');
       const saved = localStorage.getItem('pforpencil_fresh_questions_v1');
       if (saved) {
         const parsed = JSON.parse(saved);
@@ -566,10 +566,10 @@ export default function App() {
     try {
       localStorage.removeItem('pforpencil_question_bank_v1');
       localStorage.removeItem('pforpencil_question_bank_v2');
-      localStorage.removeItem('funlearn_question_bank_v3');
+      localStorage.removeItem('pforpencil_question_bank_v3');
       localStorage.removeItem('pforpencil_question_bank_masters_v1');
       localStorage.removeItem('pforpencil_question_bank_masters_v2');
-      localStorage.removeItem('funlearn_question_bank_masters_v3');
+      localStorage.removeItem('pforpencil_question_bank_masters_v3');
     } catch {}
 
     const newLog: AuditLog = {
@@ -1640,6 +1640,8 @@ export default function App() {
                 studentProgressMap={studentProgressMap}
                 questions={questions}
                 activities={activities}
+                classes={classes}
+                assignments={assignments}
                 onUpdateProgress={handleUpdateStudentProgress}
               />
             )}

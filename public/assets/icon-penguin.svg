@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160">
+  <!-- Body -->
+  <ellipse cx="80" cy="88" rx="46" ry="54" fill="#0F172A"/>
+  <!-- White Belly -->
+  <ellipse cx="80" cy="94" rx="34" ry="42" fill="#FFFFFF"/>
+  <!-- Flippers -->
+  <ellipse cx="32" cy="92" rx="12" ry="24" fill="#0F172A" transform="rotate(20 32 92)"/>
+  <ellipse cx="128" cy="92" rx="12" ry="24" fill="#0F172A" transform="rotate(-20 128 92)"/>
+  <!-- Big Eyes -->
+  <circle cx="68" cy="68" r="8" fill="#0F172A"/>
+  <circle cx="92" cy="68" r="8" fill="#0F172A"/>
+  <circle cx="66" cy="66" r="3" fill="#FFFFFF"/>
+  <circle cx="90" cy="66" r="3" fill="#FFFFFF"/>
+  <!-- Yellow Beak -->
+  <polygon points="70,76 90,76 80,90" fill="#F59E0B"/>
+  <!-- Feet -->
+  <ellipse cx="65" cy="142" rx="14" ry="8" fill="#F59E0B"/>
+  <ellipse cx="95" cy="142" rx="14" ry="8" fill="#F59E0B"/>
+</svg>

@@ -118,15 +118,15 @@ export default function Navbar({
                 if (currentView !== 'home') {
                   onNavigateView('home');
                   setTimeout(() => {
-                    document.getElementById('topics')?.scrollIntoView({ behavior: 'smooth' });
+                    document.getElementById('grades-section')?.scrollIntoView({ behavior: 'smooth' });
                   }, 100);
                 } else {
-                  document.getElementById('topics')?.scrollIntoView({ behavior: 'smooth' });
+                  document.getElementById('grades-section')?.scrollIntoView({ behavior: 'smooth' });
                 }
               }}
               className="hover:text-slate-950 transition-colors cursor-pointer"
             >
-              Math Strands
+              Grades (Pre-K to 6)
             </button>
 
             <button
@@ -134,29 +134,31 @@ export default function Navbar({
                 if (currentView !== 'home') {
                   onNavigateView('home');
                   setTimeout(() => {
-                    document.getElementById('grades')?.scrollIntoView({ behavior: 'smooth' });
+                    document.getElementById('quiz-section')?.scrollIntoView({ behavior: 'smooth' });
                   }, 100);
                 } else {
-                  document.getElementById('grades')?.scrollIntoView({ behavior: 'smooth' });
+                  document.getElementById('quiz-section')?.scrollIntoView({ behavior: 'smooth' });
                 }
               }}
               className="hover:text-slate-950 transition-colors cursor-pointer"
             >
-              Grade Roadmap
+              Live Practice
             </button>
 
             <button
-              onClick={() => onOpenAuthModal({ screen: 'register', role: 'parent' })}
+              onClick={() => {
+                if (currentView !== 'home') {
+                  onNavigateView('home');
+                  setTimeout(() => {
+                    document.getElementById('portals-section')?.scrollIntoView({ behavior: 'smooth' });
+                  }, 100);
+                } else {
+                  document.getElementById('portals-section')?.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
               className="hover:text-slate-950 transition-colors cursor-pointer"
             >
-              For Parents
-            </button>
-
-            <button
-              onClick={() => onOpenAuthModal({ screen: 'register', role: 'school' })}
-              className="hover:text-slate-950 transition-colors cursor-pointer"
-            >
-              For Schools
+              Portals
             </button>
 
             <button

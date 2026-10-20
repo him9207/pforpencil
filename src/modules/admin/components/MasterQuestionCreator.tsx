@@ -6,7 +6,8 @@ import {
   VisualQuestionTemplate, 
   VisualAnimation,
   GradeLevel,
-  Subject
+  Subject,
+  DragItemConfig
 } from '../../../types';
 import { 
   X, 
@@ -20,7 +21,14 @@ import {
   ChevronDown,
   ChevronUp,
   AlertCircle,
-  HelpCircle
+  HelpCircle,
+  Image as ImageIcon,
+  Upload,
+  Search,
+  Link as LinkIcon,
+  Sparkles,
+  Target,
+  Lock
 } from 'lucide-react';
 import { parseVisualObjectsString } from '../../../utils/visualUtils';
 import { 
@@ -30,7 +38,9 @@ import {
   ClipartItem,
   ResolvedClipart,
   getClipartsByCategory, 
-  resolveMultipleClipartItems 
+  resolveMultipleClipartItems,
+  resolveClipartItem,
+  parseOptionClipart
 } from '../../../data/clipartRegistry';
 import { ClipartImage, ClipartText } from '../../../common/ClipartRenderer';
 import QuestionPreviewModal from './QuestionPreviewModal';
@@ -44,7 +54,21 @@ import {
   getGradeTemplateKey
 } from '../../../data/questionBankMasterData';
 import { INITIAL_GRADES } from '../../../mockData';
-import { getNextQuestionId } from '../../../utils/idAndUsernameGenerator';
+import { getNextQuestionId, getQuestionSubjectCode, getQuestionGradeCode } from '../../../utils/idAndUsernameGenerator';
+
+export type ClipartTarget = 
+  | 'prompt'
+  | 'visual'
+  | 'visualText'
+  | 'openAnswer'
+  | 'explanation'
+  | 'hint'
+  | `option-${number}`
+  | `drag-${number}-item`
+  | `drag-${number}-target`
+  | `match-${number}-left`
+  | `match-${number}-right`
+  | `order-${number}`;
 
 export interface MasterQuestionCreatorProps {
   question?: Question | null;
@@ -64,6 +88,13 @@ export interface MasterQuestionCreatorProps {
   categoryMasters?: CategoryMasterRecord[];
   skillMasters?: SkillMasterRecord[];
   existingQuestions?: Question[];
+  lockAcademicHierarchy?: boolean;
+  schoolName?: string;
+  schoolId?: string;
+  schoolPrefix?: string;
+  schoolCountryName?: string;
+  schoolStateName?: string;
+  schoolCurriculumName?: string;
 }
 
 export function normalizeQuestionType(raw?: string): QuestionType {
@@ -107,7 +138,14 @@ export default function MasterQuestionCreator({
   initialCurriculumId,
   categoryMasters = [],
   skillMasters = [],
-  existingQuestions = []
+  existingQuestions = [],
+  lockAcademicHierarchy = false,
+  schoolName,
+  schoolId,
+  schoolPrefix,
+  schoolCountryName,
+  schoolStateName,
+  schoolCurriculumName
 }: MasterQuestionCreatorProps) {
   if (!isOpen) return null;
 
@@ -348,32 +386,25 @@ export default function MasterQuestionCreator({
   const questionInputRef = useRef<HTMLTextAreaElement>(null);
 
   // 8. Shared Clipart Directory State
-  const [clipartCategory, setClipartCategory] = useState<ClipartCategory>('fruits');
+  const [clipartCategory, setClipartCategory] = useState<ClipartCategory | 'all'>('all');
+  const [clipartSearch, setClipartSearch] = useState<string>('');
   const [isClipartDirectoryOpen, setIsClipartDirectoryOpen] = useState(true);
   const [clipartCopiedToast, setClipartCopiedToast] = useState<string>('');
 
   const currentCategoryCliparts = useMemo(() => {
-    return getClipartsByCategory(clipartCategory);
-  }, [clipartCategory]);
-
-  // Active input tracking for direct insertion
-  const [activeInputTarget, setActiveInputTarget] = useState<'prompt' | 'visualText' | number>('prompt');
-
-  // Insert clipart tag into active field
-  const handleInsertClipartTag = (tag: string) => {
-    if (activeInputTarget === 'prompt') {
-      setPrompt(prev => prev ? `${prev} ${tag}` : tag);
-    } else if (activeInputTarget === 'visualText') {
-      setVisualText(prev => prev ? `${prev} ${tag}` : tag);
-    } else if (typeof activeInputTarget === 'number') {
-      const next = [...options];
-      next[activeInputTarget] = next[activeInputTarget] ? `${next[activeInputTarget]} ${tag}` : tag;
-      setOptions(next);
+    let list = clipartCategory === 'all' 
+      ? CLIPART_REGISTRY 
+      : getClipartsByCategory(clipartCategory);
+    if (clipartSearch.trim()) {
+      const q = clipartSearch.toLowerCase().trim();
+      list = list.filter(item => 
+        item.name.toLowerCase().includes(q) ||
+        item.keywords.some(k => k.toLowerCase().includes(q)) ||
+        (item.emojiEquivalent && item.emojiEquivalent.includes(q))
+      );
     }
-
-    setClipartCopiedToast(`Inserted ${tag}`);
-    setTimeout(() => setClipartCopiedToast(''), 2000);
-  };
+    return list;
+  }, [clipartCategory, clipartSearch]);
 
   // 9. Answers State (Dynamically adapting to type)
   const [options, setOptions] = useState<string[]>(
@@ -414,14 +445,40 @@ export default function MasterQuestionCreator({
         while (next.length < 4) next.push('');
         setOptions(next);
       }
-    } else if (nextType === 'fill_blank') {
+      setActiveInputTarget('option-0');
+    } else if (nextType === 'fill_blank' || nextType === 'open_box') {
       setOptions([openAnswer || '']);
       setCorrectIndex(0);
       setCorrectIndices([0]);
+      setActiveInputTarget('openAnswer');
     } else if (nextType === 'select_objects') {
       setOptions([String(selectObjectsGoal || 4)]);
       setCorrectIndex(0);
       setCorrectIndices([0]);
+      setActiveInputTarget('visual');
+    } else if (nextType === 'drag_and_drop') {
+      if (!dragItems || dragItems.length === 0) {
+        setDragItems([
+          { item: '🍎 Apple', target: '🧺 Fruit Basket', itemImage: 'apple' },
+          { item: '🐶 Puppy', target: '🏠 Doghouse', itemImage: 'puppy' },
+          { item: '🍌 Banana', target: '🧺 Fruit Basket', itemImage: 'banana' }
+        ]);
+      }
+      setActiveInputTarget('drag-0-item');
+    } else if (nextType === 'match_making') {
+      if (!matchPairs || matchPairs.length === 0) {
+        setMatchPairs([
+          { left: '[apple] Apple', right: 'Red' },
+          { left: '[banana] Banana', right: 'Yellow' },
+          { left: '[grapes] Grapes', right: 'Purple' }
+        ]);
+      }
+      setActiveInputTarget('match-0-left');
+    } else if (nextType === 'ordering') {
+      if (!orderSequence || orderSequence.length === 0) {
+        setOrderSequence(['1. First', '2. Second', '3. Third']);
+      }
+      setActiveInputTarget('order-0');
     }
   };
 
@@ -433,29 +490,72 @@ export default function MasterQuestionCreator({
     Number(question?.openBoxAnswer || question?.options?.[0]) || 4
   );
 
-  const [dragItems, setDragItems] = useState<{ item: string; target: string }[]>(
+  const [dragItems, setDragItems] = useState<DragItemConfig[]>(
     question?.dragItems && question.dragItems.length
       ? [...question.dragItems]
-      : []
+      : [
+          { item: '🍎 Apple', target: '🧺 Fruit Basket', itemImage: 'apple' },
+          { item: '🐶 Puppy', target: '🏠 Doghouse', itemImage: 'puppy' },
+          { item: '🍌 Banana', target: '🧺 Fruit Basket', itemImage: 'banana' }
+        ]
   );
 
-  const [matchPairs, setMatchPairs] = useState<{ left: string; right: string }[]>(
-    question?.matchPairs && question.matchPairs.length
-      ? [...question.matchPairs]
-      : []
-  );
+  // Drag & Drop Image Picker Modal state
+  const [dragItemImagePicker, setDragItemImagePicker] = useState<{
+    itemIndex: number;
+    field: 'itemImage' | 'targetImage';
+  } | null>(null);
+  const [dragImageSearch, setDragImageSearch] = useState('');
+  const [dragImageCategory, setDragImageCategory] = useState<ClipartCategory | 'all'>('all');
+  const [dragImageUrlInput, setDragImageUrlInput] = useState('');
+  const [dragImageTab, setDragImageTab] = useState<'clipart' | 'upload' | 'url'>('clipart');
+  const [selectedDragIndex, setSelectedDragIndex] = useState<number>(0);
+  const dragFileInputRef = useRef<HTMLInputElement>(null);
 
-  const [orderSequence, setOrderSequence] = useState<string[]>(
-    question?.orderSequence && question.orderSequence.length
-      ? [...question.orderSequence]
-      : []
-  );
+  const [matchPairs, setMatchPairs] = useState<{ left: string; right: string }[]>(() => {
+    if (question?.matchPairs && question.matchPairs.length) {
+      return [...question.matchPairs];
+    }
+    if (question?.options && question.options.length) {
+      const parsed = question.options
+        .map(opt => {
+          if (!opt) return null;
+          const delim = opt.includes('->') ? '->' : opt.includes('→') ? '→' : opt.includes('➔') ? '➔' : opt.includes(':') ? ':' : null;
+          if (delim) {
+            const [l, r] = opt.split(delim);
+            return { left: l.trim(), right: r.trim() };
+          }
+          return null;
+        })
+        .filter(Boolean) as { left: string; right: string }[];
+      if (parsed.length > 0) return parsed;
+    }
+    return [
+      { left: '[apple] Apple', right: 'Red' },
+      { left: '[banana] Banana', right: 'Yellow' },
+      { left: '[grapes] Grapes', right: 'Purple' }
+    ];
+  });
 
-  const [sortBuckets, setSortBuckets] = useState<{ bucketName: string; items: string[] }[]>(
-    question?.sortBuckets && question.sortBuckets.length
-      ? [...question.sortBuckets]
-      : []
-  );
+  const [orderSequence, setOrderSequence] = useState<string[]>(() => {
+    if (question?.orderSequence && question.orderSequence.length) {
+      return [...question.orderSequence];
+    }
+    if (question?.options && question.options.length) {
+      return [...question.options];
+    }
+    return ['1. First', '2. Second', '3. Third'];
+  });
+
+  const [sortBuckets, setSortBuckets] = useState<{ bucketName: string; items: string[] }[]>(() => {
+    if (question?.sortBuckets && question.sortBuckets.length) {
+      return [...question.sortBuckets];
+    }
+    return [
+      { bucketName: 'Fruits', items: ['[apple] Apple', '[banana] Banana'] },
+      { bucketName: 'Vegetables', items: ['[carrot] Carrot', '[broccoli] Broccoli'] }
+    ];
+  });
 
   const [clockHour, setClockHour] = useState<number>(3);
   const [clockMinute, setClockMinute] = useState<number>(0);
@@ -531,20 +631,38 @@ export default function MasterQuestionCreator({
   };
 
   const handleUpdateChipCount = (rawKey: string, delta: number) => {
-    const items = resolveMultipleClipartItems(visualClipartString);
-    const matchIdx = items.findIndex(it => (it.fallbackSrc || it.src || it.id.split('-')[0]) === rawKey || it.alt === rawKey);
-    if (delta < 0 && matchIdx !== -1) {
-      items.splice(matchIdx, 1);
-    } else if (delta > 0 && matchIdx !== -1) {
-      items.push({ ...items[matchIdx], id: `${items[matchIdx].id}-copy` });
+    const currentTokens = visualClipartString.trim() 
+      ? visualClipartString.split(/[,|]/).map(s => s.trim()).filter(Boolean) 
+      : [];
+    if (delta > 0) {
+      currentTokens.push(rawKey);
+    } else if (delta < 0) {
+      const idx = currentTokens.findIndex(tok => {
+        const resolved = resolveClipartItem(tok);
+        const resolvedKey = resolveClipartItem(rawKey);
+        return tok === rawKey || 
+          tok.toLowerCase() === rawKey.toLowerCase() ||
+          (resolved && resolvedKey && resolved.id === resolvedKey.id);
+      });
+      if (idx !== -1) {
+        currentTokens.splice(idx, 1);
+      }
     }
-    setVisualClipartString(items.map(it => it.fallbackSrc || it.src).join(', '));
+    setVisualClipartString(currentTokens.join(', '));
   };
 
   const handleRemoveChip = (rawKey: string) => {
-    const items = resolveMultipleClipartItems(visualClipartString);
-    const filtered = items.filter(it => (it.fallbackSrc || it.src || it.id.split('-')[0]) !== rawKey && it.alt !== rawKey);
-    setVisualClipartString(filtered.map(it => it.fallbackSrc || it.src).join(', '));
+    const currentTokens = visualClipartString.trim() 
+      ? visualClipartString.split(/[,|]/).map(s => s.trim()).filter(Boolean) 
+      : [];
+    const filtered = currentTokens.filter(tok => {
+      const resolved = resolveClipartItem(tok);
+      const resolvedKey = resolveClipartItem(rawKey);
+      if (tok === rawKey || tok.toLowerCase() === rawKey.toLowerCase()) return false;
+      if (resolved && resolvedKey && resolved.id === resolvedKey.id) return false;
+      return true;
+    });
+    setVisualClipartString(filtered.join(', '));
   };
 
   // 11. Difficulty, Points & Status
@@ -556,14 +674,149 @@ export default function MasterQuestionCreator({
   const [hint, setHint] = useState<string>(question?.hint || '');
   const [explanation, setExplanation] = useState<string>(question?.explanation || '');
 
+  // 11B. UNIFIED CLIPART INSERTION TARGET & HANDLER
+  const [activeInputTarget, setActiveInputTarget] = useState<ClipartTarget>('prompt');
+
+  const getTargetLabel = (target: ClipartTarget): string => {
+    if (target === 'prompt') return 'Question Prompt';
+    if (target === 'visual') return '🎨 Visual Canvas (Attached Clipart)';
+    if (target === 'visualText') return 'Visual Caption / Instructions';
+    if (target === 'openAnswer') return 'Answer (Fill-in Blank)';
+    if (target === 'explanation') return 'Explanation';
+    if (target === 'hint') return 'Hint';
+    if (target.startsWith('option-')) {
+      const idx = parseInt(target.replace('option-', ''), 10);
+      return `Option ${String.fromCharCode(65 + idx)}`;
+    }
+    if (target.startsWith('drag-')) {
+      const parts = target.split('-');
+      const idx = parseInt(parts[1], 10);
+      const field = parts[2];
+      return `Drag Item #${idx + 1} (${field === 'target' ? 'Target Zone' : 'Object'})`;
+    }
+    if (target.startsWith('match-')) {
+      const parts = target.split('-');
+      const idx = parseInt(parts[1], 10);
+      const side = parts[2];
+      return `Match Pair #${idx + 1} (${side === 'left' ? 'Left Item' : 'Right Match'})`;
+    }
+    if (target.startsWith('order-')) {
+      const idx = parseInt(target.replace('order-', ''), 10);
+      return `Sequence Step #${idx + 1}`;
+    }
+    return 'Selected Field';
+  };
+
+  const handleInsertClipart = (item: ClipartItem) => {
+    const tag = `[${item.keywords[0] || item.id}]`;
+
+    if (activeInputTarget === 'visual') {
+      handleAddVisualClipart(item.id);
+      setClipartCopiedToast(`Added ${item.name} to Visual Canvas`);
+      sounds.click();
+    } else if (activeInputTarget === 'prompt') {
+      setPrompt(prev => prev ? `${prev} ${tag}` : tag);
+      setClipartCopiedToast(`Inserted ${tag} into Prompt`);
+      sounds.click();
+    } else if (activeInputTarget === 'visualText') {
+      setVisualText(prev => prev ? `${prev} ${tag}` : tag);
+      setClipartCopiedToast(`Inserted ${tag} into Visual Text`);
+      sounds.click();
+    } else if (activeInputTarget === 'openAnswer') {
+      setOpenAnswer(prev => prev ? `${prev} ${tag}` : tag);
+      setClipartCopiedToast(`Inserted ${tag} into Answer`);
+      sounds.click();
+    } else if (activeInputTarget === 'explanation') {
+      setExplanation(prev => prev ? `${prev} ${tag}` : tag);
+      setClipartCopiedToast(`Inserted ${tag} into Explanation`);
+      sounds.click();
+    } else if (activeInputTarget === 'hint') {
+      setHint(prev => prev ? `${prev} ${tag}` : tag);
+      setClipartCopiedToast(`Inserted ${tag} into Hint`);
+      sounds.click();
+    } else if (activeInputTarget.startsWith('option-')) {
+      const idx = parseInt(activeInputTarget.replace('option-', ''), 10);
+      if (!isNaN(idx)) {
+        const next = [...options];
+        next[idx] = next[idx] ? `${next[idx]} ${tag}` : tag;
+        setOptions(next);
+        setClipartCopiedToast(`Inserted ${tag} into Option ${String.fromCharCode(65 + idx)}`);
+        sounds.click();
+      }
+    } else if (activeInputTarget.startsWith('drag-')) {
+      const parts = activeInputTarget.split('-');
+      const idx = parseInt(parts[1], 10);
+      const field = parts[2] as 'item' | 'target';
+      if (!isNaN(idx) && dragItems[idx]) {
+        const next = [...dragItems];
+        if (field === 'item') {
+          next[idx] = {
+            ...next[idx],
+            item: next[idx].item ? `${next[idx].item} ${tag}` : `${item.name} ${tag}`,
+            itemImage: item.id
+          };
+        } else {
+          next[idx] = {
+            ...next[idx],
+            target: next[idx].target ? `${next[idx].target} ${tag}` : `${item.name} ${tag}`
+          };
+        }
+        setDragItems(next);
+        setClipartCopiedToast(`Added ${item.name} to Drag Item #${idx + 1}`);
+        sounds.click();
+      }
+    } else if (activeInputTarget.startsWith('match-')) {
+      const parts = activeInputTarget.split('-');
+      const idx = parseInt(parts[1], 10);
+      const side = parts[2] as 'left' | 'right';
+      if (!isNaN(idx) && matchPairs[idx]) {
+        const next = [...matchPairs];
+        next[idx] = {
+          ...next[idx],
+          [side]: next[idx][side] ? `${next[idx][side]} ${tag}` : tag
+        };
+        setMatchPairs(next);
+        setClipartCopiedToast(`Inserted ${tag} into Match Pair #${idx + 1} (${side})`);
+        sounds.click();
+      }
+    } else if (activeInputTarget.startsWith('order-')) {
+      const idx = parseInt(activeInputTarget.replace('order-', ''), 10);
+      if (!isNaN(idx) && orderSequence[idx] !== undefined) {
+        const next = [...orderSequence];
+        next[idx] = next[idx] ? `${next[idx]} ${tag}` : tag;
+        setOrderSequence(next);
+        setClipartCopiedToast(`Inserted ${tag} into Step #${idx + 1}`);
+        sounds.click();
+      }
+    }
+
+    setTimeout(() => setClipartCopiedToast(''), 2500);
+  };
+
   // 12. Preview & Validation
   const [previewOpen, setPreviewOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   const generatedId = useMemo(() => {
     if (question?.id) return question.id;
+    if (lockAcademicHierarchy || schoolPrefix) {
+      const pfx = schoolPrefix || 'SCH';
+      const subjCode = getQuestionSubjectCode(subject || 'Mathematics');
+      const grCode = getQuestionGradeCode(grade || 'Grade 1');
+      const basePrefix = `${pfx}-${subjCode}-${grCode}`;
+      const regex = new RegExp(`^${basePrefix}[-_]?(\\d+)$`, 'i');
+      let max = 0;
+      for (const q of existingQuestions) {
+        const m = (q.id || '').match(regex);
+        if (m) {
+          const n = parseInt(m[1], 10);
+          if (!isNaN(n) && n > max) max = n;
+        }
+      }
+      return `${basePrefix}-${String(max + 1).padStart(4, '0')}`;
+    }
     return getNextQuestionId(grade as GradeLevel, existingQuestions, 0, subject as Subject);
-  }, [question?.id, grade, subject, existingQuestions]);
+  }, [question?.id, lockAcademicHierarchy, schoolPrefix, grade, subject, existingQuestions]);
 
   const targetGradeId = useMemo(() => {
     if (question?.gradeId) return question.gradeId;
@@ -653,13 +906,18 @@ export default function MasterQuestionCreator({
       gradeId: targetGradeId,
       subject: subject as Subject,
       subjectId: targetSubjectId,
-      category: selectedCategory.name,
-      skill: selectedSkill.name,
+      category: (selectedCategory.name || customCategoryText || 'General Practice').trim(),
+      skill: (selectedSkill.name || customSkillText || 'Problem Solving').trim(),
       categoryId: selectedCategory.id,
       skillId: selectedSkill.id,
       curriculumId: activeCurriculum.id,
-      curriculum: activeCurriculum.name,
+      curriculum: schoolCurriculumName || activeCurriculum.name,
       countryId: countryId,
+      country: schoolCountryName || (countryId === 'CNT-US' ? 'United States' : 'Global'),
+      state: schoolStateName,
+      schoolId: schoolId || (question as any)?.schoolId,
+      schoolName: schoolName || (question as any)?.schoolName,
+      isCustom: lockAcademicHierarchy ? true : (question as any)?.isCustom,
       visualClipart: hasVisual && visualClipartString.trim() ? visualClipartString.trim() : undefined,
       visualConfig
     };
@@ -768,10 +1026,14 @@ export default function MasterQuestionCreator({
               <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider font-mono ${
                 isCreate ? 'bg-amber-400 text-stone-950' : 'bg-blue-400 text-stone-950'
               }`}>
-                {isCreate ? '✨ Create New Question' : `✏️ Edit #${generatedId}`}
+                {isCreate 
+                  ? (lockAcademicHierarchy ? `🏫 School Custom #${generatedId}` : '✨ Create New Question') 
+                  : `✏️ Edit #${generatedId}`}
               </span>
               <span className="text-xs font-bold text-stone-300 hidden sm:inline">
-                Standard Question & Answer Creator
+                {lockAcademicHierarchy 
+                  ? `🔒 Private to ${schoolName || 'Your School'} (Applicable only to your school)` 
+                  : 'Standard Question & Answer Creator'}
               </span>
             </div>
 
@@ -804,150 +1066,310 @@ export default function MasterQuestionCreator({
               </div>
             )}
 
-            {/* 1. HEADER -> COMPLETE GRID (Country / Curriculum / Grade / Category / Skill) */}
-            <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 font-black text-stone-900 text-xs uppercase tracking-wider">
-                  <Globe className="w-4 h-4 text-blue-600" />
-                  <span>Academic Hierarchy Grid</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-stone-500">Difficulty:</span>
-                  {(['Easy', 'Medium', 'Hard'] as const).map(d => (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => setDifficulty(d)}
-                      className={`px-2 py-0.5 rounded-lg text-[10px] font-black transition cursor-pointer ${
-                        difficulty === d
-                          ? d === 'Easy'
-                            ? 'bg-emerald-600 text-white'
-                            : d === 'Medium'
-                            ? 'bg-amber-600 text-white'
-                            : 'bg-rose-600 text-white'
-                          : 'bg-white border border-stone-200 text-stone-600 hover:bg-stone-100'
-                      }`}
-                    >
-                      {d}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 5-Column Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 pt-1">
-                
-                {/* 1. Country */}
-                <div>
-                  <label className="text-[10px] font-bold text-stone-500 block mb-1">Country</label>
-                  <select
-                    value={countryId}
-                    onChange={e => setCountryId(e.target.value)}
-                    className="w-full p-2 rounded-xl border border-stone-200 bg-white text-xs font-bold text-stone-800 focus:ring-2 focus:ring-[#10246f]"
-                  >
-                    {countries.map(c => (
-                      <option key={c.id} value={c.id}>
-                        {getCountryFlag(c.id)} {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* 2. Curriculum */}
-                <div>
-                  <label className="text-[10px] font-bold text-stone-500 block mb-1">Curriculum</label>
-                  <select
-                    value={curriculumId}
-                    onChange={e => setCurriculumId(e.target.value)}
-                    className="w-full p-2 rounded-xl border border-stone-200 bg-white text-xs font-bold text-stone-800 focus:ring-2 focus:ring-[#10246f]"
-                  >
-                    {availableCurricula.map(c => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* 3. Grade */}
-                <div>
-                  <label className="text-[10px] font-bold text-stone-500 block mb-1">Grade</label>
-                  <select
-                    value={grade}
-                    onChange={e => setGrade(e.target.value)}
-                    className="w-full p-2 rounded-xl border border-stone-200 bg-white text-xs font-bold text-stone-800 focus:ring-2 focus:ring-[#10246f]"
-                  >
-                    {availableGrades.map(g => (
-                      <option key={g} value={g}>{g}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* 4. Category / Topic */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-[10px] font-bold text-stone-500">Category (Topic)</label>
-                    <button
-                      type="button"
-                      onClick={() => setIsCustomCategory(!isCustomCategory)}
-                      className="text-[9px] text-blue-600 font-bold hover:underline cursor-pointer"
-                    >
-                      {isCustomCategory ? 'List' : '+ Custom'}
-                    </button>
+            {/* 1. HEADER -> ACADEMIC HIERARCHY */}
+            {lockAcademicHierarchy ? (
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/40 border border-slate-200 space-y-3">
+                {/* School Standard Lock Banner */}
+                <div className="bg-white p-3 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm shadow-2xs shrink-0">
+                      🏫
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-black text-slate-900">
+                        <span>School Academic Standards (Locked to {schoolName || 'Your School'})</span>
+                        <span className="px-2 py-0.2 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                          🔒 Fixed Hierarchy
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-600 font-medium flex flex-wrap items-center gap-1.5 mt-0.5">
+                        <span className="font-bold text-slate-800">{schoolCountryName || 'United States'}</span>
+                        <span>•</span>
+                        <span>{schoolStateName || 'California'}</span>
+                        <span>•</span>
+                        <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 text-slate-900 font-bold text-[10px]">
+                          {schoolCurriculumName || 'Common Core (US)'}
+                        </span>
+                        <span>•</span>
+                        <span className="text-blue-700 font-bold text-[10px]">🔒 Private to {schoolName || 'Your School'} Question Bank</span>
+                      </div>
+                    </div>
                   </div>
-                  {isCustomCategory ? (
-                    <input
-                      value={customCategoryText}
-                      onChange={e => setCustomCategoryText(e.target.value)}
-                      placeholder="Type custom topic..."
-                      className="w-full p-2 rounded-xl border border-blue-300 bg-blue-50/40 text-xs font-semibold focus:ring-2 focus:ring-blue-600"
-                    />
-                  ) : (
+                  <div className="text-[10px] text-slate-500 font-bold bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200 shrink-0 flex items-center gap-1">
+                    <Lock className="w-3 h-3 text-emerald-600" />
+                    <span>Fixed to School Profile</span>
+                  </div>
+                </div>
+
+                {/* 4-Field Grid for Teachers: Grade, Subject, Category, Skill */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-1">
+                  {/* Grade */}
+                  <div>
+                    <label className="text-[10px] font-bold text-stone-600 block mb-1 uppercase tracking-wider">
+                      Assigned Grade
+                    </label>
                     <select
-                      value={selectedCategory.id}
-                      onChange={e => setCategoryId(e.target.value)}
+                      value={grade}
+                      onChange={e => setGrade(e.target.value)}
                       className="w-full p-2 rounded-xl border border-stone-200 bg-white text-xs font-bold text-stone-800 focus:ring-2 focus:ring-[#10246f]"
                     >
-                      {categoryOptions.map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
+                      {availableGrades.map(g => (
+                        <option key={g} value={g}>{g}</option>
                       ))}
                     </select>
-                  )}
-                </div>
-
-                {/* 5. Skill */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-[10px] font-bold text-stone-500">Target Skill</label>
-                    <button
-                      type="button"
-                      onClick={() => setIsCustomSkill(!isCustomSkill)}
-                      className="text-[9px] text-emerald-600 font-bold hover:underline cursor-pointer"
-                    >
-                      {isCustomSkill ? 'List' : '+ Custom'}
-                    </button>
                   </div>
-                  {isCustomSkill ? (
-                    <input
-                      value={customSkillText}
-                      onChange={e => setCustomSkillText(e.target.value)}
-                      placeholder="Type custom skill..."
-                      className="w-full p-2 rounded-xl border border-emerald-300 bg-emerald-50/40 text-xs font-semibold focus:ring-2 focus:ring-emerald-600"
-                    />
-                  ) : (
+
+                  {/* Subject */}
+                  <div>
+                    <label className="text-[10px] font-bold text-stone-600 block mb-1 uppercase tracking-wider">
+                      Assigned Subject
+                    </label>
                     <select
-                      value={selectedSkill.id}
-                      onChange={e => setSkillId(e.target.value)}
+                      value={subject}
+                      onChange={e => setSubject(e.target.value)}
                       className="w-full p-2 rounded-xl border border-stone-200 bg-white text-xs font-bold text-stone-800 focus:ring-2 focus:ring-[#10246f]"
                     >
-                      {skillOptions.map(s => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
+                      {availableSubjects.map(s => (
+                        <option key={s} value={s}>{s}</option>
                       ))}
                     </select>
-                  )}
+                  </div>
+
+                  {/* Category / Topic */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10px] font-bold text-stone-600 uppercase tracking-wider">Category (Topic)</label>
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomCategory(!isCustomCategory)}
+                        className="text-[9px] text-blue-600 font-bold hover:underline cursor-pointer"
+                      >
+                        {isCustomCategory ? 'Select List' : '+ Type Custom'}
+                      </button>
+                    </div>
+                    {isCustomCategory ? (
+                      <input
+                        value={customCategoryText}
+                        onChange={e => setCustomCategoryText(e.target.value)}
+                        placeholder="e.g. Numbers & Operations"
+                        className="w-full p-2 rounded-xl border border-blue-300 bg-blue-50/40 text-xs font-semibold focus:ring-2 focus:ring-blue-600"
+                      />
+                    ) : (
+                      <select
+                        value={selectedCategory.id}
+                        onChange={e => setCategoryId(e.target.value)}
+                        className="w-full p-2 rounded-xl border border-stone-200 bg-white text-xs font-bold text-stone-800 focus:ring-2 focus:ring-[#10246f]"
+                      >
+                        {categoryOptions.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
+                  {/* Skill */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10px] font-bold text-stone-600 uppercase tracking-wider">Target Skill</label>
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomSkill(!isCustomSkill)}
+                        className="text-[9px] text-emerald-600 font-bold hover:underline cursor-pointer"
+                      >
+                        {isCustomSkill ? 'Select List' : '+ Type Custom'}
+                      </button>
+                    </div>
+                    {isCustomSkill ? (
+                      <input
+                        value={customSkillText}
+                        onChange={e => setCustomSkillText(e.target.value)}
+                        placeholder="e.g. Problem Solving"
+                        className="w-full p-2 rounded-xl border border-emerald-300 bg-emerald-50/40 text-xs font-semibold focus:ring-2 focus:ring-emerald-600"
+                      />
+                    ) : (
+                      <select
+                        value={selectedSkill.id}
+                        onChange={e => setSkillId(e.target.value)}
+                        className="w-full p-2 rounded-xl border border-stone-200 bg-white text-xs font-bold text-stone-800 focus:ring-2 focus:ring-[#10246f]"
+                      >
+                        {skillOptions.map(s => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                </div>
+
+                {/* Difficulty selector bar */}
+                <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
+                  <span className="text-[11px] font-bold text-stone-500">Question Difficulty Level:</span>
+                  <div className="flex items-center gap-1.5">
+                    {(['Easy', 'Medium', 'Hard'] as const).map(d => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setDifficulty(d)}
+                        className={`px-3 py-1 rounded-xl text-xs font-black transition cursor-pointer ${
+                          difficulty === d
+                            ? d === 'Easy'
+                              ? 'bg-emerald-600 text-white shadow-xs'
+                              : d === 'Medium'
+                              ? 'bg-amber-600 text-white shadow-xs'
+                              : 'bg-rose-600 text-white shadow-xs'
+                            : 'bg-white border border-stone-200 text-stone-600 hover:bg-stone-100'
+                        }`}
+                      >
+                        {d}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-black text-stone-900 text-xs uppercase tracking-wider">
+                    <Globe className="w-4 h-4 text-blue-600" />
+                    <span>Academic Hierarchy Grid</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-stone-500">Difficulty:</span>
+                    {(['Easy', 'Medium', 'Hard'] as const).map(d => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setDifficulty(d)}
+                        className={`px-2 py-0.5 rounded-lg text-[10px] font-black transition cursor-pointer ${
+                          difficulty === d
+                            ? d === 'Easy'
+                              ? 'bg-emerald-600 text-white'
+                              : d === 'Medium'
+                              ? 'bg-amber-600 text-white'
+                              : 'bg-rose-600 text-white'
+                            : 'bg-white border border-stone-200 text-stone-600 hover:bg-stone-100'
+                        }`}
+                      >
+                        {d}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 5-Column Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 pt-1">
+                  
+                  {/* 1. Country */}
+                  <div>
+                    <label className="text-[10px] font-bold text-stone-500 block mb-1">Country</label>
+                    <select
+                      value={countryId}
+                      onChange={e => setCountryId(e.target.value)}
+                      className="w-full p-2 rounded-xl border border-stone-200 bg-white text-xs font-bold text-stone-800 focus:ring-2 focus:ring-[#10246f]"
+                    >
+                      {countries.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {getCountryFlag(c.id)} {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 2. Curriculum */}
+                  <div>
+                    <label className="text-[10px] font-bold text-stone-500 block mb-1">Curriculum</label>
+                    <select
+                      value={curriculumId}
+                      onChange={e => setCurriculumId(e.target.value)}
+                      className="w-full p-2 rounded-xl border border-stone-200 bg-white text-xs font-bold text-stone-800 focus:ring-2 focus:ring-[#10246f]"
+                    >
+                      {availableCurricula.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 3. Grade */}
+                  <div>
+                    <label className="text-[10px] font-bold text-stone-500 block mb-1">Grade</label>
+                    <select
+                      value={grade}
+                      onChange={e => setGrade(e.target.value)}
+                      className="w-full p-2 rounded-xl border border-stone-200 bg-white text-xs font-bold text-stone-800 focus:ring-2 focus:ring-[#10246f]"
+                    >
+                      {availableGrades.map(g => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 4. Category / Topic */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10px] font-bold text-stone-500">Category (Topic)</label>
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomCategory(!isCustomCategory)}
+                        className="text-[9px] text-blue-600 font-bold hover:underline cursor-pointer"
+                      >
+                        {isCustomCategory ? 'List' : '+ Custom'}
+                      </button>
+                    </div>
+                    {isCustomCategory ? (
+                      <input
+                        value={customCategoryText}
+                        onChange={e => setCustomCategoryText(e.target.value)}
+                        placeholder="Type custom topic..."
+                        className="w-full p-2 rounded-xl border border-blue-300 bg-blue-50/40 text-xs font-semibold focus:ring-2 focus:ring-blue-600"
+                      />
+                    ) : (
+                      <select
+                        value={selectedCategory.id}
+                        onChange={e => setCategoryId(e.target.value)}
+                        className="w-full p-2 rounded-xl border border-stone-200 bg-white text-xs font-bold text-stone-800 focus:ring-2 focus:ring-[#10246f]"
+                      >
+                        {categoryOptions.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
+                  {/* 5. Skill */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10px] font-bold text-stone-500">Target Skill</label>
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomSkill(!isCustomSkill)}
+                        className="text-[9px] text-emerald-600 font-bold hover:underline cursor-pointer"
+                      >
+                        {isCustomSkill ? 'List' : '+ Custom'}
+                      </button>
+                    </div>
+                    {isCustomSkill ? (
+                      <input
+                        value={customSkillText}
+                        onChange={e => setCustomSkillText(e.target.value)}
+                        placeholder="Type custom skill..."
+                        className="w-full p-2 rounded-xl border border-emerald-300 bg-emerald-50/40 text-xs font-semibold focus:ring-2 focus:ring-emerald-600"
+                      />
+                    ) : (
+                      <select
+                        value={selectedSkill.id}
+                        onChange={e => setSkillId(e.target.value)}
+                        className="w-full p-2 rounded-xl border border-stone-200 bg-white text-xs font-bold text-stone-800 focus:ring-2 focus:ring-[#10246f]"
+                      >
+                        {skillOptions.map(s => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* 2. QUESTION TYPE DROPDOWN */}
             <div className="p-3.5 rounded-2xl bg-white border border-stone-200 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
@@ -976,9 +1398,22 @@ export default function MasterQuestionCreator({
             {/* 3. QUESTION PROMPT */}
             <div className="p-4 rounded-2xl bg-white border border-stone-200 space-y-2 shadow-2xs">
               <div className="flex items-center justify-between">
-                <label className="font-black text-stone-900 text-xs uppercase tracking-wider">
-                  Question Prompt (Student-Facing Text):
-                </label>
+                <div className="flex items-center gap-2">
+                  <label className="font-black text-stone-900 text-xs uppercase tracking-wider">
+                    Question Prompt (Student-Facing Text):
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveInputTarget('prompt');
+                      setIsClipartDirectoryOpen(true);
+                      document.getElementById('universal-clipart-directory')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }}
+                    className="text-[10px] font-bold text-amber-800 hover:text-amber-950 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded-lg border border-amber-300 transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>🎨</span> + Insert Clipart
+                  </button>
+                </div>
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-stone-500 font-bold">Reward Points:</span>
                   <input
@@ -1018,32 +1453,37 @@ export default function MasterQuestionCreator({
               )}
             </div>
 
-            {/* 4. CENTRALIZED CLIPART DIRECTORY (Used for Question & Answers) */}
-            <div className="rounded-2xl border border-amber-300/80 bg-amber-50/70 overflow-hidden shadow-2xs">
+            {/* 4. CENTRALIZED CLIPART DIRECTORY (Used for Question, Visuals, Answers, Options & Draggables) */}
+            <div id="universal-clipart-directory" className="rounded-2xl border-2 border-amber-300 bg-amber-50/70 overflow-hidden shadow-2xs">
               {/* Directory Header with Toggle */}
               <div 
                 onClick={() => setIsClipartDirectoryOpen(!isClipartDirectoryOpen)}
-                className="p-3 bg-amber-100/70 flex items-center justify-between cursor-pointer select-none border-b border-amber-200/80"
+                className="p-3 bg-gradient-to-r from-amber-100 to-amber-200/90 flex items-center justify-between cursor-pointer select-none border-b border-amber-300"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-base">🎨</span>
+                  <span className="text-lg">🎨</span>
                   <div>
-                    <span className="font-black text-amber-950 text-xs">
-                      Universal Clipart Directory ({CLIPART_REGISTRY.length} Vector Items)
-                    </span>
-                    <span className="text-[10px] text-amber-800 ml-2 hidden sm:inline">
-                      Click any clipart below to insert into your Question or Answer
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-amber-950 text-xs sm:text-sm">
+                        Universal Clipart Directory ({CLIPART_REGISTRY.length} Vector Items)
+                      </span>
+                      <span className="text-[10px] font-extrabold text-amber-900 bg-amber-300/80 px-2 py-0.5 rounded-full">
+                        1-Click Insert
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-amber-900 ml-0.5 hidden sm:inline">
+                      Click any clipart below to add directly into your Question, Visuals, Options, or Draggables
                     </span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
                   {clipartCopiedToast && (
-                    <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full animate-pulse">
+                    <span className="text-[11px] font-black text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-full border border-emerald-300 shadow-2xs animate-pulse">
                       ✓ {clipartCopiedToast}
                     </span>
                   )}
-                  <span className="text-[11px] font-bold text-amber-900">
+                  <span className="p-1 rounded-lg hover:bg-amber-300/60 text-amber-900 font-bold transition">
                     {isClipartDirectoryOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </span>
                 </div>
@@ -1052,8 +1492,200 @@ export default function MasterQuestionCreator({
               {isClipartDirectoryOpen && (
                 <div className="p-3.5 space-y-3">
                   
+                  {/* UNIFIED INSERTION TARGET SELECTOR BAR */}
+                  <div className="p-2.5 rounded-xl bg-white border border-amber-300 shadow-2xs space-y-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs font-black text-stone-800 flex items-center gap-1.5 shrink-0">
+                          <Target className="w-4 h-4 text-amber-600" />
+                          <span>Insert Clipart Into:</span>
+                        </label>
+                        <select
+                          value={activeInputTarget}
+                          onChange={(e) => setActiveInputTarget(e.target.value as ClipartTarget)}
+                          className="px-2.5 py-1.5 bg-amber-50 border-2 border-amber-400 text-stone-900 font-black text-xs rounded-xl outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer shadow-2xs"
+                        >
+                          <option value="prompt">📝 Question Prompt</option>
+                          <option value="visual">🎨 Visual Canvas (Attached Clipart)</option>
+                          <option value="visualText">ℹ️ Visual Caption / Text</option>
+                          {options.map((_, idx) => (
+                            <option key={idx} value={`option-${idx}`}>
+                              🔘 Option {String.fromCharCode(65 + idx)}
+                            </option>
+                          ))}
+                          {(type === 'fill_blank' || type === 'open_box' || type === 'word_problem') && (
+                            <option value="openAnswer">✏️ Answer (Fill-in Blank)</option>
+                          )}
+                          {type === 'drag_and_drop' && dragItems.map((_, idx) => (
+                            <optgroup key={idx} label={`Drag Item #${idx + 1}`}>
+                              <option value={`drag-${idx}-item`}>🔀 Drag Item #{idx + 1} (Object)</option>
+                              <option value={`drag-${idx}-target`}>🧺 Drag Item #{idx + 1} (Target Zone)</option>
+                            </optgroup>
+                          ))}
+                          {type === 'match_making' && matchPairs.map((_, idx) => (
+                            <optgroup key={idx} label={`Match Pair #${idx + 1}`}>
+                              <option value={`match-${idx}-left`}>🔗 Match Pair #{idx + 1} (Left Item)</option>
+                              <option value={`match-${idx}-right`}>🔗 Match Pair #{idx + 1} (Right Match)</option>
+                            </optgroup>
+                          ))}
+                          {type === 'ordering' && orderSequence.map((_, idx) => (
+                            <option key={idx} value={`order-${idx}`}>
+                              🔢 Step #{idx + 1}
+                            </option>
+                          ))}
+                          <option value="explanation">📖 Explanation</option>
+                          <option value="hint">💡 Hint</option>
+                        </select>
+                      </div>
+
+                      {/* Search Bar for Clipart */}
+                      <div className="relative flex-1 max-w-xs">
+                        <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-stone-400" />
+                        <input
+                          value={clipartSearch}
+                          onChange={e => setClipartSearch(e.target.value)}
+                          placeholder="Search cliparts (e.g. apple, cat, star)..."
+                          className="w-full pl-8 pr-2.5 py-1.5 rounded-xl border border-stone-200 text-xs font-bold outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-300 bg-stone-50/50"
+                        />
+                        {clipartSearch && (
+                          <button
+                            type="button"
+                            onClick={() => setClipartSearch('')}
+                            className="absolute right-2 top-2 text-stone-400 hover:text-stone-700 text-xs font-black cursor-pointer"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Quick Pill Buttons */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pt-1 pb-0.5 border-t border-amber-100 scrollbar-thin">
+                      <span className="text-[10px] font-extrabold text-stone-500 uppercase tracking-wider shrink-0">
+                        Quick Targets:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveInputTarget('prompt')}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-black cursor-pointer transition whitespace-nowrap ${
+                          activeInputTarget === 'prompt' 
+                            ? 'bg-[#10246f] text-white shadow-2xs' 
+                            : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                        }`}
+                      >
+                        📝 Prompt
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveInputTarget('visual');
+                          setHasVisual(true);
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-black cursor-pointer transition whitespace-nowrap flex items-center gap-1 ${
+                          activeInputTarget === 'visual' 
+                            ? 'bg-amber-600 text-white shadow-2xs ring-2 ring-amber-300' 
+                            : 'bg-amber-100 text-amber-950 hover:bg-amber-200 border border-amber-300'
+                        }`}
+                      >
+                        <span>🎨</span> Visuals
+                      </button>
+                      {(type === 'single_choice' || type === 'multiple_choice' || type === 'image_choice' || type === 'radio_single') && options.slice(0, 4).map((_, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setActiveInputTarget(`option-${idx}`)}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-black cursor-pointer transition whitespace-nowrap ${
+                            activeInputTarget === `option-${idx}` 
+                              ? 'bg-[#10246f] text-white shadow-2xs' 
+                              : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                          }`}
+                        >
+                          Option {String.fromCharCode(65 + idx)}
+                        </button>
+                      ))}
+                      {type === 'match_making' && matchPairs.map((_, idx) => (
+                        <div key={idx} className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setActiveInputTarget(`match-${idx}-left`)}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-black cursor-pointer transition whitespace-nowrap ${
+                              activeInputTarget === `match-${idx}-left`
+                                ? 'bg-purple-600 text-white shadow-2xs'
+                                : 'bg-purple-100 text-purple-950 hover:bg-purple-200'
+                            }`}
+                          >
+                            🔗 Pair #{idx + 1} Left
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActiveInputTarget(`match-${idx}-right`)}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-black cursor-pointer transition whitespace-nowrap ${
+                              activeInputTarget === `match-${idx}-right`
+                                ? 'bg-purple-600 text-white shadow-2xs'
+                                : 'bg-purple-100 text-purple-950 hover:bg-purple-200'
+                            }`}
+                          >
+                            🔗 Pair #{idx + 1} Right
+                          </button>
+                        </div>
+                      ))}
+                      {type === 'drag_and_drop' && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveInputTarget('drag-0-item')}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-black cursor-pointer transition whitespace-nowrap ${
+                            activeInputTarget.startsWith('drag-') 
+                              ? 'bg-purple-600 text-white shadow-2xs' 
+                              : 'bg-purple-100 text-purple-950 hover:bg-purple-200'
+                          }`}
+                        >
+                          🔀 Drag Items
+                        </button>
+                      )}
+                      {type === 'ordering' && orderSequence.map((_, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setActiveInputTarget(`order-${idx}`)}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-black cursor-pointer transition whitespace-nowrap ${
+                            activeInputTarget === `order-${idx}`
+                              ? 'bg-emerald-600 text-white shadow-2xs'
+                              : 'bg-emerald-100 text-emerald-950 hover:bg-emerald-200'
+                          }`}
+                        >
+                          🔢 Step #{idx + 1}
+                        </button>
+                      ))}
+                      {(type === 'fill_blank' || type === 'open_box') && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveInputTarget('openAnswer')}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-black cursor-pointer transition whitespace-nowrap ${
+                            activeInputTarget === 'openAnswer' 
+                              ? 'bg-emerald-600 text-white shadow-2xs' 
+                              : 'bg-emerald-100 text-emerald-950 hover:bg-emerald-200'
+                          }`}
+                        >
+                          ✏️ Answer
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Family Selector Tabs */}
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+                    <button
+                      type="button"
+                      onClick={() => setClipartCategory('all')}
+                      className={`px-2.5 py-1 rounded-xl font-black text-[11px] flex items-center gap-1 transition cursor-pointer shrink-0 ${
+                        clipartCategory === 'all'
+                          ? 'bg-amber-600 text-white shadow-xs'
+                          : 'bg-white border border-stone-200 text-stone-700 hover:bg-amber-100/60'
+                      }`}
+                    >
+                      <span>🌟</span>
+                      <span>All ({CLIPART_REGISTRY.length})</span>
+                    </button>
                     {CLIPART_FAMILIES.map(fam => {
                       const isActive = fam.id === clipartCategory;
                       return (
@@ -1063,7 +1695,7 @@ export default function MasterQuestionCreator({
                           onClick={() => setClipartCategory(fam.id)}
                           className={`px-2.5 py-1 rounded-xl font-black text-[11px] flex items-center gap-1 transition cursor-pointer shrink-0 ${
                             isActive
-                              ? 'bg-amber-500 text-stone-950 shadow-xs ring-2 ring-amber-300'
+                              ? 'bg-amber-600 text-white shadow-xs ring-2 ring-amber-300'
                               : 'bg-white border border-stone-200 text-stone-700 hover:bg-amber-100/60'
                           }`}
                         >
@@ -1074,85 +1706,39 @@ export default function MasterQuestionCreator({
                     })}
                   </div>
 
-                  {/* Active Clipart Grid */}
-                  <div className="grid grid-cols-3 sm:grid-cols-6 md:grid-cols-9 gap-2 max-h-48 overflow-y-auto p-1">
-                    {currentCategoryCliparts.map(item => {
-                      const tag = `[${item.keywords[0] || item.id}]`;
-                      return (
-                        <div
-                          key={item.id}
-                          className="p-1.5 rounded-xl bg-white border border-stone-200 hover:border-amber-400 hover:bg-amber-50/70 transition flex flex-col items-center justify-between group shadow-2xs"
-                        >
-                          <div className="w-8 h-8 flex items-center justify-center p-0.5">
-                            <ClipartImage clipart={item} size="sm" />
-                          </div>
-                          <span className="text-[10px] font-extrabold text-stone-700 truncate w-full text-center mt-1">
-                            {item.name}
-                          </span>
-                          
-                          {/* Quick 1-click Insert Actions */}
-                          <div className="flex items-center gap-1 mt-1 pt-1 border-t border-stone-100 w-full justify-center">
-                            <button
-                              type="button"
-                              onClick={() => handleInsertClipartTag(tag)}
-                              className="px-1 py-0.5 rounded bg-amber-100 hover:bg-amber-200 text-amber-900 font-black text-[9px] cursor-pointer"
-                              title={`Insert ${tag} into active field`}
-                            >
-                              + Insert
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                handleAddVisualClipart(tag);
-                                setClipartCopiedToast(`Added ${tag} to Visual`);
-                                setTimeout(() => setClipartCopiedToast(''), 2000);
-                              }}
-                              className="px-1 py-0.5 rounded bg-blue-100 hover:bg-blue-200 text-blue-900 font-black text-[9px] cursor-pointer"
-                              title="Add to Visual Representation"
-                            >
-                              + Visual
-                            </button>
-                          </div>
+                  {/* Active Clipart Grid - Clean single-action cards */}
+                  <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 max-h-52 overflow-y-auto p-1 bg-white/60 rounded-xl border border-amber-200/80">
+                    {currentCategoryCliparts.map(item => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => handleInsertClipart(item)}
+                        className="p-2 rounded-xl bg-white border border-stone-200 hover:border-amber-500 hover:bg-amber-50/90 hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center gap-1 cursor-pointer shadow-2xs group text-center"
+                        title={`Click to insert ${item.name} into ${getTargetLabel(activeInputTarget)}`}
+                      >
+                        <div className="w-10 h-10 flex items-center justify-center p-0.5">
+                          <ClipartImage clipart={item} size="sm" />
                         </div>
-                      );
-                    })}
+                        <span className="text-[10px] font-extrabold text-stone-800 group-hover:text-amber-950 truncate w-full text-center">
+                          {item.name}
+                        </span>
+                      </button>
+                    ))}
+                    {currentCategoryCliparts.length === 0 && (
+                      <div className="col-span-full py-8 text-center text-xs text-stone-400 font-bold">
+                        No cliparts found matching &quot;{clipartSearch}&quot;
+                      </div>
+                    )}
                   </div>
 
-                  {/* Insertion Target Switcher */}
-                  <div className="flex items-center justify-between text-[11px] pt-1 border-t border-amber-200/80 flex-wrap gap-2">
-                    <span className="font-bold text-amber-900">Current Insertion Target:</span>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <button
-                        type="button"
-                        onClick={() => setActiveInputTarget('prompt')}
-                        className={`px-2 py-0.5 rounded-lg font-bold text-[10px] cursor-pointer ${
-                          activeInputTarget === 'prompt' ? 'bg-[#10246f] text-white' : 'bg-white text-stone-700 border border-stone-200'
-                        }`}
-                      >
-                        Question Prompt
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setActiveInputTarget('visualText')}
-                        className={`px-2 py-0.5 rounded-lg font-bold text-[10px] cursor-pointer ${
-                          activeInputTarget === 'visualText' ? 'bg-[#10246f] text-white' : 'bg-white text-stone-700 border border-stone-200'
-                        }`}
-                      >
-                        Visual Text
-                      </button>
-                      {options.slice(0, 4).map((_, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => setActiveInputTarget(idx)}
-                          className={`px-2 py-0.5 rounded-lg font-bold text-[10px] cursor-pointer ${
-                            activeInputTarget === idx ? 'bg-[#10246f] text-white' : 'bg-white text-stone-700 border border-stone-200'
-                          }`}
-                        >
-                          Option {String.fromCharCode(65 + idx)}
-                        </button>
-                      ))}
-                    </div>
+                  {/* Active Target Information Banner */}
+                  <div className="px-3 py-1.5 rounded-xl bg-amber-100/70 border border-amber-200/80 text-[11px] font-bold text-amber-900 flex items-center justify-between">
+                    <span>
+                      Current Destination: <strong className="text-amber-950 bg-amber-200/80 px-1.5 py-0.5 rounded-md ml-1">{getTargetLabel(activeInputTarget)}</strong>
+                    </span>
+                    <span className="text-[10px] text-stone-500 hidden sm:inline">
+                      Click any clipart above to insert immediately
+                    </span>
                   </div>
                 </div>
               )}
@@ -1230,7 +1816,7 @@ export default function MasterQuestionCreator({
 
                             <input
                               value={opt}
-                              onFocus={() => setActiveInputTarget(idx)}
+                              onFocus={() => setActiveInputTarget(`option-${idx}`)}
                               onChange={e => {
                                 const next = [...options];
                                 next[idx] = e.target.value;
@@ -1239,6 +1825,23 @@ export default function MasterQuestionCreator({
                               placeholder={`Option ${letter} answer text or [clipart]...`}
                               className="flex-1 p-2 rounded-xl border border-stone-200 bg-white font-bold text-xs outline-none focus:ring-2 focus:ring-emerald-500"
                             />
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveInputTarget(`option-${idx}`);
+                                setIsClipartDirectoryOpen(true);
+                                document.getElementById('universal-clipart-directory')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                              }}
+                              title={`Insert clipart into Option ${letter}`}
+                              className={`p-1.5 rounded-xl border text-xs font-bold transition flex items-center justify-center cursor-pointer shrink-0 ${
+                                activeInputTarget === `option-${idx}`
+                                  ? 'bg-amber-500 text-white border-amber-600 shadow-2xs'
+                                  : 'bg-white text-stone-600 border-stone-200 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-900'
+                              }`}
+                            >
+                              🎨
+                            </button>
 
                             {options.length > 2 && (
                               <button
@@ -1274,12 +1877,26 @@ export default function MasterQuestionCreator({
               {/* 5B. Fill in the Blank / Open Box */}
               {(type === 'fill_blank' || type === 'open_box') && (
                 <div className="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-2">
-                  <label className="font-extrabold text-xs text-stone-900 block">
-                    Expected Correct Student Answer:
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="font-extrabold text-xs text-stone-900 block">
+                      Expected Correct Student Answer:
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveInputTarget('openAnswer');
+                        setIsClipartDirectoryOpen(true);
+                        document.getElementById('universal-clipart-directory')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                      }}
+                      className="text-[10px] font-bold text-amber-800 hover:text-amber-950 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded-lg border border-amber-300 transition flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>🎨</span> + Insert Clipart
+                    </button>
+                  </div>
                   <input
                     required
                     value={openAnswer}
+                    onFocus={() => setActiveInputTarget('openAnswer')}
                     onChange={e => setOpenAnswer(e.target.value)}
                     placeholder="e.g. 15 or 8 apples or Triangle"
                     className="w-full p-2.5 rounded-xl border border-amber-300 bg-white text-sm font-black text-amber-950 focus:ring-2 focus:ring-amber-500"
@@ -1344,140 +1961,406 @@ export default function MasterQuestionCreator({
 
               {/* 5E. Drag & Drop */}
               {type === 'drag_and_drop' && (
-                <div className="space-y-2">
+                <div className="space-y-3 p-3.5 rounded-2xl bg-amber-50/50 border border-amber-200">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-stone-700">Draggable Items ➔ Target Zones</span>
+                    <div>
+                      <span className="font-bold text-xs text-amber-950 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                        Draggable Items ➔ Target Drop Zones
+                      </span>
+                      <p className="text-[10px] text-amber-700 mt-0.5">
+                        Each item can have a vector clipart image or custom uploaded picture attached!
+                      </p>
+                    </div>
                     <button
                       type="button"
-                      onClick={() => setDragItems(prev => [...prev, { item: 'Item', target: 'Target' }])}
-                      className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-black text-[10px] hover:bg-blue-100"
+                      onClick={() => {
+                        const newIdx = dragItems.length + 1;
+                        setDragItems(prev => [
+                          ...prev,
+                          { item: `Item ${newIdx}`, target: 'Target Zone', itemImage: undefined }
+                        ]);
+                        setSelectedDragIndex(dragItems.length);
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-black text-[10px] cursor-pointer shadow-2xs transition"
                     >
-                      + Add Pair
+                      + Add Item
                     </button>
                   </div>
-                  {dragItems.map((d, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <input
-                        value={d.item}
-                        onChange={e => {
-                          const next = [...dragItems];
-                          next[i].item = e.target.value;
-                          setDragItems(next);
-                        }}
-                        placeholder="Draggable item (e.g. 🍎 Apple)"
-                        className="flex-1 p-2 rounded-xl border border-stone-200 text-xs font-bold"
-                      />
-                      <span className="text-stone-400 font-black">➔</span>
-                      <input
-                        value={d.target}
-                        onChange={e => {
-                          const next = [...dragItems];
-                          next[i].target = e.target.value;
-                          setDragItems(next);
-                        }}
-                        placeholder="Target container (e.g. 🧺 Basket)"
-                        className="flex-1 p-2 rounded-xl border border-stone-200 text-xs font-bold"
-                      />
-                      {dragItems.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => setDragItems(prev => prev.filter((_, idx) => idx !== i))}
-                          className="p-1.5 text-stone-400 hover:text-rose-600 rounded-lg"
+
+                  <div className="space-y-2">
+                    {dragItems.map((d, i) => {
+                      // Resolve item thumbnail
+                      const currentImgNode = (() => {
+                        if (d.itemImage) {
+                          if (d.itemImage.startsWith('data:') || d.itemImage.startsWith('http') || d.itemImage.startsWith('/')) {
+                            return <img src={d.itemImage} alt={d.item} className="w-8 h-8 object-contain rounded-lg" />;
+                          }
+                          const resolved = resolveClipartItem(d.itemImage);
+                          if (resolved && resolved.isImage) {
+                            return <ClipartImage clipart={resolved} size="xs" />;
+                          }
+                          if (resolved?.emoji) {
+                            return <span className="text-xl">{resolved.emoji}</span>;
+                          }
+                        }
+                        const parsed = parseOptionClipart(d.item);
+                        if (parsed.hasClipart && parsed.clipart) {
+                          return <ClipartImage clipart={parsed.clipart} size="xs" />;
+                        }
+                        return null;
+                      })();
+
+                      // Resolve target container thumbnail
+                      const currentTargetImgNode = (() => {
+                        if (d.targetImage) {
+                          if (d.targetImage.startsWith('data:') || d.targetImage.startsWith('http') || d.targetImage.startsWith('/')) {
+                            return <img src={d.targetImage} alt={d.target} className="w-7 h-7 object-contain rounded-lg" />;
+                          }
+                          const resolved = resolveClipartItem(d.targetImage);
+                          if (resolved && resolved.isImage) {
+                            return <ClipartImage clipart={resolved} size="xs" />;
+                          }
+                        }
+                        return null;
+                      })();
+
+                      const isSelectedRow = selectedDragIndex === i;
+
+                      return (
+                        <div
+                          key={i}
+                          onClick={() => setSelectedDragIndex(i)}
+                          className={`p-2.5 rounded-2xl border transition-all ${
+                            isSelectedRow
+                              ? 'bg-white border-amber-400 ring-2 ring-amber-300/60 shadow-xs'
+                              : 'bg-white/90 border-amber-200/80 hover:border-amber-300'
+                          }`}
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-black text-amber-900 text-xs w-6 text-center shrink-0">
+                              #{i + 1}
+                            </span>
+
+                            {/* Item Image Button / Thumbnail */}
+                            <div className="relative group shrink-0">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedDragIndex(i);
+                                  setDragItemImagePicker({ itemIndex: i, field: 'itemImage' });
+                                }}
+                                className={`w-11 h-11 rounded-xl border-2 flex flex-col items-center justify-center p-1 transition cursor-pointer ${
+                                  currentImgNode
+                                    ? 'bg-amber-50 border-amber-300 hover:bg-amber-100/80 shadow-2xs'
+                                    : 'bg-stone-50 border-dashed border-stone-300 hover:border-amber-400 hover:bg-amber-50 text-stone-400 hover:text-amber-700'
+                                }`}
+                                title={currentImgNode ? 'Click to change item image' : 'Click to add picture or clipart to this draggable item'}
+                              >
+                                {currentImgNode ? (
+                                  currentImgNode
+                                ) : (
+                                  <>
+                                    <ImageIcon className="w-4 h-4 text-stone-400 group-hover:text-amber-600" />
+                                    <span className="text-[8px] font-black text-stone-400 group-hover:text-amber-600 leading-none mt-0.5">+Img</span>
+                                  </>
+                                )}
+                              </button>
+                              {d.itemImage && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const next = [...dragItems];
+                                    delete next[i].itemImage;
+                                    setDragItems(next);
+                                  }}
+                                  className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center text-[10px] font-bold shadow-xs cursor-pointer"
+                                  title="Remove image"
+                                >
+                                  ✕
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Item Text Input */}
+                            <div className="flex-1 min-w-0">
+                              <input
+                                value={d.item}
+                                onFocus={() => {
+                                  setSelectedDragIndex(i);
+                                  setActiveInputTarget(`drag-${i}-item`);
+                                }}
+                                onChange={e => {
+                                  const next = [...dragItems];
+                                  next[i].item = e.target.value;
+                                  setDragItems(next);
+                                }}
+                                placeholder="Draggable Item (e.g. 🍎 Apple or Red Circle)"
+                                className="w-full p-2 rounded-xl border border-stone-200 text-xs font-bold outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-300 bg-white"
+                              />
+                            </div>
+
+                            <span className="text-amber-700 font-black text-xs shrink-0 flex items-center gap-0.5">
+                              ➔
+                            </span>
+
+                            {/* Target Zone Text Input */}
+                            <div className="flex-1 min-w-0">
+                              <input
+                                value={d.target}
+                                onFocus={() => {
+                                  setSelectedDragIndex(i);
+                                  setActiveInputTarget(`drag-${i}-target`);
+                                }}
+                                onChange={e => {
+                                  const next = [...dragItems];
+                                  next[i].target = e.target.value;
+                                  setDragItems(next);
+                                }}
+                                placeholder="Target Zone (e.g. 🧺 Basket or Red Box)"
+                                className="w-full p-2 rounded-xl border border-stone-200 text-xs font-bold outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-300 bg-white"
+                              />
+                            </div>
+
+                            {/* Target Zone Optional Image */}
+                            <div className="relative group shrink-0">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedDragIndex(i);
+                                  setDragItemImagePicker({ itemIndex: i, field: 'targetImage' });
+                                }}
+                                className={`w-9 h-9 rounded-xl border flex items-center justify-center p-1 transition cursor-pointer ${
+                                  currentTargetImgNode
+                                    ? 'bg-sky-50 border-sky-300 hover:bg-sky-100 shadow-2xs'
+                                    : 'bg-stone-50 border-dashed border-stone-200 hover:border-sky-400 hover:bg-sky-50 text-stone-300 hover:text-sky-600'
+                                }`}
+                                title={currentTargetImgNode ? 'Target container image attached' : 'Optional: add picture to target drop zone'}
+                              >
+                                {currentTargetImgNode ? currentTargetImgNode : <span className="text-xs">🎯</span>}
+                              </button>
+                              {d.targetImage && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const next = [...dragItems];
+                                    delete next[i].targetImage;
+                                    setDragItems(next);
+                                  }}
+                                  className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center text-[9px] font-bold shadow-xs cursor-pointer"
+                                  title="Remove target image"
+                                >
+                                  ✕
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Delete Button */}
+                            {dragItems.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDragItems(prev => prev.filter((_, idx) => idx !== i));
+                                }}
+                                className="p-1.5 text-stone-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer shrink-0"
+                                title="Remove item pair"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
               {/* 5F. Match Making */}
               {type === 'match_making' && (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-stone-700">Left Item ➔ Right Matching Item</span>
+                    <div>
+                      <span className="font-black text-xs text-stone-800">Match Making Pairs</span>
+                      <p className="text-[10px] text-stone-500">Pair each left item with its matching right item. You can insert clipart into both!</p>
+                    </div>
                     <button
                       type="button"
-                      onClick={() => setMatchPairs(prev => [...prev, { left: 'Left', right: 'Right' }])}
-                      className="px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 font-black text-[10px] hover:bg-purple-100"
+                      onClick={() => setMatchPairs(prev => [...prev, { left: `Item ${prev.length + 1}`, right: `Match ${prev.length + 1}` }])}
+                      className="px-3 py-1.5 rounded-xl bg-purple-100 text-purple-900 hover:bg-purple-200 font-black text-xs cursor-pointer transition shadow-2xs"
                     >
                       + Add Pair
                     </button>
                   </div>
-                  {matchPairs.map((pair, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <input
-                        value={pair.left}
-                        onChange={e => {
-                          const next = [...matchPairs];
-                          next[i].left = e.target.value;
-                          setMatchPairs(next);
-                        }}
-                        placeholder="Left prompt (e.g. 5 + 5)"
-                        className="flex-1 p-2 rounded-xl border border-stone-200 text-xs font-bold"
-                      />
-                      <span className="text-stone-400 font-black">➔</span>
-                      <input
-                        value={pair.right}
-                        onChange={e => {
-                          const next = [...matchPairs];
-                          next[i].right = e.target.value;
-                          setMatchPairs(next);
-                        }}
-                        placeholder="Right match (e.g. 10)"
-                        className="flex-1 p-2 rounded-xl border border-stone-200 text-xs font-bold"
-                      />
-                      {matchPairs.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => setMatchPairs(prev => prev.filter((_, idx) => idx !== i))}
-                          className="p-1.5 text-stone-400 hover:text-rose-600 rounded-lg"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
+
+                  <div className="space-y-2.5">
+                    {matchPairs.map((pair, i) => (
+                      <div key={i} className="p-2.5 rounded-2xl border border-stone-200 bg-stone-50/60 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                        <span className="font-mono font-black text-purple-900 text-xs w-6 shrink-0 text-center">
+                          #{i + 1}
+                        </span>
+
+                        {/* Left Item */}
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-extrabold text-stone-600">Left Item:</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveInputTarget(`match-${i}-left`);
+                                setIsClipartDirectoryOpen(true);
+                                document.getElementById('universal-clipart-directory')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                              }}
+                              className="text-[9px] font-bold text-amber-800 hover:text-amber-950 bg-amber-100 px-2 py-0.5 rounded border border-amber-300 cursor-pointer transition"
+                            >
+                              🎨 + Clipart
+                            </button>
+                          </div>
+                          <div className="relative flex items-center">
+                            <input
+                              value={pair.left}
+                              onFocus={() => setActiveInputTarget(`match-${i}-left`)}
+                              onChange={e => {
+                                const next = [...matchPairs];
+                                next[i].left = e.target.value;
+                                setMatchPairs(next);
+                              }}
+                              placeholder="e.g. 5 + 5 or [apple] Red Apple"
+                              className={`w-full p-2 pr-9 rounded-xl border text-xs font-bold bg-white outline-none ${
+                                activeInputTarget === `match-${i}-left` ? 'border-purple-500 ring-2 ring-purple-300' : 'border-stone-200'
+                              }`}
+                            />
+                            {pair.left && (
+                              <div className="absolute right-2 pointer-events-none">
+                                <ClipartText text={pair.left} imageSize="xs" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <span className="text-purple-600 font-black text-base shrink-0 self-center">➔</span>
+
+                        {/* Right Match */}
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-extrabold text-stone-600">Right Matching Target:</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveInputTarget(`match-${i}-right`);
+                                setIsClipartDirectoryOpen(true);
+                                document.getElementById('universal-clipart-directory')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                              }}
+                              className="text-[9px] font-bold text-amber-800 hover:text-amber-950 bg-amber-100 px-2 py-0.5 rounded border border-amber-300 cursor-pointer transition"
+                            >
+                              🎨 + Clipart
+                            </button>
+                          </div>
+                          <div className="relative flex items-center">
+                            <input
+                              value={pair.right}
+                              onFocus={() => setActiveInputTarget(`match-${i}-right`)}
+                              onChange={e => {
+                                const next = [...matchPairs];
+                                next[i].right = e.target.value;
+                                setMatchPairs(next);
+                              }}
+                              placeholder="e.g. 10 or [banana] Yellow"
+                              className={`w-full p-2 pr-9 rounded-xl border text-xs font-bold bg-white outline-none ${
+                                activeInputTarget === `match-${i}-right` ? 'border-purple-500 ring-2 ring-purple-300' : 'border-stone-200'
+                              }`}
+                            />
+                            {pair.right && (
+                              <div className="absolute right-2 pointer-events-none">
+                                <ClipartText text={pair.right} imageSize="xs" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {matchPairs.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setMatchPairs(prev => prev.filter((_, idx) => idx !== i))}
+                            className="p-1.5 text-stone-400 hover:text-rose-600 rounded-lg self-center cursor-pointer transition"
+                            title="Remove pair"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
               {/* 5G. Ordering */}
               {type === 'ordering' && (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-stone-700">Correct Sequence</span>
+                    <div>
+                      <span className="font-black text-xs text-stone-800">Correct Sequence (Chronological or Logical Order)</span>
+                      <p className="text-[10px] text-stone-500">Arrange items in the correct order from first to last.</p>
+                    </div>
                     <button
                       type="button"
                       onClick={() => setOrderSequence(prev => [...prev, `Step ${prev.length + 1}`])}
-                      className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-black text-[10px] hover:bg-emerald-100"
+                      className="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-900 hover:bg-emerald-200 font-black text-xs cursor-pointer transition shadow-2xs"
                     >
                       + Add Step
                     </button>
                   </div>
-                  {orderSequence.map((item, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className="w-6 text-center font-black text-stone-400">#{i + 1}</span>
-                      <input
-                        value={item}
-                        onChange={e => {
-                          const next = [...orderSequence];
-                          next[i] = e.target.value;
-                          setOrderSequence(next);
-                        }}
-                        className="flex-1 p-2 rounded-xl border border-stone-200 text-xs font-bold"
-                      />
-                      {orderSequence.length > 2 && (
+                  <div className="space-y-2">
+                    {orderSequence.map((item, i) => (
+                      <div key={i} className="flex items-center gap-2 p-2 rounded-xl border border-stone-200 bg-stone-50/60">
+                        <span className="w-7 text-center font-black text-emerald-800 text-xs shrink-0">#{i + 1}</span>
+                        <div className="relative flex-1 flex items-center">
+                          <input
+                            value={item}
+                            onFocus={() => setActiveInputTarget(`order-${i}` as ClipartTarget)}
+                            onChange={e => {
+                              const next = [...orderSequence];
+                              next[i] = e.target.value;
+                              setOrderSequence(next);
+                            }}
+                            className={`w-full p-2 pr-12 rounded-xl border text-xs font-bold bg-white outline-none ${
+                              activeInputTarget === `order-${i}` ? 'border-emerald-500 ring-2 ring-emerald-300' : 'border-stone-200'
+                            }`}
+                          />
+                          {item && (
+                            <div className="absolute right-2 pointer-events-none">
+                              <ClipartText text={item} imageSize="xs" />
+                            </div>
+                          )}
+                        </div>
                         <button
                           type="button"
-                          onClick={() => setOrderSequence(prev => prev.filter((_, idx) => idx !== i))}
-                          className="p-1.5 text-stone-400 hover:text-rose-600 rounded-lg"
+                          onClick={() => {
+                            setActiveInputTarget(`order-${i}` as ClipartTarget);
+                            setIsClipartDirectoryOpen(true);
+                            document.getElementById('universal-clipart-directory')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                          }}
+                          className="text-[10px] font-bold text-amber-800 hover:text-amber-950 bg-amber-100 px-2 py-1 rounded-lg border border-amber-300 cursor-pointer shrink-0"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          🎨 + Clipart
                         </button>
-                      )}
-                    </div>
-                  ))}
+                        {orderSequence.length > 2 && (
+                          <button
+                            type="button"
+                            onClick={() => setOrderSequence(prev => prev.filter((_, idx) => idx !== i))}
+                            className="p-1.5 text-stone-400 hover:text-rose-600 rounded-lg shrink-0 cursor-pointer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -1572,14 +2455,32 @@ export default function MasterQuestionCreator({
                   <input
                     type="checkbox"
                     checked={hasVisual}
-                    onChange={e => setHasVisual(e.target.checked)}
+                    onChange={e => {
+                      setHasVisual(e.target.checked);
+                      if (e.target.checked) setActiveInputTarget('visual');
+                    }}
                     className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
                   />
                   <span>Enable Visual Representation (Visual Layer)</span>
                 </label>
-                <span className="text-[10px] text-stone-400 font-semibold">
-                  {hasVisual ? 'Active' : 'Optional visual display'}
-                </span>
+                <div className="flex items-center gap-2">
+                  {hasVisual && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveInputTarget('visual');
+                        setIsClipartDirectoryOpen(true);
+                        document.getElementById('universal-clipart-directory')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                      }}
+                      className="px-2.5 py-1 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs cursor-pointer transition shadow-2xs flex items-center gap-1.5"
+                    >
+                      <span>🎨</span> + Add Clipart to Visual
+                    </button>
+                  )}
+                  <span className="text-[10px] text-stone-400 font-semibold">
+                    {hasVisual ? 'Active' : 'Optional visual display'}
+                  </span>
+                </div>
               </div>
 
               {hasVisual && (
@@ -1587,9 +2488,22 @@ export default function MasterQuestionCreator({
                   
                   {/* Further below: Visual Text */}
                   <div>
-                    <label className="text-[10px] font-bold text-stone-600 block mb-1">
-                      Visual Instruction / Caption Text:
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10px] font-bold text-stone-600 block">
+                        Visual Instruction / Caption Text:
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveInputTarget('visualText');
+                          setIsClipartDirectoryOpen(true);
+                          document.getElementById('universal-clipart-directory')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }}
+                        className="text-[9px] font-bold text-amber-800 hover:text-amber-950 bg-amber-100 px-2 py-0.5 rounded border border-amber-300 cursor-pointer"
+                      >
+                        🎨 + Insert Clipart
+                      </button>
+                    </div>
                     <input
                       value={visualText}
                       onFocus={() => setActiveInputTarget('visualText')}
@@ -1605,20 +2519,47 @@ export default function MasterQuestionCreator({
                       <span className="text-[10px] font-black text-stone-700 uppercase tracking-wider">
                         Attached Clipart Items ({visualChips.length} Unique / {resolveMultipleClipartItems(visualClipartString).length} Total):
                       </span>
-                      {visualChips.length > 0 && (
+                      <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => setVisualClipartString('')}
-                          className="text-[10px] font-bold text-rose-600 hover:underline cursor-pointer"
+                          onClick={() => {
+                            setActiveInputTarget('visual');
+                            setIsClipartDirectoryOpen(true);
+                            document.getElementById('universal-clipart-directory')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                          }}
+                          className="text-[10px] font-extrabold text-amber-800 hover:text-amber-950 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded-lg border border-amber-300 cursor-pointer transition flex items-center gap-1"
                         >
-                          Clear Clipart
+                          <span>🎨</span> + Add Clipart
                         </button>
-                      )}
+                        {visualChips.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setVisualClipartString('')}
+                            className="text-[10px] font-bold text-rose-600 hover:underline cursor-pointer"
+                          >
+                            Clear All
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {visualChips.length === 0 ? (
-                      <div className="p-3 text-center text-stone-400 text-[11px] bg-white rounded-xl border border-dashed border-stone-300">
-                        No clipart attached to visual yet. Click "+ Visual" on any item in the Clipart Directory above!
+                      <div className="p-4 text-center text-stone-500 text-xs bg-white rounded-xl border border-dashed border-amber-300 space-y-2">
+                        <p className="font-bold text-stone-700">No clipart attached to visual canvas yet.</p>
+                        <p className="text-[11px] text-stone-500">
+                          Click the button below to open the Universal Clipart Directory and add items (apples, stars, animals, coins, etc.) to your visual!
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveInputTarget('visual');
+                            setIsClipartDirectoryOpen(true);
+                            document.getElementById('universal-clipart-directory')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs cursor-pointer transition shadow-2xs"
+                        >
+                          <Sparkles className="w-4 h-4" /> Open Clipart Directory & Select Clipart
+                        </button>
                       </div>
                     ) : (
                       <div className="flex flex-wrap items-center gap-2 p-2 rounded-xl bg-white border border-stone-200">
@@ -1702,10 +2643,24 @@ export default function MasterQuestionCreator({
             {/* 7. EDUCATIONAL GUIDANCE (Hints & Explanation) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="p-3 rounded-xl bg-white border border-stone-200 space-y-1">
-                <label className="font-bold text-stone-700 text-xs">💡 Student Hint (Optional)</label>
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-stone-700 text-xs">💡 Student Hint (Optional)</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveInputTarget('hint');
+                      setIsClipartDirectoryOpen(true);
+                      document.getElementById('universal-clipart-directory')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }}
+                    className="text-[9px] font-bold text-amber-800 hover:text-amber-950 bg-amber-100 px-2 py-0.5 rounded border border-amber-300 cursor-pointer"
+                  >
+                    🎨 + Clipart
+                  </button>
+                </div>
                 <textarea
                   rows={2}
                   value={hint}
+                  onFocus={() => setActiveInputTarget('hint')}
                   onChange={e => setHint(e.target.value)}
                   placeholder="e.g. Try counting by 2s or look at the colors..."
                   className="w-full p-2 rounded-lg border border-stone-200 text-xs"
@@ -1713,10 +2668,24 @@ export default function MasterQuestionCreator({
               </div>
 
               <div className="p-3 rounded-xl bg-white border border-stone-200 space-y-1">
-                <label className="font-bold text-stone-700 text-xs">📖 Solution Explanation (Optional)</label>
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-stone-700 text-xs">📖 Solution Explanation (Optional)</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveInputTarget('explanation');
+                      setIsClipartDirectoryOpen(true);
+                      document.getElementById('universal-clipart-directory')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }}
+                    className="text-[9px] font-bold text-amber-800 hover:text-amber-950 bg-amber-100 px-2 py-0.5 rounded border border-amber-300 cursor-pointer"
+                  >
+                    🎨 + Clipart
+                  </button>
+                </div>
                 <textarea
                   rows={2}
                   value={explanation}
+                  onFocus={() => setActiveInputTarget('explanation')}
                   onChange={e => setExplanation(e.target.value)}
                   placeholder="e.g. 5 apples plus 3 apples equals 8 apples."
                   className="w-full p-2 rounded-lg border border-stone-200 text-xs"
@@ -1773,6 +2742,316 @@ export default function MasterQuestionCreator({
           </form>
         </div>
       </div>
+
+      {/* DRAG & DROP ITEM IMAGE & CLIPART PICKER MODAL */}
+      {dragItemImagePicker !== null && (() => {
+        const activeItem = dragItems[dragItemImagePicker.itemIndex];
+        const isTargetZone = dragItemImagePicker.field === 'targetImage';
+        const currentVal = activeItem ? activeItem[dragItemImagePicker.field] : undefined;
+
+        const filteredCliparts = CLIPART_REGISTRY.filter(c => {
+          const catMatches = dragImageCategory === 'all' || c.category === dragImageCategory;
+          const searchMatches = !dragImageSearch.trim() || 
+            c.name.toLowerCase().includes(dragImageSearch.toLowerCase()) ||
+            c.keywords.some(k => k.toLowerCase().includes(dragImageSearch.toLowerCase()));
+          return catMatches && searchMatches;
+        });
+
+        const handleSelectClipart = (clipartItem: ClipartItem) => {
+          const next = [...dragItems];
+          if (next[dragItemImagePicker.itemIndex]) {
+            next[dragItemImagePicker.itemIndex] = {
+              ...next[dragItemImagePicker.itemIndex],
+              [dragItemImagePicker.field]: clipartItem.id,
+              // If the text label is empty or default, suggest the clipart name
+              item: !isTargetZone && (!next[dragItemImagePicker.itemIndex].item || next[dragItemImagePicker.itemIndex].item.startsWith('Item '))
+                ? clipartItem.name
+                : next[dragItemImagePicker.itemIndex].item
+            };
+            setDragItems(next);
+          }
+          sounds.click();
+          setDragItemImagePicker(null);
+        };
+
+        const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const dataUri = ev.target?.result as string;
+            if (dataUri) {
+              const next = [...dragItems];
+              if (next[dragItemImagePicker.itemIndex]) {
+                next[dragItemImagePicker.itemIndex] = {
+                  ...next[dragItemImagePicker.itemIndex],
+                  [dragItemImagePicker.field]: dataUri
+                };
+                setDragItems(next);
+              }
+              sounds.click();
+              setDragItemImagePicker(null);
+            }
+          };
+          reader.readAsDataURL(file);
+        };
+
+        const handleApplyUrl = () => {
+          if (!dragImageUrlInput.trim()) return;
+          const next = [...dragItems];
+          if (next[dragItemImagePicker.itemIndex]) {
+            next[dragItemImagePicker.itemIndex] = {
+              ...next[dragItemImagePicker.itemIndex],
+              [dragItemImagePicker.field]: dragImageUrlInput.trim()
+            };
+            setDragItems(next);
+          }
+          sounds.click();
+          setDragImageUrlInput('');
+          setDragItemImagePicker(null);
+        };
+
+        const handleRemoveImage = () => {
+          const next = [...dragItems];
+          if (next[dragItemImagePicker.itemIndex]) {
+            delete next[dragItemImagePicker.itemIndex][dragItemImagePicker.field];
+            setDragItems(next);
+          }
+          sounds.click();
+          setDragItemImagePicker(null);
+        };
+
+        return (
+          <div 
+            className="fixed inset-0 z-[170] bg-stone-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+            onClick={() => setDragItemImagePicker(null)}
+          >
+            <div 
+              className="bg-white rounded-3xl shadow-2xl border border-stone-200 max-w-2xl w-full overflow-hidden flex flex-col max-h-[88vh]"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white p-4 sm:p-5 flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-black flex items-center gap-2">
+                    <ImageIcon className="w-5 h-5 text-amber-200" />
+                    {isTargetZone ? 'Choose Target Zone Image' : `Choose Image for Item #${dragItemImagePicker.itemIndex + 1}`}
+                  </h3>
+                  <p className="text-xs text-amber-100 mt-0.5">
+                    {isTargetZone
+                      ? `Drop container: "${activeItem?.target || 'Target Zone'}"`
+                      : `Draggable object: "${activeItem?.item || 'Item'}"`}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDragItemImagePicker(null)}
+                  className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white cursor-pointer transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Tabs */}
+              <div className="bg-stone-100 px-5 pt-3 border-b border-stone-200 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDragImageTab('clipart')}
+                  className={`px-3.5 py-2 rounded-t-xl text-xs font-black flex items-center gap-1.5 transition cursor-pointer ${
+                    dragImageTab === 'clipart'
+                      ? 'bg-white text-amber-900 border-t-2 border-amber-600 shadow-2xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                  Vector Clipart ({CLIPART_REGISTRY.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDragImageTab('upload')}
+                  className={`px-3.5 py-2 rounded-t-xl text-xs font-black flex items-center gap-1.5 transition cursor-pointer ${
+                    dragImageTab === 'upload'
+                      ? 'bg-white text-amber-900 border-t-2 border-amber-600 shadow-2xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <Upload className="w-3.5 h-3.5 text-emerald-600" />
+                  Upload Image
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDragImageTab('url')}
+                  className={`px-3.5 py-2 rounded-t-xl text-xs font-black flex items-center gap-1.5 transition cursor-pointer ${
+                    dragImageTab === 'url'
+                      ? 'bg-white text-amber-900 border-t-2 border-amber-600 shadow-2xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <LinkIcon className="w-3.5 h-3.5 text-blue-600" />
+                  Image URL
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-4 sm:p-5 overflow-y-auto flex-1">
+                {dragImageTab === 'clipart' && (
+                  <div className="space-y-3">
+                    {/* Search & Categories */}
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <div className="relative flex-1">
+                        <Search className="w-4 h-4 absolute left-3 top-2.5 text-stone-400" />
+                        <input
+                          value={dragImageSearch}
+                          onChange={e => setDragImageSearch(e.target.value)}
+                          placeholder="Search apple, dog, star, coin, bus..."
+                          className="w-full pl-9 pr-3 py-2 rounded-xl border border-stone-200 text-xs font-bold outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-300"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Category pills */}
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setDragImageCategory('all')}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer transition ${
+                          dragImageCategory === 'all'
+                            ? 'bg-amber-600 text-white shadow-2xs'
+                            : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                        }`}
+                      >
+                        All
+                      </button>
+                      {CLIPART_FAMILIES.map(fam => (
+                        <button
+                          key={fam.id}
+                          type="button"
+                          onClick={() => setDragImageCategory(fam.id)}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 cursor-pointer transition ${
+                            dragImageCategory === fam.id
+                              ? 'bg-amber-600 text-white shadow-2xs'
+                              : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                          }`}
+                        >
+                          <span>{fam.icon}</span>
+                          <span>{fam.name}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Clipart Grid */}
+                    <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 gap-2.5 max-h-72 overflow-y-auto p-1 border border-stone-100 rounded-2xl bg-stone-50/50">
+                      {filteredCliparts.map(item => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => handleSelectClipart(item)}
+                          className="p-2 rounded-xl bg-white border border-stone-200 hover:border-amber-500 hover:bg-amber-50 hover:scale-105 transition-all flex flex-col items-center justify-center gap-1 cursor-pointer shadow-2xs group text-center"
+                        >
+                          <div className="w-10 h-10 flex items-center justify-center">
+                            <ClipartImage clipart={item} size="md" />
+                          </div>
+                          <span className="text-[10px] font-extrabold text-stone-800 group-hover:text-amber-950 truncate w-full">
+                            {item.name}
+                          </span>
+                        </button>
+                      ))}
+                      {filteredCliparts.length === 0 && (
+                        <div className="col-span-full py-8 text-center text-xs text-stone-400 font-bold">
+                          No cliparts found matching &quot;{dragImageSearch}&quot;
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {dragImageTab === 'upload' && (
+                  <div className="space-y-4 py-4 text-center">
+                    <input
+                      ref={dragFileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                    <div
+                      onClick={() => dragFileInputRef.current?.click()}
+                      className="border-2 border-dashed border-stone-300 hover:border-amber-500 rounded-3xl p-8 hover:bg-amber-50/40 transition cursor-pointer flex flex-col items-center justify-center gap-2"
+                    >
+                      <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                        <Upload className="w-7 h-7" />
+                      </div>
+                      <p className="font-black text-sm text-stone-800">
+                        Click to select an image from your computer
+                      </p>
+                      <p className="text-xs text-stone-500">
+                        Supports PNG, JPG, WebP, and SVG files. Converted instantly for 100% offline reliability.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {dragImageTab === 'url' && (
+                  <div className="space-y-3 py-2">
+                    <label className="block text-xs font-bold text-stone-700">
+                      Direct Web Image URL or App Asset Path:
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        value={dragImageUrlInput}
+                        onChange={e => setDragImageUrlInput(e.target.value)}
+                        placeholder="https://example.com/image.png or /assets/icon-bee.webp"
+                        className="flex-1 p-2.5 rounded-xl border border-stone-200 text-xs font-bold outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-300"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyUrl}
+                        disabled={!dragImageUrlInput.trim()}
+                        className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-black text-xs cursor-pointer shadow-xs transition"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                    {dragImageUrlInput.trim() && (
+                      <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 flex items-center gap-3">
+                        <span className="text-[11px] font-bold text-stone-500">URL Preview:</span>
+                        <img 
+                          src={dragImageUrlInput.trim()} 
+                          alt="Preview" 
+                          className="w-12 h-12 object-contain rounded-lg border bg-white" 
+                          onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="bg-stone-50 px-5 py-3 border-t border-stone-200 flex items-center justify-between">
+                {currentVal ? (
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    className="px-3 py-1.5 rounded-xl text-rose-600 hover:bg-rose-50 font-bold text-xs cursor-pointer transition flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Remove Current Image
+                  </button>
+                ) : (
+                  <span className="text-[11px] text-stone-400 font-bold">No image currently attached</span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setDragItemImagePicker(null)}
+                  className="px-4 py-1.5 rounded-xl border border-stone-300 hover:bg-stone-100 font-bold text-xs text-stone-700 cursor-pointer transition"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* LIVE PREVIEW MODAL */}
       {previewOpen && (

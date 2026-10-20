@@ -23,11 +23,13 @@ export default function ResetCredentialsModal({
   const [showPassword, setShowPassword] = useState(false);
   const [copied, setCopied] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Generate random 4-digit PIN
   const handleGenerateRandomPin = () => {
     const randomPin = String(Math.floor(1000 + Math.random() * 9000));
     setPin(randomPin);
+    setErrorMessage('');
     sounds.playCorrect();
   };
 
@@ -38,6 +40,7 @@ export default function ResetCredentialsModal({
     const num = Math.floor(100 + Math.random() * 900);
     const newPwd = `${adj}#${num}!`;
     setPassword(newPwd);
+    setErrorMessage('');
     sounds.playCorrect();
   };
 
@@ -52,15 +55,16 @@ export default function ResetCredentialsModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage('');
     if (isStudent) {
       if (!/^\d{4}$/.test(pin)) {
-        alert('PIN must be exactly 4 digits (e.g. 7392).');
+        setErrorMessage('PIN must be exactly 4 numeric digits (e.g. 7392).');
         return;
       }
       onSaveCredentials(user.id, pin, true, username.trim());
     } else {
       if (!password.trim() || password.length < 6) {
-        alert('Password must be at least 6 characters long.');
+        setErrorMessage('Password must be at least 6 characters long.');
         return;
       }
       onSaveCredentials(user.id, password.trim(), false);
@@ -132,6 +136,12 @@ export default function ResetCredentialsModal({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 text-xs overflow-y-auto overscroll-contain pr-1 flex-1 modal-scroll-container">
+            {errorMessage && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-bold animate-in fade-in flex items-center gap-2">
+                <span className="text-base shrink-0">⚠️</span>
+                <span>{errorMessage}</span>
+              </div>
+            )}
             {isStudent ? (
               <>
                 <div>

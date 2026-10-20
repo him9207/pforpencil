@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <defs>
+    <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#E0F2FE"/>
+      <stop offset="100%" stop-color="#BAE6FD"/>
+    </linearGradient>
+    <linearGradient id="schoolGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#0284C7"/>
+    </linearGradient>
+    <linearGradient id="roofGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#EF4444"/>
+      <stop offset="100%" stop-color="#B91C1C"/>
+    </linearGradient>
+    <linearGradient id="grassGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4ADE80"/>
+      <stop offset="100%" stop-color="#16A34A"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="400" height="300" rx="16" fill="url(#skyGrad)"/>
+  
+  <!-- Cheerful Sun -->
+  <circle cx="340" cy="60" r="32" fill="#FBBF24"/>
+  <circle cx="340" cy="60" r="28" fill="#FDE047"/>
+  <circle cx="332" cy="56" r="3" fill="#78350F"/>
+  <circle cx="348" cy="56" r="3" fill="#78350F"/>
+  <path d="M 334 66 C 337 72, 343 72, 346 66" stroke="#78350F" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+  <!-- Clouds -->
+  <circle cx="80" cy="65" r="20" fill="#FFFFFF" opacity="0.9"/>
+  <circle cx="105" cy="55" r="28" fill="#FFFFFF" opacity="0.9"/>
+  <circle cx="130" cy="65" r="20" fill="#FFFFFF" opacity="0.9"/>
+
+  <!-- Trees -->
+  <circle cx="50" cy="170" r="32" fill="#15803D"/>
+  <rect x="44" y="180" width="12" height="40" rx="4" fill="#78350F"/>
+  <circle cx="350" cy="170" r="32" fill="#15803D"/>
+  <rect x="344" y="180" width="12" height="40" rx="4" fill="#78350F"/>
+
+  <!-- School Building -->
+  <rect x="100" y="110" width="200" height="110" rx="6" fill="url(#schoolGrad)"/>
+  <!-- Roof -->
+  <polygon points="80,110 200,40 320,110" fill="url(#roofGrad)"/>
+  
+  <!-- Clock Tower -->
+  <rect x="175" y="25" width="50" height="45" rx="4" fill="#FFFFFF"/>
+  <polygon points="170,25 200,2 230,25" fill="#EF4444"/>
+  <circle cx="200" cy="45" r="14" fill="#0284C7"/>
+  <circle cx="200" cy="45" r="11" fill="#FFFFFF"/>
+  <line x1="200" y1="45" x2="200" y2="38" stroke="#0F172A" stroke-width="2" stroke-linecap="round"/>
+  <line x1="200" y1="45" x2="206" y2="45" stroke="#0F172A" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Windows -->
+  <rect x="120" y="130" width="28" height="35" rx="4" fill="#E0F2FE" stroke="#BAE6FD" stroke-width="2"/>
+  <line x1="134" y1="130" x2="134" y2="165" stroke="#0284C7" stroke-width="1.5"/>
+  <line x1="120" y1="147" x2="148" y2="147" stroke="#0284C7" stroke-width="1.5"/>
+
+  <rect x="252" y="130" width="28" height="35" rx="4" fill="#E0F2FE" stroke="#BAE6FD" stroke-width="2"/>
+  <line x1="266" y1="130" x2="266" y2="165" stroke="#0284C7" stroke-width="1.5"/>
+  <line x1="252" y1="147" x2="280" y2="147" stroke="#0284C7" stroke-width="1.5"/>
+
+  <!-- Entrance Door -->
+  <path d="M 180 220 L 180 180 C 180 170, 220 170, 220 180 L 220 220 Z" fill="#F8FAFC"/>
+  <circle cx="212" cy="195" r="3" fill="#D97706"/>
+
+  <!-- School Banner -->
+  <rect x="150" y="115" width="100" height="20" rx="4" fill="#FEF08A"/>
+  <text x="200" y="130" font-family="Arial, sans-serif" font-weight="900" font-size="11" fill="#854D0E" text-anchor="middle">PRIMARY ACADEMY</text>
+
+  <!-- Green Grass Lawn -->
+  <path d="M 0 215 Q 200 200, 400 215 L 400 300 L 0 300 Z" fill="url(#grassGrad)"/>
+
+  <!-- Children Walking Together -->
+  <!-- Child 1 (Left) -->
+  <circle cx="140" cy="235" r="12" fill="#FED7AA"/>
+  <path d="M 132 230 C 130 220, 150 220, 148 230" fill="#451A03"/>
+  <rect x="130" y="247" width="20" height="25" rx="4" fill="#EF4444"/>
+  <line x1="135" y1="272" x2="132" y2="292" stroke="#1E3A8A" stroke-width="6" stroke-linecap="round"/>
+  <line x1="145" y1="272" x2="148" y2="292" stroke="#1E3A8A" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- Child 2 (Center) -->
+  <circle cx="180" cy="230" r="13" fill="#FED7AA"/>
+  <path d="M 170 225 C 170 215, 190 215, 190 225" fill="#78350F"/>
+  <rect x="170" y="243" width="20" height="26" rx="4" fill="#10B981"/>
+  <line x1="175" y1="269" x2="173" y2="292" stroke="#1E3A8A" stroke-width="6" stroke-linecap="round"/>
+  <line x1="185" y1="269" x2="187" y2="292" stroke="#1E3A8A" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- Child 3 (Right) -->
+  <circle cx="220" cy="235" r="12" fill="#FED7AA"/>
+  <path d="M 212 230 C 210 220, 230 220, 228 230" fill="#1F2937"/>
+  <rect x="210" y="247" width="20" height="25" rx="4" fill="#3B82F6"/>
+  <line x1="215" y1="272" x2="213" y2="292" stroke="#1E3A8A" stroke-width="6" stroke-linecap="round"/>
+  <line x1="225" y1="272" x2="227" y2="292" stroke="#1E3A8A" stroke-width="6" stroke-linecap="round"/>
+</svg>

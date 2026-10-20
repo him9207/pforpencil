@@ -12,7 +12,7 @@ import {
   Trash2,
   Move
 } from 'lucide-react';
-import { Question } from '../../types';
+import { Question, DragItemConfig } from '../../types';
 import { fixMojibake, resolveVisualEmoji } from '../../utils/visualUtils';
 import { resolveClipartItem, resolveMultipleClipartItems, parseOptionClipart } from '../../data/clipartRegistry';
 import { ClipartImage, ClipartText } from '../../common/ClipartRenderer';
@@ -456,7 +456,7 @@ export default function InteractiveQuestionCard({
   // -------------------------------------------------------------
   // 3. DRAG & DROP ITEMS
   // -------------------------------------------------------------
-  const dragItemsConfig = useMemo(() => {
+  const dragItemsConfig: DragItemConfig[] = useMemo(() => {
     if (question.dragItems && question.dragItems.length > 0) {
       return question.dragItems;
     }
@@ -477,7 +477,7 @@ export default function InteractiveQuestionCard({
           const target = (parts[1] || '').trim() || 'Target Zone';
           return item ? { item, target } : null;
         })
-        .filter((d): d is { item: string; target: string } => Boolean(d));
+        .filter((d): d is DragItemConfig => Boolean(d));
 
       const validParsed = parsed.filter(d => !d.item.toLowerCase().includes('completed'));
       if (validParsed.length > 0) return validParsed;
@@ -501,6 +501,47 @@ export default function InteractiveQuestionCard({
   const unplacedDragItems = useMemo(() => {
     return dragItemsConfig.filter((d) => !userDragPlacements[d.item]);
   }, [dragItemsConfig, userDragPlacements]);
+
+  const targetImagesMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    dragItemsConfig.forEach((d) => {
+      if (d.target && d.targetImage && !map[d.target]) {
+        map[d.target] = d.targetImage;
+      }
+    });
+    return map;
+  }, [dragItemsConfig]);
+
+  const renderItemImage = (imgSrc?: string, itemText?: string, size: 'xs' | 'sm' | 'md' | 'lg' = 'md') => {
+    if (imgSrc) {
+      if (imgSrc.startsWith('data:') || imgSrc.startsWith('http') || imgSrc.startsWith('/') || imgSrc.startsWith('blob:')) {
+        const sizeClasses = size === 'xs' ? 'w-6 h-6' : size === 'sm' ? 'w-8 h-8' : size === 'lg' ? 'w-16 h-16 sm:w-20 sm:h-20' : 'w-12 h-12 sm:w-14 sm:h-14';
+        return (
+          <img
+            src={imgSrc}
+            alt={itemText || 'item visual'}
+            className={`${sizeClasses} object-contain rounded-xl drop-shadow-2xs`}
+          />
+        );
+      }
+      const resolved = resolveClipartItem(imgSrc);
+      if (resolved && resolved.isImage) {
+        return <ClipartImage clipart={resolved} size={size === 'xs' ? 'xs' : size === 'sm' ? 'sm' : 'md'} />;
+      }
+      if (resolved?.emoji) {
+        return <span className={size === 'xs' ? 'text-lg' : size === 'sm' ? 'text-2xl' : 'text-3xl'}>{resolved.emoji}</span>;
+      }
+    }
+
+    if (itemText) {
+      const parsed = parseOptionClipart(itemText);
+      if (parsed.hasClipart && parsed.clipart) {
+        return <ClipartImage clipart={parsed.clipart} size={size === 'xs' ? 'xs' : size === 'sm' ? 'sm' : 'md'} />;
+      }
+    }
+
+    return null;
+  };
 
   // -------------------------------------------------------------
   // 4. ORDERING
@@ -753,6 +794,9 @@ export default function InteractiveQuestionCard({
                 unplacedDragItems.map((d, dIdx) => {
                   const isSelected = selectedDragItem === d.item;
                   const isCurrentlyDragged = activeDrag?.isDragging && activeDrag.itemId === d.item;
+                  const itemImgNode = renderItemImage(d.itemImage, d.item, 'md');
+                  const parsed = parseOptionClipart(d.item);
+                  const cleanLabel = parsed.hasClipart && parsed.cleanText ? parsed.cleanText : d.item;
 
                   return (
                     <button
@@ -764,17 +808,35 @@ export default function InteractiveQuestionCard({
                         e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'drag_and_drop', itemId: d.item }));
                         e.dataTransfer.effectAllowed = 'move';
                       }}
-                      onPointerDown={(e) => startPointerDrag(e, 'drag_and_drop', d.item)}
-                      className={`px-4 py-2.5 rounded-2xl font-black text-sm sm:text-base border-2 transition-all cursor-grab active:cursor-grabbing shadow-xs touch-none select-none flex items-center gap-1.5 ${
+                      onPointerDown={(e) => startPointerDrag(e, 'drag_and_drop', d.item, { itemImage: d.itemImage })}
+                      className={`rounded-2xl font-black border-2 transition-all cursor-grab active:cursor-grabbing shadow-xs touch-none select-none ${
+                        itemImgNode
+                          ? 'p-2.5 sm:p-3 flex flex-col items-center justify-center gap-1.5 min-w-[100px] sm:min-w-[120px]'
+                          : 'px-4 py-2.5 flex items-center gap-1.5 text-sm sm:text-base'
+                      } ${
                         isCurrentlyDragged
                           ? 'opacity-30 border-dashed border-stone-400 scale-95'
                           : isSelected
-                          ? 'bg-amber-100 border-amber-500 text-amber-950 scale-105 ring-4 ring-amber-300'
-                          : 'bg-white border-stone-300 hover:border-amber-400 hover:scale-102 text-stone-800'
+                          ? 'bg-amber-100 border-amber-500 text-amber-950 scale-105 ring-4 ring-amber-300 shadow-md'
+                          : 'bg-white border-stone-300 hover:border-amber-400 hover:scale-102 text-stone-800 hover:shadow-xs'
                       }`}
                     >
-                      <Move className="w-3.5 h-3.5 text-stone-400 shrink-0" />
-                      <ClipartText text={d.item} imageSize="sm" />
+                      {itemImgNode ? (
+                        <>
+                          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-amber-50/70 border border-amber-200/60 flex items-center justify-center p-1.5 overflow-hidden drop-shadow-2xs">
+                            {itemImgNode}
+                          </div>
+                          <div className="flex items-center gap-1 text-xs sm:text-sm font-black text-stone-800 text-center max-w-[130px] truncate">
+                            <Move className="w-3 h-3 text-stone-400 shrink-0" />
+                            <ClipartText text={cleanLabel} imageSize="xs" />
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <Move className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                          <ClipartText text={d.item} imageSize="sm" />
+                        </>
+                      )}
                     </button>
                   );
                 })
@@ -831,47 +893,69 @@ export default function InteractiveQuestionCard({
                       : 'bg-white border-stone-200 hover:border-sky-300'
                   }`}
                 >
-                  <div className="font-black text-sm sm:text-base text-stone-900 mb-2">
-                    <ClipartText text={targetName} imageSize="sm" />
+                  <div className="flex flex-col items-center gap-1.5 mb-2">
+                    {(() => {
+                      const targetImg = renderItemImage(targetImagesMap[targetName], targetName, 'md');
+                      return targetImg ? (
+                        <div className="w-14 h-14 rounded-2xl bg-sky-50 border border-sky-200/70 flex items-center justify-center p-1.5 shadow-2xs">
+                          {targetImg}
+                        </div>
+                      ) : null;
+                    })()}
+                    <div className="font-black text-sm sm:text-base text-stone-900">
+                      <ClipartText text={targetName} imageSize="sm" />
+                    </div>
                   </div>
 
                   {placedItems.length > 0 ? (
                     <div className="w-full flex flex-col gap-2">
-                      {placedItems.map((placedItem, pIdx) => (
-                        <div 
-                          key={`placed-${placedItem}-${pIdx}`}
-                          onPointerDown={(e) => {
-                            e.stopPropagation();
-                            startPointerDrag(e, 'drag_and_drop', placedItem, { sourceTarget: targetName });
-                          }}
-                          draggable={!isSubmitted}
-                          onDragStart={(e) => {
-                            e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'drag_and_drop', itemId: placedItem }));
-                          }}
-                          className="w-full flex items-center justify-between px-2.5 py-2 rounded-2xl bg-white border-2 border-emerald-400 text-emerald-950 font-black text-xs sm:text-sm shadow-xs cursor-grab active:cursor-grabbing touch-none select-none"
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <Move className="w-3 h-3 text-emerald-500 shrink-0" />
-                            <ClipartText text={placedItem} imageSize="sm" />
+                      {placedItems.map((placedItem, pIdx) => {
+                        const placedConfig = dragItemsConfig.find(d => d.item === placedItem);
+                        const placedImgNode = renderItemImage(placedConfig?.itemImage, placedItem, 'xs');
+                        const parsedPlaced = parseOptionClipart(placedItem);
+                        const cleanPlaced = parsedPlaced.hasClipart && parsedPlaced.cleanText ? parsedPlaced.cleanText : placedItem;
+
+                        return (
+                          <div 
+                            key={`placed-${placedItem}-${pIdx}`}
+                            onPointerDown={(e) => {
+                              e.stopPropagation();
+                              startPointerDrag(e, 'drag_and_drop', placedItem, { sourceTarget: targetName, itemImage: placedConfig?.itemImage });
+                            }}
+                            draggable={!isSubmitted}
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'drag_and_drop', itemId: placedItem }));
+                            }}
+                            className="w-full flex items-center justify-between px-2.5 py-2 rounded-2xl bg-white border-2 border-emerald-400 text-emerald-950 font-black text-xs sm:text-sm shadow-xs cursor-grab active:cursor-grabbing touch-none select-none"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Move className="w-3 h-3 text-emerald-500 shrink-0" />
+                              {placedImgNode && (
+                                <div className="w-7 h-7 rounded-lg bg-emerald-100/70 flex items-center justify-center p-0.5 overflow-hidden shrink-0">
+                                  {placedImgNode}
+                                </div>
+                              )}
+                              <ClipartText text={cleanPlaced} imageSize="xs" />
+                            </div>
+                            {!isSubmitted && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  playPop();
+                                  const next = { ...userDragPlacements };
+                                  delete next[placedItem];
+                                  onUpdateDragPlacements(next);
+                                }}
+                                className="w-5 h-5 rounded-full hover:bg-rose-100 text-stone-400 hover:text-rose-600 flex items-center justify-center cursor-pointer"
+                                title="Remove"
+                              >
+                                ✕
+                              </button>
+                            )}
                           </div>
-                          {!isSubmitted && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                playPop();
-                                const next = { ...userDragPlacements };
-                                delete next[placedItem];
-                                onUpdateDragPlacements(next);
-                              }}
-                              className="w-5 h-5 rounded-full hover:bg-rose-100 text-stone-400 hover:text-rose-600 flex items-center justify-center cursor-pointer"
-                              title="Remove"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : isHoveredTarget ? (
                     <div className="text-xs font-black text-sky-900 bg-sky-200/90 py-2 px-3 rounded-xl animate-bounce border border-sky-300">
@@ -1368,14 +1452,17 @@ export default function InteractiveQuestionCard({
           {/* If the prompt has a blank/fill-in placeholder or math equation, show the focused formula box */}
           {(question.prompt.includes('__') || question.prompt.includes('...') || question.prompt.includes('=')) ? (
             <div className="bg-amber-50/80 border-2 border-amber-300 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-center gap-2.5 text-lg sm:text-xl font-black text-stone-900 shadow-2xs">
-              <span className="leading-snug text-center">
-                {question.prompt.includes('__') ? (
-                  question.prompt.split('__')[0]
-                ) : question.prompt.includes('...') ? (
-                  question.prompt.split('...')[0]
-                ) : (
-                  question.prompt
-                )}
+              <span className="leading-snug text-center inline-flex items-center gap-1.5 flex-wrap">
+                <ClipartText
+                  text={
+                    question.prompt.includes('__')
+                      ? question.prompt.split('__')[0]
+                      : question.prompt.includes('...')
+                      ? question.prompt.split('...')[0]
+                      : question.prompt
+                  }
+                  imageSize="md"
+                />
               </span>
               {/* The inline answer box */}
               <input
@@ -1389,10 +1476,14 @@ export default function InteractiveQuestionCard({
                 className="w-28 sm:w-36 text-center text-xl sm:text-2xl font-black tracking-wider py-1.5 px-3 rounded-xl border-3 border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-300 bg-white text-stone-900 shadow-inner"
               />
               {question.prompt.includes('__') && question.prompt.split('__')[1] && (
-                <span>{question.prompt.split('__')[1]}</span>
+                <span className="inline-flex items-center gap-1.5">
+                  <ClipartText text={question.prompt.split('__')[1]} imageSize="md" />
+                </span>
               )}
               {question.prompt.includes('...') && question.prompt.split('...')[1] && (
-                <span>{question.prompt.split('...')[1]}</span>
+                <span className="inline-flex items-center gap-1.5">
+                  <ClipartText text={question.prompt.split('...')[1]} imageSize="md" />
+                </span>
               )}
             </div>
           ) : (
@@ -1665,25 +1756,40 @@ export default function InteractiveQuestionCard({
       {/* -------------------------------------------------------------
           FLOATING DRAG PREVIEW (FOLLOWS CURSOR / TOUCH POINTER)
       ------------------------------------------------------------- */}
-      {activeDrag?.isDragging && (
-        <div
-          style={{
-            position: 'fixed',
-            left: `${activeDrag.currentX}px`,
-            top: `${activeDrag.currentY}px`,
-            transform: 'translate(-50%, -50%) rotate(-4deg) scale(1.12)',
-            pointerEvents: 'none',
-            zIndex: 99999,
-          }}
-          className="px-4 py-2.5 rounded-2xl bg-white/95 border-3 border-amber-500 text-stone-950 font-black text-sm sm:text-base shadow-2xl ring-4 ring-amber-300/70 flex items-center gap-2 select-none pointer-events-none"
-        >
-          <Move className="w-4 h-4 text-amber-600 animate-spin" />
-          <span>{activeDrag.itemId}</span>
-          <span className="text-[10px] font-black text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full uppercase tracking-wider">
-            Release to Drop
-          </span>
-        </div>
-      )}
+      {activeDrag?.isDragging && (() => {
+        const ghostImgNode = activeDrag?.type === 'drag_and_drop'
+          ? renderItemImage(
+              activeDrag?.itemData?.itemImage || dragItemsConfig.find(d => d.item === activeDrag.itemId)?.itemImage,
+              activeDrag.itemId,
+              'sm'
+            )
+          : null;
+
+        return (
+          <div
+            style={{
+              position: 'fixed',
+              left: `${activeDrag.currentX}px`,
+              top: `${activeDrag.currentY}px`,
+              transform: 'translate(-50%, -50%) rotate(-4deg) scale(1.12)',
+              pointerEvents: 'none',
+              zIndex: 99999,
+            }}
+            className="px-4 py-2.5 rounded-2xl bg-white/95 border-3 border-amber-500 text-stone-950 font-black text-sm sm:text-base shadow-2xl ring-4 ring-amber-300/70 flex items-center gap-2 select-none pointer-events-none"
+          >
+            {ghostImgNode && (
+              <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center p-0.5 overflow-hidden shrink-0">
+                {ghostImgNode}
+              </div>
+            )}
+            <Move className="w-4 h-4 text-amber-600 animate-spin" />
+            <span>{activeDrag.itemId}</span>
+            <span className="text-[10px] font-black text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full uppercase tracking-wider">
+              Release to Drop
+            </span>
+          </div>
+        );
+      })()}
     </div>
   );
 }

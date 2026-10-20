@@ -929,7 +929,9 @@ export default function StudentAnalyticsDashboard({
               </div>
             ) : (
               filteredActivities.map((act) => {
-                const pct = Math.round((act.score / Math.max(1, act.maxScore)) * 100);
+                const safeMax = Math.max(1, act.maxScore || 100);
+                const safeScore = Math.min(safeMax, Math.max(0, act.score || 0));
+                const pct = Math.min(100, Math.max(0, Math.round((safeScore / safeMax) * 100)));
                 const badge = getScoreBadge(pct);
                 return (
                   <div
@@ -953,7 +955,9 @@ export default function StudentAnalyticsDashboard({
                     <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-stone-100">
                       <div className="text-left sm:text-right">
                         <span className="text-xs sm:text-sm font-black text-stone-900 block">
-                          {act.score} / {act.maxScore} pts
+                          {typeof act.correctAnswers === 'number' && act.totalQuestions
+                            ? `${act.correctAnswers} / ${act.totalQuestions} Qs`
+                            : `${safeScore} / ${safeMax} pts`}
                         </span>
                         <span className="text-[10px] text-stone-400 block">{pct}% Accuracy</span>
                       </div>

@@ -7,7 +7,8 @@ import {
   Subject,
   GradeLevel,
   ClassRoom,
-  ClassAssignment
+  ClassAssignment,
+  QuestionResult
 } from '../../types';
 import { 
   Flame, 
@@ -41,10 +42,15 @@ import {
   Database,
   FolderOpen,
   ChevronDown,
+  ChevronUp,
   GraduationCap,
   Gamepad2,
   X,
-  Medal
+  Medal,
+  FileText,
+  Printer,
+  Calendar,
+  Building2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { sounds } from '../../utils/audio';
@@ -58,6 +64,7 @@ import ActivityPlayerModal from '../activities/ActivityPlayerModal';
 import InteractiveQuestionCard from '../activities/InteractiveQuestionCard';
 import TactileActivityLab from '../tactile-activities/TactileActivityLab';
 import PforPencilLogo from '../../common/PforPencilLogo';
+import { ClipartText } from '../../common/ClipartRenderer';
 import { syncActivityAttemptToSupabase, syncProgressToSupabase, isSupabaseConfigured } from '../../database';
 import { loadQuestionBankMasters } from '../../data/questionBankMasterData';
 import { loadCurriculumMaster } from '../../data/curriculumMasterData';
@@ -329,8 +336,10 @@ export default function StudentPortal({
   assignments = [],
   onUpdateProgress
 }: StudentPortalProps) {
-  // Navigation Tabs - Skill Practice & Tests is the primary default focus
-  const [activeTab, setActiveTab] = useState<'skills' | 'tactile' | 'leaderboard' | 'analytics'>('skills');
+  // Navigation Tabs: 1. Teacher Assignments, 2. Regular Question Bank, 3. Interactive Activities, 4. Student Profile & Report, 5. Leaderboard
+  const [activeTab, setActiveTab] = useState<'assignments' | 'skills' | 'tactile' | 'profile' | 'leaderboard'>('skills');
+  const [expandedAssignmentId, setExpandedAssignmentId] = useState<string | null>(null);
+  const [assignmentFilter, setAssignmentFilter] = useState<'all' | 'pending' | 'completed'>('all');
 
   // Master data version tracking to react instantly when admin activates/deactivates categories or skills
   const [masterDataVersion, setMasterDataVersion] = useState(0);
@@ -397,13 +406,34 @@ export default function StudentPortal({
     ) || null;
   }, [classes, currentUser.id, studentProgress.studentId]);
 
-  const assignedClassHomework = useMemo(() => {
+  const allClassAssignments = useMemo(() => {
     if (!assignments || assignments.length === 0) return [];
     if (assignedClass) {
-      return assignments.filter(a => a.classId === assignedClass.id && a.status === 'active');
+      return assignments.filter(a => 
+        a.classId === assignedClass.id || 
+        a.className === assignedClass.name ||
+        a.studentIds?.includes(currentUser.id) ||
+        a.studentIds?.includes(studentProgress.studentId)
+      );
     }
-    return assignments.filter(a => a.grade === studentGrade && a.status === 'active');
-  }, [assignments, assignedClass, studentGrade]);
+    // For students without a school classroom (e.g. parent accounts or independent learners),
+    // only include assignments specifically designated for this student
+    return assignments.filter(a => 
+      a.studentIds?.includes(currentUser.id) || 
+      a.studentIds?.includes(studentProgress.studentId)
+    );
+  }, [assignments, assignedClass, currentUser.id, studentProgress.studentId]);
+
+  const assignedClassHomework = useMemo(() => {
+    return allClassAssignments.filter(a => a.status === 'active');
+  }, [allClassAssignments]);
+
+  // If student is on assignments tab but has no assignments assigned, automatically switch to skills bank
+  useEffect(() => {
+    if (activeTab === 'assignments' && allClassAssignments.length === 0) {
+      setActiveTab('skills');
+    }
+  }, [activeTab, allClassAssignments.length]);
 
   const handleStartClassAssignment = (asg: ClassAssignment) => {
     sounds.playCorrect();
@@ -493,6 +523,8 @@ export default function StudentPortal({
   };
   const [showHint, setShowHint] = useState(false);
   const [score, setScore] = useState(0);
+  const [correctAnswersCount, setCorrectAnswersCount] = useState(0);
+  const [recordedQuestionResults, setRecordedQuestionResults] = useState<QuestionResult[]>([]);
   const [quizFinished, setQuizFinished] = useState(false);
   const [isIdCardOpen, setIsIdCardOpen] = useState(false);
   const [isReportCardOpen, setIsReportCardOpen] = useState(false);
@@ -625,9 +657,19 @@ export default function StudentPortal({
     const addedCoins = activity.rewardCoins || 0;
     const updatedXp = studentProgress.xp + addedXp;
     const updatedLevel = Math.floor(updatedXp / 500) + 1;
+    const safeMax = Math.max(1, maxScore || 100);
+    const safeScore = Math.min(safeMax, Math.max(0, finalScore));
+    const totalQ = Math.max(1, activity.questionIds?.length || 1);
+    const safeCorrectCount = Math.min(totalQ, Math.max(0, Math.round((safeScore / safeMax) * totalQ)));
     const log = {
-      id: `ACT-LOG-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      title: activity.title, type: activity.type, score: finalScore, maxScore, timestamp: 'Just now'
+      id: activity.id || `ACT-LOG-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      title: activity.title,
+      type: activity.type,
+      score: safeScore,
+      maxScore: safeMax,
+      correctAnswers: safeCorrectCount,
+      totalQuestions: totalQ,
+      timestamp: 'Just now'
     };
     const updatedProgress = {
       ...studentProgress, 
@@ -682,6 +724,8 @@ export default function StudentPortal({
     setIsAnswerSubmitted(false);
     setShowHint(false);
     setScore(0);
+    setCorrectAnswersCount(0);
+    setRecordedQuestionResults([]);
     setQuizFinished(false);
     setQuestionTimer(30);
     setQuestionElapsedTime(0);
@@ -888,12 +932,52 @@ export default function StudentPortal({
 
     setIsAnswerSubmitted(true);
 
+    // Format human-readable student answer and correct answer for teacher review
+    let studentAnswerText = '';
+    let correctAnswerText = '';
+    if (qType === 'open_box' || qType === 'fill_blank') {
+      studentAnswerText = openBoxInput.trim();
+      correctAnswerText = currentQ.openBoxAnswer || currentQ.options[0] || '';
+    } else if (qType === 'select_objects') {
+      const target = parseInt(currentQ.openBoxAnswer || currentQ.options[0] || '4', 10);
+      studentAnswerText = `${tappedObjectIds.length} object(s) selected`;
+      correctAnswerText = `${target} object(s)`;
+    } else if (qType === 'ordering') {
+      studentAnswerText = userOrderedList.join(' → ') || 'No order';
+      correctAnswerText = (currentQ.orderSequence || currentQ.options || []).join(' → ');
+    } else if (qType === 'drag_and_drop') {
+      studentAnswerText = Object.entries(userDragPlacements).map(([k, v]) => `${k} → ${v}`).join(', ') || 'No placements';
+      correctAnswerText = (currentQ.dragItems || []).map((p: any) => p.item ? `${p.item} → ${p.target}` : String(p)).join(', ') || (currentQ.options || []).join(', ');
+    } else if (qType === 'match_making') {
+      studentAnswerText = Object.entries(userMatchPairs).map(([k, v]) => `${k} = ${v}`).join(', ') || 'No pairs';
+      correctAnswerText = (currentQ.matchPairs || []).map((p) => `${p.left} = ${p.right}`).join(', ') || (currentQ.options || []).join(', ');
+    } else if (qType === 'sorting') {
+      studentAnswerText = Object.entries(userBuckets).map(([b, items]) => `${b}: [${items.join(', ')}]`).join('; ') || 'No categories';
+      correctAnswerText = (currentQ.sortBuckets || []).map((b) => `${b.bucketName}: [${b.items.join(', ')}]`).join('; ') || 'Categorized correctly';
+    } else {
+      studentAnswerText = selectedOption !== null && currentQ.options?.[selectedOption] ? currentQ.options[selectedOption] : 'No answer';
+      correctAnswerText = currentQ.options?.[currentQ.correctIndex ?? 0] || 'Correct answer';
+    }
+
+    const questionResultItem: QuestionResult = {
+      questionId: currentQ.id,
+      prompt: currentQ.prompt,
+      isCorrect,
+      studentAnswer: studentAnswerText,
+      correctAnswer: correctAnswerText,
+      explanation: currentQ.explanation,
+      hint: currentQ.hint,
+      timeSpentSeconds: questionElapsedTime
+    };
+    setRecordedQuestionResults((prev) => [...prev, questionResultItem]);
+
     const isSpeedBonus = isCorrect && questionElapsedTime <= 10;
-    const pointsEarned = currentQ.points + (isSpeedBonus ? 10 : 0);
+    const pointsEarned = currentQ.points;
 
     if (isCorrect) {
       sounds.playHappyCelebration();
       setScore((prev) => prev + pointsEarned);
+      setCorrectAnswersCount((prev) => prev + 1);
       if (isSpeedBonus) {
         setSpeedBonusesEarned((prev) => prev + 1);
       }
@@ -906,7 +990,7 @@ export default function StudentPortal({
         status: 'correct',
         title: isSpeedBonus ? '⚡ Lightning Fast! Speed Bonus!' : '🌟 Outstanding! Excellent Job!',
         message: isSpeedBonus 
-          ? `Answered in just ${questionElapsedTime}s! You earned +${currentQ.points} Base XP & +10 Speed Bonus XP!` 
+          ? `Answered in just ${questionElapsedTime}s! You earned +${currentQ.points} Points & +10 Speed Bonus XP!` 
           : `Super work! You got it right in ${questionElapsedTime}s and earned +${currentQ.points} Points!`,
         isSpeedBonus
       });
@@ -963,12 +1047,22 @@ export default function StudentPortal({
       const updatedXp = studentProgress.xp + addedXp;
       const updatedLevel = Math.floor(updatedXp / 500) + 1;
 
+      const totalQ = Math.max(1, activeQuestions.length);
+      const safeCorrectCount = Math.min(totalQ, Math.max(0, correctAnswersCount));
+
+      // Calculate max possible score from questions and strictly clamp finalScore
+      const calculatedMaxScore = activeQuestions.reduce((acc, q) => acc + (q.points || 10), 0) || (totalQ * 10) || 100;
+      const validatedScore = Math.min(calculatedMaxScore, Math.max(0, finalScore));
+
       const newActivityLog = {
-        id: `ACT-LOG-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        id: activePlayActivity.id || `ACT-LOG-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         title: activePlayActivity.title,
         type: activePlayActivity.type,
-        score: finalScore,
-        maxScore: activeQuestions.reduce((acc, q) => acc + q.points, 0) || 100,
+        score: validatedScore,
+        maxScore: calculatedMaxScore,
+        correctAnswers: safeCorrectCount,
+        totalQuestions: totalQ,
+        questionResults: recordedQuestionResults,
         timestamp: 'Just now'
       };
 
@@ -1394,10 +1488,10 @@ export default function StudentPortal({
                 📝 {assignedClassHomework.length} Active Assignment{assignedClassHomework.length === 1 ? '' : 's'}
               </span>
               <button
-                onClick={() => handleStartClassAssignment(assignedClassHomework[0])}
+                onClick={() => setActiveTab('assignments')}
                 className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
               >
-                <span>Start Homework</span>
+                <span>View Assignments</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -1409,8 +1503,31 @@ export default function StudentPortal({
         </div>
       )}
 
-      {/* PORTAL NAVIGATION TABS: 1. Skill Practice & Tests (First focus), 2. Interactive Activities, 3. Leaderboard, 4. Analytics */}
+      {/* PORTAL NAVIGATION TABS: 1. Teacher Assignments (only if assigned), 2. Regular Question Bank, 3. Interactive Activities, 4. Student Profile & Report, 5. Leaderboard */}
       <div className="flex items-center gap-2 border-b border-[#e1e6f1] pb-2 overflow-x-auto scrollbar-none">
+        {/* Only show Teacher Assignments tab if student has tasks assigned by teacher or parent */}
+        {allClassAssignments.length > 0 && (
+          <button
+            id="student-tab-assignments-btn"
+            onClick={() => setActiveTab('assignments')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-bold transition cursor-pointer whitespace-nowrap ${
+              activeTab === 'assignments'
+                ? 'bg-[#10246f] text-white shadow-xs'
+                : 'text-[#59627a] hover:text-[#10246f] hover:bg-[#eef4ff]'
+            }`}
+          >
+            <FileText className="w-4 h-4 text-amber-400" />
+            <span>📋 Teacher Assignments</span>
+            {assignedClassHomework.length > 0 && (
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                activeTab === 'assignments' ? 'bg-amber-400 text-stone-950' : 'bg-rose-500 text-white'
+              }`}>
+                {assignedClassHomework.length}
+              </span>
+            )}
+          </button>
+        )}
+
         <button
           id="student-tab-skills-btn"
           onClick={() => setActiveTab('skills')}
@@ -1421,7 +1538,7 @@ export default function StudentPortal({
           }`}
         >
           <Compass className="w-4 h-4 text-sky-400" />
-          <span>🧭 Skill Practice & Tests</span>
+          <span>🧭 Regular Question Bank</span>
         </button>
 
         <button
@@ -1438,6 +1555,19 @@ export default function StudentPortal({
         </button>
 
         <button
+          id="student-tab-profile-btn"
+          onClick={() => setActiveTab('profile')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-bold transition cursor-pointer whitespace-nowrap ${
+            activeTab === 'profile'
+              ? 'bg-[#10246f] text-white shadow-xs'
+              : 'text-[#59627a] hover:text-[#10246f] hover:bg-[#eef4ff]'
+          }`}
+        >
+          <GraduationCap className="w-4 h-4 text-purple-400" />
+          <span>👤 Student Profile & Report</span>
+        </button>
+
+        <button
           id="student-tab-leaderboard-btn"
           onClick={() => setActiveTab('leaderboard')}
           className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-bold transition cursor-pointer whitespace-nowrap ${
@@ -1447,20 +1577,7 @@ export default function StudentPortal({
           }`}
         >
           <Trophy className="w-4 h-4 text-amber-400" />
-          <span>Leaderboard</span>
-        </button>
-
-        <button
-          id="student-tab-analytics-btn"
-          onClick={() => setActiveTab('analytics')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-bold transition cursor-pointer whitespace-nowrap ${
-            activeTab === 'analytics'
-              ? 'bg-[#10246f] text-white shadow-xs'
-              : 'text-[#59627a] hover:text-[#10246f] hover:bg-[#eef4ff]'
-          }`}
-        >
-          <BarChart3 className="w-4 h-4 text-emerald-400" />
-          <span>Learning Analytics</span>
+          <span>🏆 Leaderboard</span>
         </button>
       </div>
 
@@ -1781,6 +1898,8 @@ export default function StudentPortal({
                       setIsAnswerSubmitted(false);
                       setAnswerFeedback(null);
                       setScore(0);
+                      setCorrectAnswersCount(0);
+                      setRecordedQuestionResults([]);
                       resetQuestionInteractions(activeQuestions[0]);
                     }}
                     className="flex-1 py-3 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs sm:text-sm transition cursor-pointer flex items-center justify-center gap-2"
@@ -1801,6 +1920,264 @@ export default function StudentPortal({
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB: TEACHER ASSIGNMENTS (ASSIGNED BY CLASSROOM FACULTY) */}
+      {/* ========================================================================= */}
+      {activeTab === 'assignments' && allClassAssignments.length > 0 && (
+        <div className="space-y-5">
+          {/* Header Banner */}
+          <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-3xl shrink-0 border border-white/20">
+                📋
+              </div>
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[11px] font-black uppercase tracking-wider mb-1">
+                  Classroom Homework Portal
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                  Teacher Assignments & Assessments
+                </h2>
+                <p className="text-xs text-blue-200 mt-0.5">
+                  Assigned by {assignedClass?.teacherName ? <strong>{assignedClass.teacherName}</strong> : 'your faculty'} for {assignedClass?.name || studentGrade}
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="flex items-center gap-3 bg-white/10 p-3 rounded-2xl border border-white/10 backdrop-blur-md">
+              <div className="text-center px-3 border-r border-white/10">
+                <div className="text-xl font-black text-amber-300">{allClassAssignments.length}</div>
+                <div className="text-[10px] text-blue-200 uppercase font-bold tracking-wider">Total Tasks</div>
+              </div>
+              <div className="text-center px-3 border-r border-white/10">
+                <div className="text-xl font-black text-emerald-400">{assignedClassHomework.length}</div>
+                <div className="text-[10px] text-blue-200 uppercase font-bold tracking-wider">Pending</div>
+              </div>
+              <div className="text-center px-3">
+                <div className="text-xl font-black text-white">{allClassAssignments.length - assignedClassHomework.length}</div>
+                <div className="text-[10px] text-blue-200 uppercase font-bold tracking-wider">Done</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Filter Bar */}
+          <div className="bg-white rounded-2xl border border-stone-200 p-3 shadow-xs flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-1 bg-stone-100 p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setAssignmentFilter('all')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  assignmentFilter === 'all' ? 'bg-white text-stone-900 shadow-xs' : 'text-stone-600 hover:text-stone-900'
+                }`}
+              >
+                All Assignments ({allClassAssignments.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setAssignmentFilter('pending')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                  assignmentFilter === 'pending' ? 'bg-blue-600 text-white shadow-xs' : 'text-blue-700 hover:bg-blue-50'
+                }`}
+              >
+                Pending ({assignedClassHomework.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setAssignmentFilter('completed')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  assignmentFilter === 'completed' ? 'bg-white text-stone-900 shadow-xs' : 'text-stone-600 hover:text-stone-900'
+                }`}
+              >
+                Completed ({allClassAssignments.length - assignedClassHomework.length})
+              </button>
+            </div>
+
+            <div className="text-xs text-stone-500 font-medium">
+              💡 Complete assignments on time to earn extra XP and streak bonuses!
+            </div>
+          </div>
+
+          {/* Assignment Cards List */}
+          {allClassAssignments.length === 0 ? (
+            <div className="bg-white rounded-3xl border border-stone-200 p-12 text-center space-y-4 shadow-xs">
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-3xl mx-auto shadow-inner">
+                🎉
+              </div>
+              <div className="max-w-md mx-auto">
+                <h3 className="text-base font-black text-stone-900">All Caught Up!</h3>
+                <p className="text-xs text-stone-500 mt-1">
+                  You have no pending assignments right now. Head over to the Regular Question Bank to practice curriculum skills anytime.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('skills')}
+                className="px-5 py-2.5 rounded-full bg-[#10246f] hover:bg-[#0c1a52] text-white font-bold text-xs transition cursor-pointer shadow-xs inline-flex items-center gap-1.5"
+              >
+                <Compass className="w-4 h-4 text-sky-400" />
+                <span>Explore Regular Question Bank</span>
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {allClassAssignments
+                .filter(asg => {
+                  if (assignmentFilter === 'pending') return asg.status === 'active';
+                  if (assignmentFilter === 'completed') return asg.status !== 'active';
+                  return true;
+                })
+                .map((asg) => {
+                  const asgQuestions = questions.filter(q => asg.questionIds.includes(q.id));
+                  const customCount = asgQuestions.filter(q => q.isCustom || q.schoolId).length;
+                  const masterCount = asgQuestions.length - customCount;
+                  const isExpanded = expandedAssignmentId === asg.id;
+                  const recentAttempt = studentProgress.recentActivities.find(a => a.id === asg.id || a.title === asg.title);
+                  const isDone = asg.status !== 'active' || !!recentAttempt;
+
+                  return (
+                    <div
+                      key={asg.id}
+                      className="bg-white rounded-3xl border border-stone-200 overflow-hidden shadow-xs hover:border-blue-300 transition-all"
+                    >
+                      <div className="p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="space-y-2 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-mono text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-stone-100 text-stone-700">
+                              {asg.id}
+                            </span>
+                            <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 text-[11px] font-bold">
+                              {asg.subject}
+                            </span>
+                            <span className="px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-700 text-[10px] font-semibold">
+                              {asg.grade}
+                            </span>
+                            {customCount > 0 && (
+                              <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 text-[10px] font-bold flex items-center gap-1">
+                                🏫 {customCount} School Custom
+                              </span>
+                            )}
+                            {masterCount > 0 && (
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 text-[10px] font-bold flex items-center gap-1">
+                                🌐 {masterCount} Master Bank
+                              </span>
+                            )}
+                          </div>
+
+                          <h3 className="text-base sm:text-lg font-black text-stone-900">
+                            {asg.title}
+                          </h3>
+
+                          <div className="flex flex-wrap items-center gap-4 text-xs text-stone-500 font-medium">
+                            <span className="flex items-center gap-1">
+                              <Building2 className="w-3.5 h-3.5 text-stone-400" />
+                              <span>{asg.className || assignedClass?.name || 'Classroom Cohort'}</span>
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                              <span>Due: <strong>{asg.dueDate}</strong></span>
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <HelpCircle className="w-3.5 h-3.5 text-stone-400" />
+                              <span>{asg.questionIds.length} Questions</span>
+                            </span>
+                            {recentAttempt && (() => {
+                              const totalQ = recentAttempt.totalQuestions || asg.questionIds.length || 1;
+                              const correctQ = typeof recentAttempt.correctAnswers === 'number'
+                                ? Math.min(totalQ, Math.max(0, recentAttempt.correctAnswers))
+                                : Math.min(totalQ, Math.max(0, Math.round((recentAttempt.score / Math.max(1, recentAttempt.maxScore)) * totalQ)));
+                              const pct = Math.min(100, Math.max(0, Math.round((correctQ / totalQ) * 100)));
+                              return (
+                                <span className="text-emerald-700 font-bold flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 text-xs">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>Completed ({correctQ}/{totalQ} • {pct}%)</span>
+                                </span>
+                              );
+                            })()}
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-2 self-start md:self-center shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedAssignmentId(isExpanded ? null : asg.id)}
+                            className="px-3 py-2 rounded-xl border border-stone-200 hover:bg-stone-50 text-stone-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
+                          >
+                            <span>Questions ({asg.questionIds.length})</span>
+                            {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleStartClassAssignment(asg)}
+                            className={`px-5 py-2.5 rounded-full font-bold text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer shadow-sm hover:scale-102 active:scale-98 ${
+                              isDone
+                                ? 'bg-stone-800 hover:bg-stone-900 text-white'
+                                : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+                            }`}
+                          >
+                            <span>{isDone ? 'Retake Assignment' : 'Start Assignment'}</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Expandable Question Preview List */}
+                      {isExpanded && (
+                        <div className="bg-stone-50/80 border-t border-stone-200 p-5 space-y-3">
+                          <div className="flex items-center justify-between text-xs font-bold text-stone-600">
+                            <span>Questions in this Assignment ({asgQuestions.length}):</span>
+                            <span className="text-[11px] text-stone-500 font-normal">
+                              Source: {customCount > 0 ? `${customCount} School Custom` : ''} {masterCount > 0 ? `• ${masterCount} Master Bank` : ''}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 gap-2.5">
+                            {asgQuestions.map((q, qIdx) => (
+                              <div
+                                key={q.id}
+                                className="bg-white p-3.5 rounded-2xl border border-stone-200 shadow-2xs flex items-start gap-3"
+                              >
+                                <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-900 text-xs font-black flex items-center justify-center shrink-0 mt-0.5">
+                                  {qIdx + 1}
+                                </span>
+                                <div className="flex-1 space-y-1">
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    <span className="font-mono text-[10px] font-bold text-stone-500">{q.id}</span>
+                                    {q.isCustom || q.schoolId ? (
+                                      <span className="px-2 py-0.2 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-200">
+                                        🏫 School Custom
+                                      </span>
+                                    ) : (
+                                      <span className="px-2 py-0.2 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
+                                        🌐 Master Bank
+                                      </span>
+                                    )}
+                                    <span className="px-2 py-0.2 rounded-full bg-amber-50 text-amber-800 text-[10px] font-bold">
+                                      🏷️ {q.category || 'Topic'}
+                                    </span>
+                                    <span className="px-2 py-0.2 rounded-full bg-purple-50 text-purple-800 text-[10px] font-bold">
+                                      🎯 {q.skill || 'Skill'}
+                                    </span>
+                                  </div>
+                                  <div className="text-xs font-bold text-stone-900">
+                                    <ClipartText text={q.prompt} imageSize="xs" />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          )}
         </div>
       )}
 
@@ -2007,18 +2384,151 @@ export default function StudentPortal({
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 3: LEARNING ANALYTICS DASHBOARDS */}
+      {/* TAB: STUDENT PROFILE & REPORT CARD (OFFICIAL CREDENTIALS & DEEP ANALYTICS) */}
       {/* ========================================================================= */}
-      {activeTab === 'analytics' && (
-        <StudentAnalyticsDashboard
-          studentProgress={studentProgress}
-          activities={activities}
-          questions={gradeLockedQuestions}
-          currentUser={currentUser}
-          onOpenReportCard={() => setIsReportCardOpen(true)}
-          onStartPracticeSkill={handleStartPracticeSkill}
-          onStartActivity={handleStartActivity}
-        />
+      {activeTab === 'profile' && (
+        <div className="space-y-6">
+          {/* Identity & Credentials Card */}
+          <div className="bg-white rounded-3xl border border-stone-200 p-6 sm:p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-blue-50 border-2 border-blue-200 flex items-center justify-center text-4xl shadow-inner">
+                {studentProgress.avatar || '🦊'}
+              </div>
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-xl sm:text-2xl font-black text-stone-900">
+                    {studentProgress.studentName}
+                  </h2>
+                  <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 font-bold text-xs">
+                    {studentProgress.grade}
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 font-bold text-xs">
+                    Level {studentProgress.level} Scholar
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-stone-600 font-mono">
+                  <span>Student ID: <strong>{currentUser.id}</strong></span>
+                  <span>•</span>
+                  <span>Username: <strong>@{currentUser.username || studentProgress.studentUsername}</strong></span>
+                  <span>•</span>
+                  <span>Login PIN: <strong>{currentUser.pin || '7392'}</strong></span>
+                </div>
+                <div className="text-xs text-stone-500 font-medium pt-0.5">
+                  🏫 Campus / Affiliation: <strong>{studentProgress.schoolName || currentUser.schoolName || 'PforPencil Academy'}</strong>
+                  {assignedClass && ` • Class: ${assignedClass.name} (Teacher: ${assignedClass.teacherName})`}
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsIdCardOpen(true)}
+                className="px-4 py-2 rounded-xl border border-stone-200 hover:bg-stone-50 text-stone-800 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+              >
+                <Printer className="w-3.5 h-3.5 text-blue-600" />
+                <span>Print Student ID Card</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsReportCardOpen(true)}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+              >
+                <GraduationCap className="w-3.5 h-3.5 text-white" />
+                <span>View Official Report Card</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Academic Metrics Strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl shrink-0">
+                ⚡
+              </div>
+              <div>
+                <div className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Total XP Score</div>
+                <div className="text-xl font-black text-amber-700">+{studentProgress.xp} XP</div>
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-yellow-50 text-yellow-600 flex items-center justify-center text-xl shrink-0">
+                🪙
+              </div>
+              <div>
+                <div className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Coin Balance</div>
+                <div className="text-xl font-black text-stone-900">{studentProgress.coins} Coins</div>
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center text-xl shrink-0">
+                🔥
+              </div>
+              <div>
+                <div className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Daily Streak</div>
+                <div className="text-xl font-black text-orange-600">{studentProgress.streakDays} Days</div>
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl shrink-0">
+                🎯
+              </div>
+              <div>
+                <div className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Overall Accuracy</div>
+                <div className="text-xl font-black text-emerald-700">{studentProgress.averageScore}%</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Performance Milestones & Earned Badges */}
+          <div className="bg-white rounded-3xl border border-stone-200 p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Award className="w-5 h-5 text-amber-500" />
+                <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">
+                  Earned Achievement Badges ({studentProgress.badges?.length || 0})
+                </h3>
+              </div>
+              <span className="text-xs text-stone-500 font-medium">
+                Keep practicing to unlock more badges!
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+              {(studentProgress.badges && studentProgress.badges.length > 0) ? (
+                studentProgress.badges.map((b) => (
+                  <div
+                    key={b.id}
+                    className="p-3 rounded-2xl bg-gradient-to-b from-amber-50/60 to-white border border-amber-200 text-center space-y-1 shadow-2xs hover:scale-105 transition"
+                  >
+                    <div className="text-2xl">{b.icon || '🏅'}</div>
+                    <div className="text-xs font-black text-stone-900 truncate" title={b.name}>{b.name}</div>
+                    <div className="text-[9px] text-stone-500 truncate" title={b.description}>{b.description}</div>
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-full p-4 rounded-2xl bg-stone-50 border border-stone-200 text-center text-xs text-stone-500">
+                  Complete your daily quizzes and assignments to earn special badges!
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Full Detailed Learning Analytics Dashboard */}
+          <StudentAnalyticsDashboard
+            studentProgress={studentProgress}
+            activities={activities}
+            questions={gradeLockedQuestions}
+            currentUser={currentUser}
+            onOpenReportCard={() => setIsReportCardOpen(true)}
+            onStartPracticeSkill={handleStartPracticeSkill}
+            onStartActivity={handleStartActivity}
+          />
+        </div>
       )}
 
       {/* Student ID Card Modal */}

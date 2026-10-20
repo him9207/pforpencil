@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160">
+  <!-- Black Round Ears -->
+  <circle cx="45" cy="48" r="18" fill="#0F172A"/>
+  <circle cx="115" cy="48" r="18" fill="#0F172A"/>
+  <!-- White Round Face -->
+  <circle cx="80" cy="86" r="48" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <!-- Black Eye Patches -->
+  <ellipse cx="60" cy="82" rx="14" ry="18" fill="#0F172A" transform="rotate(-15 60 82)"/>
+  <ellipse cx="100" cy="82" rx="14" ry="18" fill="#0F172A" transform="rotate(15 100 82)"/>
+  <!-- White Pupils -->
+  <circle cx="62" cy="80" r="5" fill="#FFFFFF"/>
+  <circle cx="98" cy="80" r="5" fill="#FFFFFF"/>
+  <circle cx="64" cy="82" r="2" fill="#0F172A"/>
+  <circle cx="96" cy="82" r="2" fill="#0F172A"/>
+  <!-- Nose & Mouth -->
+  <ellipse cx="80" cy="100" rx="7" ry="5" fill="#0F172A"/>
+  <path d="M 74 106 Q 80 112 86 106" stroke="#0F172A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <!-- Rosy cheeks -->
+  <circle cx="48" cy="98" r="6" fill="#F43F5E" opacity="0.3"/>
+  <circle cx="112" cy="98" r="6" fill="#F43F5E" opacity="0.3"/>
+</svg>

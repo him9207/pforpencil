@@ -181,6 +181,7 @@ export default function SchoolPortal({
   const [newStudentPin, setNewStudentPin] = useState('7392');
 
   const [successBanner, setSuccessBanner] = useState('');
+  const [errorBanner, setErrorBanner] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
   const allocatedSeats = schoolStudents.length;
@@ -319,7 +320,8 @@ export default function SchoolPortal({
     if (!newStudentName.trim()) return;
 
     if (allocatedSeats >= school.totalSeats) {
-      alert(`Seat limit reached (${school.totalSeats} seats). Please upgrade your school plan to add more students.`);
+      setErrorBanner(`Campus seat limit reached: All ${school.totalSeats} registered student seats are currently allocated. Please upgrade your school subscription to enroll additional students.`);
+      setTimeout(() => setErrorBanner(''), 6000);
       return;
     }
 
@@ -531,6 +533,14 @@ export default function SchoolPortal({
         <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl text-xs font-bold flex items-center gap-2 animate-in fade-in">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>{successBanner}</span>
+        </div>
+      )}
+
+      {/* Error Notification Banner */}
+      {errorBanner && (
+        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-900 rounded-xl text-xs font-bold flex items-center gap-2 animate-in fade-in">
+          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+          <span>{errorBanner}</span>
         </div>
       )}
 

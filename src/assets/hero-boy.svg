@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 480" width="400" height="480">
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#E0F2FE"/>
+      <stop offset="100%" stop-color="#BAE6FD" stop-opacity="0.1"/>
+    </radialGradient>
+    <linearGradient id="hoodieGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F1F5F9"/>
+    </linearGradient>
+    <linearGradient id="skinGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFE4D6"/>
+      <stop offset="100%" stop-color="#FBCFE8"/>
+    </linearGradient>
+    <linearGradient id="hairGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#451A03"/>
+      <stop offset="100%" stop-color="#78350F"/>
+    </linearGradient>
+    <linearGradient id="backpackGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FCD34D"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </linearGradient>
+    <filter id="dropShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#0F172A" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+  
+  <ellipse cx="200" cy="450" rx="140" ry="20" fill="#0284C7" opacity="0.15" />
+  
+  <!-- Backpack in back -->
+  <rect x="130" y="210" width="140" height="150" rx="36" fill="url(#backpackGrad)" filter="url(#dropShadow)" />
+  <rect x="150" y="195" width="100" height="30" rx="12" fill="#D97706" />
+
+  <!-- Arms - Right Hand Raised Cheering -->
+  <path d="M 270 240 C 310 210, 325 150, 315 120" stroke="#FFFFFF" stroke-width="38" stroke-linecap="round" fill="none" filter="url(#dropShadow)"/>
+  <circle cx="315" cy="115" r="22" fill="#FED7AA" />
+  <!-- Fist details -->
+  <circle cx="310" cy="110" r="8" fill="#FDBA74" />
+  <circle cx="322" cy="112" r="7" fill="#FDBA74" />
+
+  <!-- Left Arm relaxed jumping -->
+  <path d="M 130 250 C 90 270, 75 310, 85 340" stroke="#FFFFFF" stroke-width="34" stroke-linecap="round" fill="none" filter="url(#dropShadow)"/>
+  <circle cx="88" cy="345" r="20" fill="#FED7AA" />
+
+  <!-- Legs Jumping -->
+  <path d="M 170 360 L 155 425" stroke="#1E40AF" stroke-width="32" stroke-linecap="round" />
+  <ellipse cx="145" cy="435" rx="28" ry="16" fill="#EF4444" />
+  <ellipse cx="145" cy="433" rx="22" ry="10" fill="#FFFFFF" opacity="0.8"/>
+  
+  <path d="M 230 360 L 255 415" stroke="#1E40AF" stroke-width="32" stroke-linecap="round" />
+  <ellipse cx="265" cy="425" rx="28" ry="16" fill="#EF4444" />
+  <ellipse cx="265" cy="423" rx="22" ry="10" fill="#FFFFFF" opacity="0.8"/>
+
+  <!-- Body / White Hoodie -->
+  <path d="M 140 230 C 130 340, 140 370, 200 370 C 260 370, 270 340, 260 230 Z" fill="url(#hoodieGrad)" filter="url(#dropShadow)" />
+  <!-- Hoodie Green P Logo -->
+  <circle cx="200" cy="285" r="30" fill="#16C47F" />
+  <text x="200" y="296" font-family="Arial, sans-serif" font-weight="900" font-size="32" fill="#FFFFFF" text-anchor="middle">P</text>
+  <!-- Hoodie drawstrings -->
+  <path d="M 185 225 L 185 260" stroke="#CBD5E1" stroke-width="4" stroke-linecap="round"/>
+  <path d="M 215 225 L 215 260" stroke="#CBD5E1" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Head & Ears -->
+  <circle cx="128" cy="155" r="16" fill="#FED7AA" />
+  <circle cx="272" cy="155" r="16" fill="#FED7AA" />
+  <ellipse cx="200" cy="155" rx="66" ry="70" fill="#FED7AA" filter="url(#dropShadow)" />
+
+  <!-- Hair Tousled Pixar 3D -->
+  <path d="M 130 135 C 120 70, 220 50, 270 95 C 285 110, 280 145, 275 145 C 265 115, 240 100, 200 105 C 160 110, 140 125, 130 135 Z" fill="url(#hairGrad)" />
+  <path d="M 155 75 C 180 55, 225 60, 245 78 C 220 70, 185 70, 155 75 Z" fill="#92400E" />
+
+  <!-- Eyes - Big cartoon expressive -->
+  <ellipse cx="178" cy="155" rx="14" ry="18" fill="#1E293B" />
+  <ellipse cx="222" cy="155" rx="14" ry="18" fill="#1E293B" />
+  <circle cx="174" cy="150" r="6" fill="#FFFFFF" />
+  <circle cx="218" cy="150" r="6" fill="#FFFFFF" />
+  <circle cx="182" cy="160" r="2.5" fill="#FFFFFF" opacity="0.8"/>
+  <circle cx="226" cy="160" r="2.5" fill="#FFFFFF" opacity="0.8"/>
+
+  <!-- Eyebrows Cheerful -->
+  <path d="M 165 132 C 175 128, 190 132, 192 136" stroke="#451A03" stroke-width="4" stroke-linecap="round" fill="none" />
+  <path d="M 235 132 C 225 128, 210 132, 208 136" stroke="#451A03" stroke-width="4" stroke-linecap="round" fill="none" />
+
+  <!-- Rosy Cheeks -->
+  <circle cx="160" cy="172" r="12" fill="#F43F5E" opacity="0.3" />
+  <circle cx="240" cy="172" r="12" fill="#F43F5E" opacity="0.3" />
+
+  <!-- Cheerful Open Mouth Smile -->
+  <path d="M 180 178 C 185 202, 215 202, 220 178 Z" fill="#991B1B" />
+  <path d="M 185 180 C 190 188, 210 188, 215 180 Z" fill="#FFFFFF" />
+  <path d="M 190 196 C 195 190, 205 190, 210 196 Z" fill="#F87171" />
+</svg>

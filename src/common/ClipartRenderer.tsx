@@ -13,8 +13,8 @@ const emojiPattern = registeredEmojis
   .join('|');
 
 const clipartTagRegex = emojiPattern
-  ? new RegExp(`(\\[(?:clipart:)?[a-zA-Z0-9_\\-\\.\\/]+\\]|${emojiPattern})`, 'gu')
-  : /(\[(?:clipart:)?[a-zA-Z0-9_\-\.\/]+\])/g;
+  ? new RegExp(`(\\[(?:clipart:)?[a-zA-Z0-9_\\-\\.\\/\\s]+\\]|${emojiPattern})`, 'gu')
+  : /(\[(?:clipart:)?[a-zA-Z0-9_\-\.\/\s]+\])/g;
 
 interface ClipartImageProps {
   clipart?: ResolvedClipart | ClipartItem | string | null;
@@ -128,7 +128,7 @@ export const ClipartText: React.FC<ClipartTextProps> = ({
     <span className={`inline-flex flex-wrap items-center gap-1 ${className}`}>
       {parts.map((part, idx) => {
         if (!part) return null;
-        const match = part.match(/^\[(?:clipart:)?([a-zA-Z0-9_\-\.\/]+)\]$/i);
+        const match = part.match(/^\[(?:clipart:)?([a-zA-Z0-9_\-\.\/\s]+)\]$/i);
         if (match) {
           const resolved = resolveClipartItem(match[1]);
           if (resolved && resolved.isImage) {

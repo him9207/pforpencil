@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160">
+  <defs>
+    <radialGradient id="beeBody" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FDE047"/>
+      <stop offset="100%" stop-color="#EAB308"/>
+    </radialGradient>
+  </defs>
+  <!-- Wings -->
+  <ellipse cx="60" cy="50" rx="28" ry="36" fill="#E0F2FE" opacity="0.8" transform="rotate(-25 60 50)"/>
+  <ellipse cx="100" cy="50" rx="28" ry="36" fill="#E0F2FE" opacity="0.8" transform="rotate(25 100 50)"/>
+  <!-- Body -->
+  <ellipse cx="80" cy="95" rx="52" ry="46" fill="url(#beeBody)"/>
+  <!-- Stripes -->
+  <path d="M 52 75 Q 80 82 108 75 L 105 88 Q 80 96 55 88 Z" fill="#1E293B"/>
+  <path d="M 45 100 Q 80 110 115 100 L 112 112 Q 80 122 48 112 Z" fill="#1E293B"/>
+  <!-- Cheerful Face -->
+  <circle cx="68" cy="90" r="6" fill="#0F172A"/>
+  <circle cx="92" cy="90" r="6" fill="#0F172A"/>
+  <circle cx="66" cy="88" r="2" fill="#FFFFFF"/>
+  <circle cx="90" cy="88" r="2" fill="#FFFFFF"/>
+  <circle cx="56" cy="98" r="6" fill="#F43F5E" opacity="0.5"/>
+  <circle cx="104" cy="98" r="6" fill="#F43F5E" opacity="0.5"/>
+  <path d="M 72 102 Q 80 110 88 102" stroke="#1E293B" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <!-- Antennae -->
+  <path d="M 68 55 Q 60 35 50 35" stroke="#1E293B" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <circle cx="50" cy="35" r="6" fill="#EAB308"/>
+  <path d="M 92 55 Q 100 35 110 35" stroke="#1E293B" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <circle cx="110" cy="35" r="6" fill="#EAB308"/>
+</svg>

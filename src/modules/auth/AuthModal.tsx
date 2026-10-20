@@ -161,6 +161,10 @@ export default function AuthModal({
   const [regPassword, setRegPassword] = useState('');
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [regSchoolName, setRegSchoolName] = useState('');
+  const [regMaxChildren, setRegMaxChildren] = useState<number>(3);
+  const [customChildrenInput, setCustomChildrenInput] = useState<string>('');
+  const [regSchoolSeats, setRegSchoolSeats] = useState<number>(100);
+  const [customSeatsInput, setCustomSeatsInput] = useState<string>('');
   const [regError, setRegError] = useState('');
   const [regSuccess, setRegSuccess] = useState('');
   const [pendingRegistrationUser, setPendingRegistrationUser] = useState<UserAccount | null>(null);
@@ -442,6 +446,8 @@ export default function AuthModal({
       schoolName: finalSchoolName,
       schoolCode: schoolCode,
       organizationId: regRole === 'school' ? newId : undefined,
+      totalSeats: regRole === 'school' ? regSchoolSeats : undefined,
+      maxChildren: regRole === 'parent' ? regMaxChildren : undefined,
       enrolledAt: now,
       status: 'active'
     };
@@ -791,6 +797,121 @@ export default function AuthModal({
                       placeholder="e.g. Greenwood Academy of Excellence"
                       className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-blue-200 focus:border-blue-500 bg-slate-50/50"
                     />
+                  </div>
+                </div>
+              )}
+
+              {/* SEAT CAPACITY: PARENT NUMBER OF CHILDREN */}
+              {regRole === 'parent' && (
+                <div className="p-3.5 rounded-2xl bg-gradient-to-br from-rose-50/40 via-white to-blue-50/40 border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[11px] font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>👨‍👧‍👦 Registered Children Capacity</span>
+                    </label>
+                    <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2.5 py-0.5 rounded-full border border-blue-200">
+                      {regMaxChildren} Child Seat{regMaxChildren > 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    How many children are you registering? Each child gets an individual profile, custom PIN, avatar, personalized curriculum, and progress report card.
+                  </p>
+                  <div className="grid grid-cols-4 gap-1.5 pt-1">
+                    {[1, 2, 3, 4].map((num) => (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => {
+                          sounds.click();
+                          setRegMaxChildren(num);
+                          setCustomChildrenInput('');
+                        }}
+                        className={`py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex flex-col items-center gap-0.5 ${
+                          regMaxChildren === num && !customChildrenInput
+                            ? 'bg-blue-600 text-white shadow-xs scale-102'
+                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className="text-sm font-black">{num}</span>
+                        <span className="text-[9px] uppercase font-semibold">{num === 1 ? 'Solo' : num === 2 ? 'Duo' : num === 3 ? 'Family' : 'Plus'}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+                    <span className="text-[10px] text-slate-500 font-bold shrink-0">Or Custom Count:</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={20}
+                      value={customChildrenInput}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        setCustomChildrenInput(e.target.value);
+                        if (!isNaN(val) && val >= 1) {
+                          setRegMaxChildren(val);
+                        }
+                      }}
+                      placeholder="e.g. 5"
+                      className="w-20 px-2.5 py-1 text-xs font-bold bg-white border border-slate-200 rounded-lg text-slate-800 focus:ring-2 focus:ring-blue-200"
+                    />
+                    <span className="text-[10px] text-slate-400">children in family</span>
+                  </div>
+                </div>
+              )}
+
+              {/* SEAT CAPACITY: SCHOOL STUDENT LICENSES */}
+              {regRole === 'school' && (
+                <div className="p-3.5 rounded-2xl bg-gradient-to-br from-blue-50/40 via-white to-indigo-50/40 border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[11px] font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>🏫 Student Seat Capacity (Licenses)</span>
+                    </label>
+                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                      {regSchoolSeats} Student Licenses
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Select your total student enrollment seat quota. Teachers can enroll students up to this registered campus capacity.
+                  </p>
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 pt-1">
+                    {[50, 100, 250, 500, 1000].map((seats) => (
+                      <button
+                        key={seats}
+                        type="button"
+                        onClick={() => {
+                          sounds.click();
+                          setRegSchoolSeats(seats);
+                          setCustomSeatsInput('');
+                        }}
+                        className={`py-2 px-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex flex-col items-center gap-0.5 ${
+                          regSchoolSeats === seats && !customSeatsInput
+                            ? 'bg-blue-600 text-white shadow-xs scale-102'
+                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className="text-xs font-black">{seats}</span>
+                        <span className="text-[9px] uppercase font-semibold">Seats</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+                    <span className="text-[10px] text-slate-500 font-bold shrink-0">Or Custom Seats:</span>
+                    <input
+                      type="number"
+                      min={10}
+                      max={10000}
+                      step={10}
+                      value={customSeatsInput}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        setCustomSeatsInput(e.target.value);
+                        if (!isNaN(val) && val >= 1) {
+                          setRegSchoolSeats(val);
+                        }
+                      }}
+                      placeholder="e.g. 350"
+                      className="w-24 px-2.5 py-1 text-xs font-bold bg-white border border-slate-200 rounded-lg text-slate-800 focus:ring-2 focus:ring-blue-200"
+                    />
+                    <span className="text-[10px] text-slate-400">seats for campus</span>
                   </div>
                 </div>
               )}

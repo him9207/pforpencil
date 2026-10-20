@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160">
+  <defs>
+    <linearGradient id="rocketBody" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#E2E8F0"/>
+    </linearGradient>
+    <linearGradient id="flameGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FBBF24"/>
+      <stop offset="100%" stop-color="#EF4444"/>
+    </linearGradient>
+  </defs>
+  <!-- Flame Blast -->
+  <polygon points="68,118 92,118 80,152" fill="url(#flameGrad)"/>
+  <polygon points="74,118 86,118 80,140" fill="#FDE047"/>
+  <!-- Fins -->
+  <polygon points="50,115 65,85 65,115" fill="#EF4444"/>
+  <polygon points="110,115 95,85 95,115" fill="#EF4444"/>
+  <!-- Rocket Body -->
+  <path d="M 65 65 C 65 30 80 15 80 15 C 80 15 95 30 95 65 L 95 115 L 65 115 Z" fill="url(#rocketBody)"/>
+  <!-- Rocket Red Cone -->
+  <path d="M 67 50 C 70 30 80 15 80 15 C 80 15 90 30 93 50 Z" fill="#EF4444"/>
+  <!-- Porthole Window -->
+  <circle cx="80" cy="72" r="14" fill="#0284C7"/>
+  <circle cx="80" cy="72" r="10" fill="#BAE6FD"/>
+  <circle cx="77" cy="69" r="3" fill="#FFFFFF"/>
+  <!-- Sparkle Stars -->
+  <circle cx="35" cy="35" r="4" fill="#FCD34D"/>
+  <circle cx="125" cy="45" r="3" fill="#FCD34D"/>
+  <circle cx="135" cy="115" r="5" fill="#FCD34D"/>
+</svg>

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160">
+  <defs>
+    <radialGradient id="eleGrad" cx="45%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#BAE6FD"/>
+      <stop offset="100%" stop-color="#38BDF8"/>
+    </radialGradient>
+  </defs>
+  <!-- Big Round Ears -->
+  <circle cx="45" cy="80" r="32" fill="#0284C7"/>
+  <circle cx="45" cy="80" r="22" fill="#FBCFE8"/>
+  <circle cx="115" cy="80" r="32" fill="#0284C7"/>
+  <circle cx="115" cy="80" r="22" fill="#FBCFE8"/>
+  <!-- Head & Body -->
+  <circle cx="80" cy="88" r="42" fill="url(#eleGrad)"/>
+  <!-- Trunk curled upward joyfully -->
+  <path d="M 80 98 Q 80 128 96 128 Q 106 128 106 116" stroke="url(#eleGrad)" stroke-width="16" fill="none" stroke-linecap="round"/>
+  <!-- Big Eyes -->
+  <circle cx="66" cy="82" r="6" fill="#0F172A"/>
+  <circle cx="94" cy="82" r="6" fill="#0F172A"/>
+  <circle cx="64" cy="79" r="2" fill="#FFFFFF"/>
+  <circle cx="92" cy="79" r="2" fill="#FFFFFF"/>
+  <circle cx="56" cy="94" r="7" fill="#F43F5E" opacity="0.4"/>
+  <circle cx="104" cy="94" r="7" fill="#F43F5E" opacity="0.4"/>
+</svg>

@@ -90,6 +90,7 @@ export default function ParentPortal({
   const [screenTimeLimit, setScreenTimeLimit] = useState(45);
   const [selectedActivityToAssign, setSelectedActivityToAssign] = useState(activities[0]?.id || '');
   const [assignSuccessMessage, setAssignSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Modals
   const [showReportCardModal, setShowReportCardModal] = useState(false);
@@ -155,10 +156,13 @@ export default function ParentPortal({
   };
 
   const handleOpenAddChildModal = () => {
-    if (myChildren.length >= 3) {
-      alert('Parent plan limit reached: A maximum of 3 child accounts can be enrolled under your family profile.');
+    const maxAllowed = currentUser.maxChildren || 3;
+    if (myChildren.length >= maxAllowed) {
+      setErrorMessage(`Parent seat capacity reached: You have enrolled ${myChildren.length} of ${maxAllowed} children registered on your family profile. Please upgrade your family plan to add more seats.`);
+      setTimeout(() => setErrorMessage(''), 6000);
       return;
     }
+    setErrorMessage('');
     const defaultName = myChildren.length === 1 ? 'Lucas Watson' : 'Sophia Watson';
     setNewChildName(defaultName);
     setNewChildGrade('Preschool');
@@ -181,8 +185,10 @@ export default function ParentPortal({
   const handleCreateChild = (e: FormEvent) => {
     e.preventDefault();
     if (!newChildName.trim()) return;
-    if (myChildren.length >= 3) {
-      alert('You have reached the maximum limit of 3 children per family account.');
+    const maxAllowed = currentUser.maxChildren || 3;
+    if (myChildren.length >= maxAllowed) {
+      setErrorMessage(`You have reached your registered limit of ${maxAllowed} child accounts. Please upgrade your family plan to add more seats.`);
+      setTimeout(() => setErrorMessage(''), 6000);
       return;
     }
 
@@ -192,7 +198,8 @@ export default function ParentPortal({
     let finalUsername = newChildUsername;
     if (isCustomUsername) {
       if (customUsernameValidation.status !== 'available') {
-        alert(customUsernameValidation.message || 'Please enter a valid unique username between 6 and 13 characters.');
+        setErrorMessage(customUsernameValidation.message || 'Please enter a valid unique username between 6 and 13 characters.');
+        setTimeout(() => setErrorMessage(''), 5000);
         return;
       }
       finalUsername = customUsername.trim();
@@ -363,18 +370,22 @@ export default function ParentPortal({
                 <span>Enrolled Children</span>
               </span>
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                myChildren.length >= 3 
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
-                  : 'bg-stone-200/80 text-stone-700 border-stone-300'
+                myChildren.length >= (currentUser.maxChildren || 3) 
+                  ? 'bg-amber-50 text-amber-800 border-amber-200' 
+                  : 'bg-emerald-50 text-emerald-800 border-emerald-200'
               }`}>
-                {myChildren.length} / 3 Active
+                {myChildren.length} / {currentUser.maxChildren || 3} Registered
               </span>
             </div>
             <div className="font-black text-stone-900 text-sm">
-              {myChildren.length === 0 ? 'No Children Enrolled Yet' : `${myChildren.length} of 3 Children Enrolled`}
+              {myChildren.length === 0 
+                ? `0 of ${currentUser.maxChildren || 3} Seats Enrolled` 
+                : `${myChildren.length} of ${currentUser.maxChildren || 3} Children Enrolled`}
             </div>
             <p className="text-[10px] text-stone-500">
-              {myChildren.length < 3 ? `${3 - myChildren.length} child enrollment slot${3 - myChildren.length > 1 ? 's' : ''} available` : 'Family account at maximum capacity'}
+              {myChildren.length < (currentUser.maxChildren || 3) 
+                ? `${(currentUser.maxChildren || 3) - myChildren.length} child enrollment slot${(currentUser.maxChildren || 3) - myChildren.length > 1 ? 's' : ''} available` 
+                : 'Family account at full registered capacity'}
             </p>
           </div>
         </div>
@@ -416,18 +427,18 @@ export default function ParentPortal({
         </div>
 
         {/* Add Child Button */}
-        {myChildren.length < 3 ? (
+        {myChildren.length < (currentUser.maxChildren || 3) ? (
           <button
             onClick={handleOpenAddChildModal}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-102 active:scale-98 shrink-0 self-start sm:self-auto"
-            title="Add child (up to 3)"
+            title={`Add child (up to ${currentUser.maxChildren || 3})`}
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Add Child ({myChildren.length}/3)</span>
+            <span>Add Child ({myChildren.length}/{currentUser.maxChildren || 3})</span>
           </button>
         ) : (
           <span className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200 shrink-0 self-start sm:self-auto">
-            ✓ Family Max (3/3 Children)
+            ✓ Capacity Filled ({myChildren.length}/{currentUser.maxChildren || 3} Children)
           </span>
         )}
       </div>
@@ -437,6 +448,14 @@ export default function ParentPortal({
         <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl text-xs font-bold flex items-center gap-2 animate-in fade-in">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>{assignSuccessMessage}</span>
+        </div>
+      )}
+
+      {/* Error Notification Banner */}
+      {errorMessage && (
+        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-900 rounded-2xl text-xs font-bold flex items-center gap-2 animate-in fade-in">
+          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+          <span>{errorMessage}</span>
         </div>
       )}
 

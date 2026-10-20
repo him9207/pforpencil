@@ -13,7 +13,8 @@ import {
   SubscriptionPlan,
   AuditLog,
   CurriculumGrade,
-  CurriculumSubject
+  CurriculumSubject,
+  Subject
 } from './types';
 import { 
   INITIAL_USERS, 
@@ -83,6 +84,86 @@ let logCounter = 0;
 function generateLogId(): string {
   logCounter += 1;
   return `LOG-${Date.now()}-${logCounter}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
+// Robust validation and sanitization for StudentProgress
+// Enforces (correct_answers / total_questions) * 100 score bounds and prevents invalid values (> 100% or < 0%)
+export function sanitizeStudentProgress(raw: StudentProgress): StudentProgress {
+  if (!raw || typeof raw !== 'object') return raw;
+
+  // Sanitize recentActivities so that score NEVER exceeds maxScore and percentage never exceeds 100%
+  const sanitizedActivities = Array.isArray(raw.recentActivities)
+    ? raw.recentActivities.map((act) => {
+        const safeMaxScore = Math.max(1, typeof act.maxScore === 'number' && !isNaN(act.maxScore) ? act.maxScore : 100);
+        const safeScore = Math.min(safeMaxScore, Math.max(0, typeof act.score === 'number' && !isNaN(act.score) ? act.score : 0));
+        
+        const safeTotalQ = typeof act.totalQuestions === 'number' && act.totalQuestions > 0
+          ? Math.round(act.totalQuestions)
+          : undefined;
+
+        let safeCorrectA = typeof act.correctAnswers === 'number' && !isNaN(act.correctAnswers)
+          ? Math.min(safeTotalQ ?? safeMaxScore, Math.max(0, Math.round(act.correctAnswers)))
+          : undefined;
+
+        // If correctAnswers was not explicitly recorded, derive from score/maxScore ratio
+        if (safeTotalQ !== undefined && safeCorrectA === undefined) {
+          safeCorrectA = Math.min(safeTotalQ, Math.max(0, Math.round((safeScore / safeMaxScore) * safeTotalQ)));
+        }
+
+        return {
+          ...act,
+          score: safeScore,
+          maxScore: safeMaxScore,
+          correctAnswers: safeCorrectA,
+          totalQuestions: safeTotalQ,
+        };
+      })
+    : [];
+
+  // Strictly validate and recalculate averageScore: must be in 0 - 100 range calculated from (correct_answers / total_questions) * 100
+  let safeAvgScore = typeof raw.averageScore === 'number' && !isNaN(raw.averageScore) ? raw.averageScore : 100;
+  if (sanitizedActivities.length > 0) {
+    let totalCorrect = 0;
+    let totalQuestions = 0;
+    sanitizedActivities.forEach((a) => {
+      if (typeof a.totalQuestions === 'number' && a.totalQuestions > 0) {
+        totalQuestions += a.totalQuestions;
+        totalCorrect += typeof a.correctAnswers === 'number'
+          ? Math.min(a.totalQuestions, Math.max(0, a.correctAnswers))
+          : Math.min(a.totalQuestions, Math.round((a.score / a.maxScore) * a.totalQuestions));
+      } else {
+        totalQuestions += a.maxScore;
+        totalCorrect += a.score;
+      }
+    });
+    if (totalQuestions > 0) {
+      safeAvgScore = Math.min(100, Math.max(0, Math.round((totalCorrect / totalQuestions) * 100)));
+    }
+  } else {
+    safeAvgScore = Math.min(100, Math.max(0, Math.round(safeAvgScore)));
+  }
+
+  // Sanitize subjectMastery: every subject score must be in 0 - 100 range
+  const sanitizedSubjectMastery: Record<Subject, number> = { ...raw.subjectMastery };
+  if (sanitizedSubjectMastery && typeof sanitizedSubjectMastery === 'object') {
+    for (const sub of Object.keys(sanitizedSubjectMastery) as Subject[]) {
+      const val = sanitizedSubjectMastery[sub];
+      if (typeof val === 'number') {
+        sanitizedSubjectMastery[sub] = Math.min(100, Math.max(0, Math.round(val)));
+      }
+    }
+  }
+
+  return {
+    ...raw,
+    averageScore: safeAvgScore,
+    recentActivities: sanitizedActivities,
+    subjectMastery: sanitizedSubjectMastery,
+    xp: Math.max(0, typeof raw.xp === 'number' && !isNaN(raw.xp) ? Math.round(raw.xp) : 0),
+    level: Math.max(1, typeof raw.level === 'number' && !isNaN(raw.level) ? Math.round(raw.level) : 1),
+    coins: Math.max(0, typeof raw.coins === 'number' && !isNaN(raw.coins) ? Math.round(raw.coins) : 0),
+    streakDays: Math.max(0, typeof raw.streakDays === 'number' && !isNaN(raw.streakDays) ? Math.round(raw.streakDays) : 0),
+  };
 }
 
 export default function App() {
@@ -182,7 +263,12 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === 'object') {
-          return { ...INITIAL_STUDENT_PROGRESS, ...parsed };
+          const merged = { ...INITIAL_STUDENT_PROGRESS, ...parsed };
+          const sanitized: Record<string, StudentProgress> = {};
+          for (const [k, v] of Object.entries(merged)) {
+            sanitized[k] = sanitizeStudentProgress(v as StudentProgress);
+          }
+          return sanitized;
         }
       }
     } catch {}
@@ -434,8 +520,8 @@ export default function App() {
         state: newUser.state || currentUser.state || 'California',
         curriculum: newUser.curriculum || currentUser.curriculum || 'Universal Foundational',
         adminEmail: newUser.email || '',
-        plan: 'Campus 500',
-        totalSeats: 100,
+        plan: `Campus ${newUser.totalSeats || 100}`,
+        totalSeats: newUser.totalSeats || 100,
         allocatedSeats: 0,
         activeTeachers: 0,
         activeClasses: 0,
@@ -483,24 +569,106 @@ export default function App() {
   const activeStudentId = currentUser.role === 'student' ? currentUser.id : 'STU00001';
   const currentStudentProgress = studentProgressMap[activeStudentId] || studentProgressMap['STU00001'];
 
-  // Update student progress after game / quiz completion
+  // Robust validation and sanitization for StudentProgress
+  // Enforces (correct_answers / total_questions) * 100 score bounds and prevents invalid values (> 100% or < 0%)
+  const sanitizeStudentProgress = (raw: StudentProgress): StudentProgress => {
+    if (!raw || typeof raw !== 'object') return raw;
+
+    // Sanitize recentActivities so that score NEVER exceeds maxScore and percentage never exceeds 100%
+    const sanitizedActivities = Array.isArray(raw.recentActivities)
+      ? raw.recentActivities.map((act) => {
+          const safeMaxScore = Math.max(1, typeof act.maxScore === 'number' && !isNaN(act.maxScore) ? act.maxScore : 100);
+          const safeScore = Math.min(safeMaxScore, Math.max(0, typeof act.score === 'number' && !isNaN(act.score) ? act.score : 0));
+          
+          const safeTotalQ = typeof act.totalQuestions === 'number' && act.totalQuestions > 0
+            ? Math.round(act.totalQuestions)
+            : undefined;
+
+          let safeCorrectA = typeof act.correctAnswers === 'number' && !isNaN(act.correctAnswers)
+            ? Math.min(safeTotalQ ?? safeMaxScore, Math.max(0, Math.round(act.correctAnswers)))
+            : undefined;
+
+          // If correctAnswers was not explicitly recorded, derive from score/maxScore ratio
+          if (safeTotalQ !== undefined && safeCorrectA === undefined) {
+            safeCorrectA = Math.min(safeTotalQ, Math.max(0, Math.round((safeScore / safeMaxScore) * safeTotalQ)));
+          }
+
+          return {
+            ...act,
+            score: safeScore,
+            maxScore: safeMaxScore,
+            correctAnswers: safeCorrectA,
+            totalQuestions: safeTotalQ,
+          };
+        })
+      : [];
+
+    // Strictly validate and recalculate averageScore: must be in 0 - 100 range calculated from (correct_answers / total_questions) * 100
+    let safeAvgScore = typeof raw.averageScore === 'number' && !isNaN(raw.averageScore) ? raw.averageScore : 100;
+    if (sanitizedActivities.length > 0) {
+      let totalCorrect = 0;
+      let totalQuestions = 0;
+      sanitizedActivities.forEach((a) => {
+        if (typeof a.totalQuestions === 'number' && a.totalQuestions > 0) {
+          totalQuestions += a.totalQuestions;
+          totalCorrect += typeof a.correctAnswers === 'number'
+            ? Math.min(a.totalQuestions, Math.max(0, a.correctAnswers))
+            : Math.min(a.totalQuestions, Math.round((a.score / a.maxScore) * a.totalQuestions));
+        } else {
+          totalQuestions += a.maxScore;
+          totalCorrect += a.score;
+        }
+      });
+      if (totalQuestions > 0) {
+        safeAvgScore = Math.min(100, Math.max(0, Math.round((totalCorrect / totalQuestions) * 100)));
+      }
+    } else {
+      safeAvgScore = Math.min(100, Math.max(0, Math.round(safeAvgScore)));
+    }
+
+    // Sanitize subjectMastery: every subject score must be in 0 - 100 range
+    const sanitizedSubjectMastery: Record<Subject, number> = { ...raw.subjectMastery };
+    if (sanitizedSubjectMastery && typeof sanitizedSubjectMastery === 'object') {
+      for (const sub of Object.keys(sanitizedSubjectMastery) as Subject[]) {
+        const val = sanitizedSubjectMastery[sub];
+        if (typeof val === 'number') {
+          sanitizedSubjectMastery[sub] = Math.min(100, Math.max(0, Math.round(val)));
+        }
+      }
+    }
+
+    return {
+      ...raw,
+      averageScore: safeAvgScore,
+      recentActivities: sanitizedActivities,
+      subjectMastery: sanitizedSubjectMastery,
+      xp: Math.max(0, typeof raw.xp === 'number' && !isNaN(raw.xp) ? Math.round(raw.xp) : 0),
+      level: Math.max(1, typeof raw.level === 'number' && !isNaN(raw.level) ? Math.round(raw.level) : 1),
+      coins: Math.max(0, typeof raw.coins === 'number' && !isNaN(raw.coins) ? Math.round(raw.coins) : 0),
+      streakDays: Math.max(0, typeof raw.streakDays === 'number' && !isNaN(raw.streakDays) ? Math.round(raw.streakDays) : 0),
+    };
+  };
+
+  // Update student progress after game / quiz completion with strict validation
   const handleUpdateStudentProgress = (updated: StudentProgress) => {
+    const validated = sanitizeStudentProgress(updated);
+
     setStudentProgressMap((prev) => ({
       ...prev,
-      [updated.studentId]: updated
+      [validated.studentId]: validated
     }));
 
     // Persist progress update to Supabase student_progress table
-    syncProgressToSupabase(updated);
+    syncProgressToSupabase(validated);
 
     const newLog: AuditLog = {
       id: generateLogId(),
       timestamp: new Date().toISOString().replace('T', ' ').slice(0, 19),
-      accountId: updated.studentId,
-      accountName: `${updated.studentName} (${updated.studentUsername})`,
+      accountId: validated.studentId,
+      accountName: `${validated.studentName} (${validated.studentUsername})`,
       role: 'student',
       action: 'ACTIVITY_COMPLETED',
-      details: `Completed activity with score update. Total XP: ${updated.xp}`,
+      details: `Completed activity with score update. Average Accuracy: ${validated.averageScore}%, Total XP: ${validated.xp}`,
       ipAddress: '127.0.0.1'
     };
     setAuditLogs((prev) => [newLog, ...prev]);
@@ -1682,8 +1850,11 @@ export default function App() {
                 onAddStudent={handleAddStudent}
                 onCreateAssignment={handleCreateAssignment}
                 onAddQuestion={handleAddQuestion}
+                onEditQuestion={handleEditQuestion}
+                onDeleteQuestion={handleDeleteQuestion}
                 onResetCredentials={handleResetCredentials}
                 onUpdateUserProfile={handleUpdateUserProfile}
+                onUpdateStudentProgress={handleUpdateStudentProgress}
               />
             )}
 

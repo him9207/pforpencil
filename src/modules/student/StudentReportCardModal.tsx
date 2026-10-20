@@ -47,14 +47,17 @@ export default function StudentReportCardModal({
 }: StudentReportCardModalProps) {
   const printRef = useRef<HTMLDivElement>(null);
 
-  // Compute overall grade letter
-  const score = student.averageScore || 88;
+  // Compute overall grade letter with strict bounding between 0% and 100%
+  const score = typeof student.averageScore === 'number' && !isNaN(student.averageScore)
+    ? Math.min(100, Math.max(0, Math.round(student.averageScore)))
+    : 88;
   const getGradeLetter = (pct: number) => {
-    if (pct >= 95) return { letter: 'A+', standing: 'Outstanding Mastery', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' };
-    if (pct >= 90) return { letter: 'A', standing: 'Excellent Proficiency', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' };
-    if (pct >= 85) return { letter: 'B+', standing: 'Very Good Progress', color: 'text-blue-700 bg-blue-50 border-blue-200' };
-    if (pct >= 80) return { letter: 'B', standing: 'Good Competency', color: 'text-blue-700 bg-blue-50 border-blue-200' };
-    if (pct >= 70) return { letter: 'C', standing: 'Developing Skills', color: 'text-amber-700 bg-amber-50 border-amber-200' };
+    const validPct = Math.min(100, Math.max(0, pct));
+    if (validPct >= 95) return { letter: 'A+', standing: 'Outstanding Mastery', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' };
+    if (validPct >= 90) return { letter: 'A', standing: 'Excellent Proficiency', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' };
+    if (validPct >= 85) return { letter: 'B+', standing: 'Very Good Progress', color: 'text-blue-700 bg-blue-50 border-blue-200' };
+    if (validPct >= 80) return { letter: 'B', standing: 'Good Competency', color: 'text-blue-700 bg-blue-50 border-blue-200' };
+    if (validPct >= 70) return { letter: 'C', standing: 'Developing Skills', color: 'text-amber-700 bg-amber-50 border-amber-200' };
     return { letter: 'Needs Support', standing: 'Targeted Review Needed', color: 'text-rose-700 bg-rose-50 border-rose-200' };
   };
 
@@ -252,7 +255,10 @@ export default function StudentReportCardModal({
             </div>
 
             <div className="space-y-3">
-              {Object.entries(student.subjectMastery || {}).map(([subject, subjectScore]) => {
+              {Object.entries(student.subjectMastery || {}).map(([subject, rawSubjectScore]) => {
+                const subjectScore = typeof rawSubjectScore === 'number' && !isNaN(rawSubjectScore)
+                  ? Math.min(100, Math.max(0, Math.round(rawSubjectScore)))
+                  : 80;
                 const subGrade = getGradeLetter(subjectScore);
                 return (
                   <div key={subject} className="p-3 rounded-xl bg-stone-50/70 border border-stone-200/70 hover:bg-stone-50 transition">

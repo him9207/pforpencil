@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160">
+  <defs>
+    <radialGradient id="maneGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#B45309"/>
+    </radialGradient>
+  </defs>
+  <!-- Fluffy Mane -->
+  <circle cx="80" cy="80" r="58" fill="url(#maneGrad)"/>
+  <!-- Face -->
+  <circle cx="80" cy="82" r="40" fill="#FDE047"/>
+  <!-- Round Ears -->
+  <circle cx="48" cy="48" r="14" fill="#B45309"/>
+  <circle cx="48" cy="48" r="8" fill="#FDE047"/>
+  <circle cx="112" cy="48" r="14" fill="#B45309"/>
+  <circle cx="112" cy="48" r="8" fill="#FDE047"/>
+  <!-- Eyes -->
+  <circle cx="66" cy="76" r="6" fill="#0F172A"/>
+  <circle cx="94" cy="76" r="6" fill="#0F172A"/>
+  <circle cx="64" cy="73" r="2" fill="#FFFFFF"/>
+  <circle cx="92" cy="73" r="2" fill="#FFFFFF"/>
+  <!-- Cute Snout -->
+  <ellipse cx="80" cy="94" rx="16" ry="12" fill="#FFFFFF"/>
+  <polygon points="74,90 86,90 80,97" fill="#78350F"/>
+  <path d="M 75 99 Q 80 104 85 99" stroke="#78350F" stroke-width="2" fill="none" stroke-linecap="round"/>
+</svg>

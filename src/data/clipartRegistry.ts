@@ -750,14 +750,46 @@ export function resolveClipartItem(input: string | undefined | null): ResolvedCl
   }
 
   // 3. Keyword or ID match in Registry
-  const cleanKey = cleanInput.toLowerCase().replace(/[\-_]/g, ' ').trim();
-  const match = CLIPART_REGISTRY.find(item => 
-    item.id.toLowerCase() === cleanInput.toLowerCase() ||
-    item.name.toLowerCase() === cleanKey ||
-    item.keywords.includes(cleanKey) ||
-    item.keywords.some(k => cleanKey.includes(k)) ||
-    (item.emojiEquivalent && cleanInput.includes(item.emojiEquivalent))
-  );
+  const lowerInput = cleanInput.toLowerCase();
+  const cleanKey = lowerInput.replace(/[\-_]/g, ' ').trim();
+
+  // 3A. Exact ID match (e.g. 'fruit-apple', 'obj-car', 'shape-star')
+  let match = CLIPART_REGISTRY.find(item => item.id.toLowerCase() === lowerInput);
+
+  // 3B. Exact Emoji match (e.g. '🍎', '⭐', '🚗')
+  if (!match) {
+    match = CLIPART_REGISTRY.find(item => item.emojiEquivalent && (item.emojiEquivalent === raw || item.emojiEquivalent === cleanInput));
+  }
+
+  // 3C. Exact Name match (e.g. 'red apple', 'dollar bill', 'gold coin')
+  if (!match) {
+    match = CLIPART_REGISTRY.find(item => item.name.toLowerCase() === cleanKey);
+  }
+
+  // 3D. Exact Keyword match in array (e.g. 'apple', 'star', 'car', 'banana')
+  if (!match) {
+    match = CLIPART_REGISTRY.find(item => item.keywords.some(k => k.toLowerCase() === cleanKey));
+  }
+
+  // 3E. Suffix of ID without category prefix (e.g. 'apple' for 'fruit-apple', 'car' for 'obj-car', 'star' for 'shape-star')
+  if (!match) {
+    match = CLIPART_REGISTRY.find(item => {
+      const suffix = item.id.replace(/^[a-z]+-/, '').toLowerCase();
+      return suffix === lowerInput || suffix.replace(/[\-_]/g, ' ') === cleanKey;
+    });
+  }
+
+  // 3F. Whole-word boundary match for multi-character keywords (>= 3 chars)
+  if (!match) {
+    match = CLIPART_REGISTRY.find(item =>
+      item.keywords.some(k => {
+        if (k.length < 3) return false;
+        const escaped = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const pattern = new RegExp('(^|\\s|[\\-_])' + escaped + '($|\\s|[\\-_]|s\\b)', 'i');
+        return pattern.test(cleanKey);
+      })
+    );
+  }
 
   if (match) {
     return {

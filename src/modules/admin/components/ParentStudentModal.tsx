@@ -161,22 +161,25 @@ export default function ParentStudentModal({
     );
   };
 
+  const [errorMessage, setErrorMessage] = useState('');
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage('');
     const validChildren = children.filter((c) => c.name.trim().length > 0);
 
     if (parentMode === 'new') {
       if (!newParentName.trim()) {
-        alert('Please provide the parent full name.');
+        setErrorMessage('Please provide the parent full name.');
         return;
       }
     } else {
       if (!selectedParentId && !parent) {
-        alert('Please select an existing parent.');
+        setErrorMessage('Please select an existing parent.');
         return;
       }
       if (validChildren.length === 0) {
-        alert('Please enter at least one child full name.');
+        setErrorMessage('Please enter at least one child full name.');
         return;
       }
     }
@@ -201,7 +204,7 @@ export default function ParentStudentModal({
       if (!child.username.trim()) continue;
       const normalized = child.username.trim().toUpperCase();
       if (existingUsernames.has(normalized) || submittedUsernames.has(normalized)) {
-        alert(`Student username ${normalized} is already in use. Please choose another username.`);
+        setErrorMessage(`Student username ${normalized} is already in use. Please choose another username.`);
         return;
       }
       submittedUsernames.add(normalized);
@@ -413,6 +416,12 @@ export default function ParentStudentModal({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5 flex-1 text-stone-800 text-xs">
+          {errorMessage && (
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-bold animate-in fade-in flex items-center gap-2">
+              <span className="text-base shrink-0">⚠️</span>
+              <span>{errorMessage}</span>
+            </div>
+          )}
           {/* New Parent Details if in 'new' mode */}
           {parentMode === 'new' && (
             <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-3">

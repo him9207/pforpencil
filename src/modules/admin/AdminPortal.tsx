@@ -652,7 +652,7 @@ export default function AdminPortal({
     e.preventDefault();
     if (!formPrompt.trim()) return;
     if (formOptions.some(opt => !opt.trim())) {
-      alert('Please fill out all 4 option choices.');
+      triggerNotification('⚠️ Please fill out all 4 option choices.');
       return;
     }
 

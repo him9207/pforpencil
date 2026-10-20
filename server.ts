@@ -3,12 +3,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
-import { Resend } from 'resend';
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const currentFilename = typeof __filename !== 'undefined' ? __filename : fileURLToPath(import.meta.url);
+const currentDirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(currentFilename);
 
 const app = express();
 const PORT = 3000;
@@ -16,16 +15,32 @@ const PORT = 3000;
 app.use(express.json());
 
 // Explicitly serve static assets from public folder
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/clipart', express.static(path.join(__dirname, 'public', 'clipart')));
+app.use(express.static(path.join(currentDirname, 'public')));
+app.use('/clipart', express.static(path.join(currentDirname, 'public', 'clipart')));
 
-// Lazy-initialize Resend client
-function getResendClient(): Resend | null {
-  const apiKey = process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY;
-  if (!apiKey) {
-    return null;
+// Configure sender address and reply-to based on domain verification rules
+function getEmailSenderConfig(): { fromEmail: string; replyTo?: string } {
+  const rawFrom = (process.env.EMAIL_FROM || '').trim();
+  const defaultFrom = 'P for Pencil <onboarding@resend.dev>';
+  
+  if (!rawFrom) {
+    return { fromEmail: defaultFrom };
   }
-  return new Resend(apiKey);
+
+  // Resend strictly forbids sending from public webmail domains (gmail.com, yahoo.com, outlook.com, hotmail.com, icloud.com)
+  // because SPF/DKIM cannot be verified by third parties.
+  // In those cases, route via onboarding@resend.dev and set reply_to to the custom email.
+  const isPublicWebmail = /@(gmail|yahoo|hotmail|outlook|live|icloud)\.[a-z]{2,}$/i.test(rawFrom);
+  if (isPublicWebmail) {
+    const match = rawFrom.match(/<([^>]+)>/);
+    const cleanAddress = match ? match[1].trim() : rawFrom;
+    return {
+      fromEmail: defaultFrom,
+      replyTo: cleanAddress,
+    };
+  }
+
+  return { fromEmail: rawFrom };
 }
 
 // -----------------------------------------------------------------------------
@@ -61,12 +76,12 @@ app.post('/api/send-otp-email', async (req, res) => {
       ? 'Sign-In Authentication' 
       : 'Password Reset & Recovery';
 
-    const resend = getResendClient();
+    const apiKey = process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY;
 
-    // If Resend API key is available, dispatch live email to user's real inbox
-    if (resend) {
+    // If Resend API key is available, attempt live email dispatch to user's inbox
+    if (apiKey) {
       try {
-        const fromEmail = process.env.EMAIL_FROM || 'P for Pencil <onboarding@resend.dev>';
+        const { fromEmail, replyTo } = getEmailSenderConfig();
         
         const htmlTemplate = `
           <!DOCTYPE html>
@@ -115,40 +130,56 @@ app.post('/api/send-otp-email', async (req, res) => {
           </html>
         `;
 
-        const { data, error } = await resend.emails.send({
+        const requestPayload: Record<string, any> = {
           from: fromEmail,
           to: [cleanEmail],
           subject: `${otpCode} is your P for Pencil ${actionLabel} Verification Code`,
           html: htmlTemplate,
+        };
+
+        if (replyTo) {
+          requestPayload.reply_to = replyTo;
+        }
+
+        const resendResponse = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestPayload),
         });
 
-        if (error) {
-          console.warn('Resend email error:', error);
+        const resendData = await resendResponse.json();
+
+        if (resendResponse.ok && resendData?.id) {
           return res.json({
             success: true,
-            simulated: true,
-            dispatchedToInbox: false,
+            simulated: false,
+            dispatchedToInbox: true,
+            emailId: resendData.id,
             code: otpCode,
-            message: `Could not send via Resend (${error.message}). Using instant simulation mode.`
+            message: `Live verification email successfully sent to ${cleanEmail}!`
           });
         }
 
-        return res.json({
-          success: true,
-          simulated: false,
-          dispatchedToInbox: true,
-          emailId: data?.id,
-          code: otpCode,
-          message: `Live verification email successfully sent to ${cleanEmail}!`
-        });
-      } catch (sendErr: any) {
-        console.warn('Resend execution error:', sendErr);
+        // Handle Resend testing restriction gracefully (e.g. "You can only send testing emails to your own email address")
+        // without crashing or emitting error traces.
+        const failureNote = resendData?.message || 'Sandbox restriction';
         return res.json({
           success: true,
           simulated: true,
           dispatchedToInbox: false,
           code: otpCode,
-          message: 'Error in live dispatch. Switched to simulation mode.'
+          message: `Notice: ${failureNote}. Continuing in instant OTP simulation mode.`
+        });
+      } catch {
+        return res.json({
+          success: true,
+          simulated: true,
+          dispatchedToInbox: false,
+          code: otpCode,
+          message: 'Switched to instant OTP simulation mode.'
         });
       }
     }
@@ -159,10 +190,9 @@ app.post('/api/send-otp-email', async (req, res) => {
       simulated: true,
       dispatchedToInbox: false,
       code: otpCode,
-      message: `Simulated OTP code ${otpCode} generated for ${cleanEmail}. Add RESEND_API_KEY in Settings to enable real inbox delivery.`
+      message: `Simulated OTP code ${otpCode} generated for ${cleanEmail}.`
     });
   } catch (err: any) {
-    console.error('Server OTP error:', err);
     return res.status(500).json({
       success: false,
       error: err?.message || 'Internal Server Error'

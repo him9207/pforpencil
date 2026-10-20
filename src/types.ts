@@ -26,6 +26,8 @@ export interface UserAccount {
   validUntil?: string; // e.g. '2026-09-14'
   validityDuration?: '30_days' | '90_days' | '180_days' | '365_days' | '730_days' | 'lifetime' | string;
   planName?: string; // e.g. 'Annual Family Pass', 'Quarterly Access'
+  totalSeats?: number; // Registered student seat capacity for school accounts
+  maxChildren?: number; // Registered children capacity for parent accounts
 }
 
 export type Subject = 
@@ -118,6 +120,13 @@ export interface VisualQuestionConfig {
   autoPlay?: boolean;
 }
 
+export interface DragItemConfig {
+  item: string;
+  target: string;
+  itemImage?: string; // Image URL, data URI (base64), or clipart tag/id (e.g. 'apple', '[apple]')
+  targetImage?: string; // Optional target zone container image URL, data URI, or clipart tag
+}
+
 export interface Question {
   id: string; // QPRE-0001, QFND-0001, QG1-0001, QG3-0001...
   subject: Subject;
@@ -152,7 +161,7 @@ export interface Question {
   mediaUrl?: string; // e.g. URL to a GIF, WebP animation, video, or Lottie JSON
   imageCards?: { text: string; image: string }[];
   matchPairs?: { left: string; right: string }[];
-  dragItems?: { item: string; target: string }[];
+  dragItems?: DragItemConfig[];
   orderSequence?: string[];
   sortBuckets?: { bucketName: string; items: string[] }[];
   openBoxAnswer?: string; // e.g. '4'
@@ -271,6 +280,17 @@ export interface SkillMasteryRecord {
   lastPracticed?: string;
 }
 
+export interface QuestionResult {
+  questionId: string;
+  prompt: string;
+  isCorrect: boolean;
+  studentAnswer: string;
+  correctAnswer: string;
+  explanation?: string;
+  hint?: string;
+  timeSpentSeconds?: number;
+}
+
 export interface StudentProgress {
   studentId: string;
   studentUsername: string;
@@ -306,6 +326,9 @@ export interface StudentProgress {
     maxScore: number;
     timestamp: string;
     averageTimeSeconds?: number;
+    correctAnswers?: number;
+    totalQuestions?: number;
+    questionResults?: QuestionResult[];
   }[];
   badges: {
     id: string;
@@ -347,6 +370,7 @@ export interface ClassAssignment {
   dueDate: string;
   status: 'active' | 'completed';
   createdAt: string;
+  studentIds?: string[]; // Optional specific student IDs targeted for this task
 }
 
 export interface SchoolOrganization {

@@ -1200,7 +1200,7 @@ export default function MasterQuestionBank({
                         <div className="w-full min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <div className="text-xs sm:text-sm font-bold text-stone-900 leading-snug break-words">
-                              {q.prompt}
+                              <ClipartText text={q.prompt} imageSize="xs" />
                             </div>
                             {(q.options?.length || q.explanation || q.hint) && (
                               <button
@@ -1398,7 +1398,9 @@ export default function MasterQuestionBank({
                                         {Boolean(parsed.cleanText) && <span className="truncate">{parsed.cleanText}</span>}
                                       </span>
                                     ) : (
-                                      <span className="truncate">{opt || '(No text)'}</span>
+                                      <span className="truncate">
+                                        <ClipartText text={opt || '(No text)'} imageSize="xs" />
+                                      </span>
                                     )}
                                     {isCorrect && <Check className="w-3 h-3 text-emerald-600 ml-auto shrink-0" />}
                                   </div>

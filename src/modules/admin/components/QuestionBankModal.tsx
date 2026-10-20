@@ -11,7 +11,7 @@ import { CLIPART_LIBRARY } from '../../../data/clipartLibraryData';
 import QuestionPreviewModal from './QuestionPreviewModal';
 import QuestionEditModal from './QuestionEditModal';
 import { ClipartImage } from '../../../common/ClipartRenderer';
-import { resolveMultipleClipartItems, parseOptionClipart } from '../../../data/clipartRegistry';
+import { resolveMultipleClipartItems, parseOptionClipart, resolveClipartItem } from '../../../data/clipartRegistry';
 
 interface Props {
   isOpen: boolean; onClose: () => void; availableGrades: string[]; availableSubjects: string[]; questions?: Question[];
@@ -2146,13 +2146,27 @@ export default function QuestionBankModal({
                 </div>
               ) : q.type === 'drag_and_drop' && q.dragItems && q.dragItems.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-2">
-                  {q.dragItems.map((d, dIdx) => (
-                    <div key={dIdx} className="p-1.5 rounded-lg bg-stone-50 border border-stone-200 text-[11px] flex items-center justify-between">
-                      <span className="font-semibold text-stone-800">{d.item}</span>
-                      <span className="text-stone-400">➔</span>
-                      <span className="font-semibold text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded">{d.target}</span>
-                    </div>
-                  ))}
+                  {q.dragItems.map((d, dIdx) => {
+                    const parsed = parseOptionClipart(d.item);
+                    return (
+                      <div key={dIdx} className="p-1.5 rounded-lg bg-stone-50 border border-stone-200 text-[11px] flex items-center justify-between gap-1.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          {d.itemImage ? (
+                            d.itemImage.startsWith('data:') || d.itemImage.startsWith('http') || d.itemImage.startsWith('/') ? (
+                              <img src={d.itemImage} alt={d.item} className="w-5 h-5 object-contain rounded shrink-0" />
+                            ) : (
+                              <ClipartImage clipart={resolveClipartItem(d.itemImage)} size="xs" className="w-4 h-4 shrink-0 object-contain" />
+                            )
+                          ) : parsed.hasClipart && parsed.clipart ? (
+                            <ClipartImage clipart={parsed.clipart} size="xs" className="w-4 h-4 shrink-0 object-contain" />
+                          ) : null}
+                          <span className="font-semibold text-stone-800 truncate">{parsed.cleanText || d.item}</span>
+                        </div>
+                        <span className="text-stone-400 shrink-0">➔</span>
+                        <span className="font-semibold text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded shrink-0">{d.target}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : q.type === 'sorting' && q.sortBuckets && q.sortBuckets.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-2">
@@ -2257,24 +2271,32 @@ export default function QuestionBankModal({
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-h-[55vh] overflow-y-auto p-1">
         {filteredClipart.map(item => {
           const isCopied = copiedClipartCode === item.id;
+          const resolved = resolveClipartItem(item.id);
           return (
             <div
               key={item.id}
               onClick={() => {
-                navigator.clipboard.writeText(item.id);
+                navigator.clipboard.writeText(`[${item.id}]`);
                 setCopiedClipartCode(item.id);
                 sounds.click();
                 setTimeout(() => setCopiedClipartCode(null), 2000);
               }}
               className="p-3 bg-white border border-stone-200 hover:border-indigo-400 hover:shadow-md rounded-2xl cursor-pointer transition flex flex-col items-center text-center group relative"
+              title={`Click to copy [${item.id}] tag`}
             >
-              <div className="text-3xl mb-1 transition-transform group-hover:scale-110">{item.emoji}</div>
+              <div className="w-12 h-12 flex items-center justify-center mb-1 transition-transform group-hover:scale-110">
+                {resolved && resolved.isImage ? (
+                  <ClipartImage clipart={resolved} size="md" />
+                ) : (
+                  <span className="text-3xl">{item.emoji}</span>
+                )}
+              </div>
               <div className="font-bold text-stone-800 text-xs line-clamp-1">{item.name}</div>
-              <div className="font-mono text-[10px] text-indigo-700 font-semibold bg-indigo-50 px-1.5 py-0.5 rounded mt-1">{item.id}</div>
+              <div className="font-mono text-[10px] text-indigo-700 font-semibold bg-indigo-50 px-1.5 py-0.5 rounded mt-1">[{item.id}]</div>
               <div className="text-[9px] text-stone-600 mt-1">{item.category} · {item.defaultAnimation}</div>
               {isCopied && (
-                <div className="absolute inset-0 bg-indigo-900/90 rounded-2xl flex items-center justify-center text-white text-[11px] font-bold">
-                  ✓ Copied ID!
+                <div className="absolute inset-0 bg-indigo-900/90 rounded-2xl flex items-center justify-center text-white text-[11px] font-bold animate-in fade-in">
+                  ✓ Copied [{item.id}]!
                 </div>
               )}
             </div>

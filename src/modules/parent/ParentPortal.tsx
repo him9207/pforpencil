@@ -6,7 +6,9 @@ import {
   ClassRoom,
   GradeLevel,
   CurriculumGrade,
-  CurriculumSubject
+  CurriculumSubject,
+  Question,
+  ClassAssignment
 } from '../../types';
 import { 
   Heart, 
@@ -32,7 +34,10 @@ import {
   Lock,
   Edit3,
   RotateCcw,
-  Users
+  Users,
+  Target,
+  LayoutGrid,
+  Compass
 } from 'lucide-react';
 import { sounds } from '../../utils/audio';
 import { generateStudentUsername, getNextRoleId } from '../../utils/idAndUsernameGenerator';
@@ -41,11 +46,16 @@ import StudentReportCardModal from '../student/StudentReportCardModal';
 import ResetCredentialsModal from '../auth/ResetCredentialsModal';
 import EditUserProfileModal from '../admin/components/EditUserProfileModal';
 import { useBodyScrollLock } from '../../utils/useBodyScrollLock';
+import { PortalShell } from '../../common';
+import { PortalMenuItem } from '../../common/PortalShell';
+import ParentMockupDashboard from './components/ParentMockupDashboard';
 
 interface ParentPortalProps {
   currentUser: UserAccount;
   allStudents: StudentProgress[];
   activities: Activity[];
+  questions?: Question[];
+  assignments?: ClassAssignment[];
   classes?: ClassRoom[];
   allUsers?: UserAccount[];
   grades?: CurriculumGrade[];
@@ -55,12 +65,16 @@ interface ParentPortalProps {
   onAddChild?: (student: UserAccount, progress: StudentProgress) => void;
   onResetCredentials?: (userId: string, newSecret: string, isPin: boolean, newUsername?: string) => void;
   onUpdateUserProfile?: (user: UserAccount) => void;
+  onSelectUser?: (user: UserAccount) => void;
+  onNavigateHome?: () => void;
 }
 
 export default function ParentPortal({
   currentUser,
   allStudents,
   activities,
+  questions = [],
+  assignments = [],
   classes = [],
   allUsers = [],
   grades = [],
@@ -69,11 +83,15 @@ export default function ParentPortal({
   onOpenPricing,
   onAddChild,
   onResetCredentials,
-  onUpdateUserProfile
+  onUpdateUserProfile,
+  onSelectUser,
+  onNavigateHome
 }: ParentPortalProps) {
   const activeCurriculumSubjects: string[] = (subjects && subjects.length > 0)
     ? subjects.filter((s) => s.active).map((s) => s.name)
     : ['Mathematics', 'Science', 'English Language', 'Logic & Puzzles'];
+
+  const [activeTab, setActiveTab] = useState<string>('dashboard');
 
   // Find children linked to this parent
   const myChildren = allStudents.filter((s) => {
@@ -94,6 +112,7 @@ export default function ParentPortal({
 
   // Modals
   const [showReportCardModal, setShowReportCardModal] = useState(false);
+  const [reportCardTab, setReportCardTab] = useState<'summary' | 'diagnostics'>('summary');
   const [showAddChildModal, setShowAddChildModal] = useState(false);
   const [showResetPinModal, setShowResetPinModal] = useState(false);
   const [editingUser, setEditingUser] = useState<UserAccount | null>(null);
@@ -235,20 +254,15 @@ export default function ParentPortal({
       parentName: currentUser.name,
       parentId: currentUser.id,
       level: 1,
-      xp: 120,
-      coins: 25,
-      streakDays: 1,
+      xp: 0,
+      coins: 0,
+      streakDays: 0,
       dailyQuizCompletedToday: false,
-      totalQuizzesTaken: 2,
-      averageScore: 92,
-      subjectMastery: activeCurriculumSubjects.reduce((acc, s) => {
-        acc[s] = 90;
-        return acc;
-      }, {} as Record<string, number>),
+      totalQuizzesTaken: 0,
+      averageScore: 0,
+      subjectMastery: {},
       recentActivities: [],
-      badges: [
-        { id: 'B_NEW', name: 'Junior Pioneer', icon: '🌟', description: 'Enrolled in PforPencil Family Academy', unlockedAt: new Date().toISOString().split('T')[0] }
-      ]
+      badges: []
     };
 
     sounds.playLevelUp();
@@ -266,8 +280,41 @@ export default function ParentPortal({
   const parentCurriculum = currentUser.curriculum || 'US Common Core State Standards (CCSS)';
   const parentFlag = COUNTRY_FLAG_MAP[parentCountry] || '🌐';
 
+  const parentMenuItems: PortalMenuItem[] = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
+    { id: 'child', label: 'My Child', icon: Users, badge: myChildren.length },
+    { id: 'progress', label: 'Progress', icon: TrendingUp },
+    { id: 'assignments', label: 'Assignments', icon: FileText },
+    { id: 'reports', label: 'Reports', icon: Award },
+    { id: 'resources', label: 'Resources', icon: BookOpen },
+    { id: 'settings', label: 'Settings', icon: Edit3 }
+  ];
+
   return (
-    <div className="space-y-6 pb-12">
+    <PortalShell
+      currentUser={currentUser}
+      allUsers={allUsers}
+      portalRoleTitle="Parent Portal"
+      menuItems={parentMenuItems}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      searchPlaceholder="Search topics or view your child's progress..."
+      onSelectUser={onSelectUser}
+      onNavigateHome={onNavigateHome}
+      onOpenUserProfile={() => setEditingUser(currentUser)}
+      footerVariant="parent"
+    >
+      {activeTab === 'dashboard' ? (
+        <ParentMockupDashboard
+          currentUser={currentUser}
+          activeChild={activeChild}
+          allChildren={myChildren}
+          onSelectChild={(id) => setSelectedChildId(id)}
+          onNavigateTab={setActiveTab}
+          onViewReportCard={() => setShowReportCardModal(true)}
+        />
+      ) : (
+        <div className="space-y-6">
       {/* 1. Parent Guardian Profile Section - Neat, Clean, Spacious & Beautiful */}
       <div className="bg-white rounded-3xl border border-stone-200/90 p-5 sm:p-6 shadow-xs space-y-5">
         {/* Top Header Row: Identity & Clean Action Buttons */}
@@ -309,9 +356,9 @@ export default function ParentPortal({
             <button
               type="button"
               onClick={onOpenPricing}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-xs font-bold transition shadow-2xs cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#1e6f47] hover:bg-[#165636] text-white text-xs font-bold transition shadow-2xs cursor-pointer"
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
               <span>Family Plan</span>
             </button>
           </div>
@@ -401,27 +448,38 @@ export default function ParentPortal({
             <span className="text-xs text-stone-400 italic">No child profiles enrolled yet</span>
           ) : (
             <div className="flex flex-wrap items-center gap-1.5">
-              {myChildren.map((child) => (
-                <button
-                  key={child.studentId}
-                  id={`select-child-${child.studentId}`}
-                  onClick={() => {
-                    setSelectedChildId(child.studentId);
-                    sounds.playCorrect();
-                  }}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    child.studentId === activeChild?.studentId
-                      ? 'bg-slate-950 text-white shadow-xs'
-                      : 'text-stone-600 hover:text-slate-950 hover:bg-stone-100 bg-stone-50 border border-stone-200/60'
-                  }`}
-                >
-                  <span className="text-sm">{child.avatar}</span>
-                  <span>{child.studentName}</span>
-                  <span className={`text-[10px] font-mono ${child.studentId === activeChild?.studentId ? 'text-white/80' : 'text-stone-400'}`}>
-                    ({child.studentUsername})
-                  </span>
-                </button>
-              ))}
+              {myChildren.map((child) => {
+                const childHasAssessments = (child.totalQuizzesTaken || 0) > 0 || (child.recentActivities && child.recentActivities.length > 0);
+                const isSelected = child.studentId === activeChild?.studentId;
+                return (
+                  <button
+                    key={child.studentId}
+                    id={`select-child-${child.studentId}`}
+                    onClick={() => {
+                      setSelectedChildId(child.studentId);
+                      sounds.playCorrect();
+                    }}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#1e6f47] text-white shadow-xs'
+                        : 'text-stone-600 hover:text-slate-950 hover:bg-[#e6f4ea]/40 bg-stone-50 border border-stone-200/60'
+                    }`}
+                  >
+                    <span className="text-sm">{child.avatar}</span>
+                    <span>{child.studentName}</span>
+                    <span className={`text-[10px] font-mono ${isSelected ? 'text-white/80' : 'text-stone-400'}`}>
+                      ({child.studentUsername})
+                    </span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      childHasAssessments 
+                        ? (isSelected ? 'bg-emerald-500/30 text-emerald-200 border border-emerald-400/30' : 'bg-emerald-100 text-emerald-800')
+                        : (isSelected ? 'bg-white/20 text-white/80' : 'bg-stone-200 text-stone-600')
+                    }`}>
+                      {childHasAssessments ? `${child.averageScore}%` : 'New'}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
@@ -430,7 +488,7 @@ export default function ParentPortal({
         {myChildren.length < (currentUser.maxChildren || 3) ? (
           <button
             onClick={handleOpenAddChildModal}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-102 active:scale-98 shrink-0 self-start sm:self-auto"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#1e6f47] hover:bg-[#165636] text-white text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-102 active:scale-98 shrink-0 self-start sm:self-auto"
             title={`Add child (up to ${currentUser.maxChildren || 3})`}
           >
             <Plus className="w-3.5 h-3.5" />
@@ -475,7 +533,7 @@ export default function ParentPortal({
           <div className="pt-2 flex items-center justify-center gap-3">
             <button
               onClick={handleOpenAddChildModal}
-              className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs transition inline-flex items-center gap-2 cursor-pointer"
+              className="px-5 py-2.5 rounded-full bg-[#1e6f47] hover:bg-[#165636] text-white font-bold text-xs shadow-xs transition inline-flex items-center gap-2 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Enroll Your First Child</span>
@@ -557,76 +615,101 @@ export default function ParentPortal({
 
               {/* View Full Report Card Button */}
               <button
+                type="button"
                 onClick={() => {
+                  setReportCardTab('summary');
                   sounds.playLevelUp();
                   setShowReportCardModal(true);
                 }}
-                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-xs cursor-pointer hover:scale-102 active:scale-98"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#10246f] hover:bg-[#0c1a52] text-white text-xs font-bold transition shadow-xs cursor-pointer hover:scale-102 active:scale-98"
+                title="View Comprehensive Student Report Card"
               >
-                <FileText className="w-4 h-4" />
-                <span>View Full Report Card & Analytics</span>
+                <FileText className="w-4 h-4 text-sky-300" />
+                <span>View Full Report Card</span>
+              </button>
+
+              {/* Review Question Responses Button (Direct to Tab 2 Diagnostics) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setReportCardTab('diagnostics');
+                  sounds.click();
+                  setShowReportCardModal(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-amber-400 hover:bg-amber-500 text-stone-950 text-xs font-bold transition shadow-xs cursor-pointer hover:scale-102 active:scale-98"
+                title="Inspect question-by-question breakdown, wrong attempts, categories, and skills"
+              >
+                <Target className="w-4 h-4 text-stone-950" />
+                <span>Review Question Responses</span>
               </button>
             </div>
           </div>
 
           {/* Key Metrics Overview */}
-          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Average Score */}
-            <div className="p-5 rounded-2xl bg-white border border-stone-200 shadow-xs">
-              <div className="flex items-center justify-between text-xs font-bold text-stone-500 mb-2">
-                <span>Average Quiz Score</span>
-                <TrendingUp className="w-4 h-4 text-emerald-600" />
-              </div>
-              <div className="text-2xl font-black text-stone-900">
-                {activeChild.averageScore}%
-              </div>
-              <p className="text-[11px] text-emerald-700 font-medium mt-1 flex items-center gap-1">
-                <span>Top 5% in {activeChild.grade}</span>
-              </p>
-            </div>
+          {(() => {
+            const activeChildHasAssessments = (activeChild.totalQuizzesTaken || 0) > 0 || (Array.isArray(activeChild.recentActivities) && activeChild.recentActivities.length > 0);
+            return (
+              <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Average Score */}
+                <div className="p-5 rounded-2xl bg-white border border-stone-200 shadow-xs">
+                  <div className="flex items-center justify-between text-xs font-bold text-stone-500 mb-2">
+                    <span>Average Quiz Score</span>
+                    <TrendingUp className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <div className="text-2xl font-black text-stone-900">
+                    {activeChildHasAssessments ? `${activeChild.averageScore}%` : 'Not Evaluated'}
+                  </div>
+                  <p className="text-[11px] text-emerald-700 font-medium mt-1 flex items-center gap-1">
+                    <span>{activeChildHasAssessments ? `Diagnostic Accuracy in ${activeChild.grade}` : '0% • Diagnostic Pending'}</span>
+                  </p>
+                </div>
 
-            {/* Daily Streak */}
-            <div className="p-5 rounded-2xl bg-white border border-stone-200 shadow-xs">
-              <div className="flex items-center justify-between text-xs font-bold text-stone-500 mb-2">
-                <span>Active Learning Streak</span>
-                <Flame className="w-4 h-4 text-orange-500" />
-              </div>
-              <div className="text-2xl font-black text-orange-600">
-                {activeChild.streakDays} Days 🔥
-              </div>
-              <p className="text-[11px] text-stone-500 mt-1">
-                {activeChild.dailyQuizCompletedToday ? 'Daily Quiz done today!' : 'Pending today\'s quiz'}
-              </p>
-            </div>
+                {/* Daily Streak */}
+                <div className="p-5 rounded-2xl bg-white border border-stone-200 shadow-xs">
+                  <div className="flex items-center justify-between text-xs font-bold text-stone-500 mb-2">
+                    <span>Active Learning Streak</span>
+                    <Flame className="w-4 h-4 text-orange-500" />
+                  </div>
+                  <div className="text-2xl font-black text-orange-600">
+                    {activeChildHasAssessments ? activeChild.streakDays : 0} Days 🔥
+                  </div>
+                  <p className="text-[11px] text-stone-500 mt-1">
+                    {activeChildHasAssessments
+                      ? (activeChild.dailyQuizCompletedToday ? 'Daily Quiz done today!' : 'Pending today\'s quiz')
+                      : 'Ready for first streak day'}
+                  </p>
+                </div>
 
-            {/* Quizzes Taken */}
-            <div className="p-5 rounded-2xl bg-white border border-stone-200 shadow-xs">
-              <div className="flex items-center justify-between text-xs font-bold text-stone-500 mb-2">
-                <span>Completed Quizzes</span>
-                <Award className="w-4 h-4 text-blue-600" />
-              </div>
-              <div className="text-2xl font-black text-stone-900">
-                {activeChild.totalQuizzesTaken}
-              </div>
-              <p className="text-[11px] text-stone-500 mt-1">
-                Total XP: {activeChild.xp} (Level {activeChild.level})
-              </p>
-            </div>
+                {/* Quizzes Taken */}
+                <div className="p-5 rounded-2xl bg-white border border-stone-200 shadow-xs">
+                  <div className="flex items-center justify-between text-xs font-bold text-stone-500 mb-2">
+                    <span>Completed Quizzes</span>
+                    <Award className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div className="text-2xl font-black text-stone-900">
+                    {activeChildHasAssessments ? (activeChild.totalQuizzesTaken || activeChild.recentActivities?.length || 0) : 0}
+                  </div>
+                  <p className="text-[11px] text-stone-500 mt-1">
+                    Total XP: {activeChildHasAssessments ? activeChild.xp : 0} (Level {activeChild.level || 1})
+                  </p>
+                </div>
 
-            {/* Study Time / Screen Budget */}
-            <div className="p-5 rounded-2xl bg-white border border-stone-200 shadow-xs">
-              <div className="flex items-center justify-between text-xs font-bold text-stone-500 mb-2">
-                <span>Daily Screen Limit</span>
-                <Clock className="w-4 h-4 text-blue-600" />
-              </div>
-              <div className="text-2xl font-black text-stone-900">
-                {screenTimeLimit} min
-              </div>
-              <p className="text-[11px] text-stone-500 mt-1">
-                ~28 mins spent today
-              </p>
-            </div>
-          </section>
+                {/* Study Time / Screen Budget */}
+                <div className="p-5 rounded-2xl bg-white border border-stone-200 shadow-xs">
+                  <div className="flex items-center justify-between text-xs font-bold text-stone-500 mb-2">
+                    <span>Daily Screen Limit</span>
+                    <Clock className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div className="text-2xl font-black text-stone-900">
+                    {screenTimeLimit} min
+                  </div>
+                  <p className="text-[11px] text-stone-500 mt-1">
+                    {activeChildHasAssessments ? '~28 mins spent today' : 'No screen time used today'}
+                  </p>
+                </div>
+              </section>
+            );
+          })()}
 
           {/* Deep Dive: Subject Breakdown & Parental Controls */}
           <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -642,7 +725,11 @@ export default function ParentPortal({
                   </p>
                 </div>
                 <button
-                  onClick={() => setShowReportCardModal(true)}
+                  type="button"
+                  onClick={() => {
+                    setReportCardTab('summary');
+                    setShowReportCardModal(true);
+                  }}
                   className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
                 >
                   <span>Detailed Analytics</span>
@@ -652,10 +739,20 @@ export default function ParentPortal({
 
               <div className="space-y-5">
                 {(() => {
+                  const hasAssessments = (activeChild.totalQuizzesTaken || 0) > 0 || (Array.isArray(activeChild.recentActivities) && activeChild.recentActivities.length > 0);
+                  if (!hasAssessments || Object.keys(activeChild.subjectMastery || {}).length === 0) {
+                    return (
+                      <div className="p-8 text-center bg-stone-50 rounded-2xl border border-stone-200 text-stone-500 space-y-2">
+                        <div className="text-3xl">📚</div>
+                        <div className="text-xs font-bold text-stone-700">Pending Initial Assessment</div>
+                        <p className="text-[11px] max-w-sm mx-auto text-stone-500 leading-relaxed">
+                          Subject proficiencies and competency matrices will automatically calibrate as {activeChild.studentName} completes quizzes and assignments.
+                        </p>
+                      </div>
+                    );
+                  }
+
                   const mastery = { ...(activeChild.subjectMastery || {}) };
-                  activeCurriculumSubjects.forEach(s => {
-                    if (mastery[s] === undefined) mastery[s] = 85;
-                  });
                   return Object.entries(mastery).map(([subject, score]) => (
                     <div key={subject}>
                       <div className="flex items-center justify-between text-xs font-bold text-stone-800 mb-1.5">
@@ -1043,6 +1140,9 @@ export default function ParentPortal({
           principalName={activeChild.schoolName ? `Principal / Academic Dean (${activeChild.schoolName})` : undefined}
           parentName={currentUser.name}
           schoolName={activeChild.schoolName || activeChildUser?.schoolName}
+          questions={questions}
+          assignments={assignments}
+          initialTab={reportCardTab}
           onClose={() => setShowReportCardModal(false)}
           viewerRole="parent"
         />
@@ -1080,6 +1180,8 @@ export default function ParentPortal({
           canEditGrade={false}
         />
       )}
-    </div>
+        </div>
+      )}
+    </PortalShell>
   );
 }

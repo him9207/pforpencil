@@ -136,14 +136,14 @@ export function GradePicker({ selectedGradeId, onSelectGrade, onStartPracticing 
         
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-12">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-[#1a56db] text-xs font-black uppercase tracking-wider mb-3">
-            <Sparkles className="w-3.5 h-3.5" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e6f4ea] text-[#1e6f47] text-xs font-black uppercase tracking-wider mb-3 border border-emerald-200/60">
+            <Sparkles className="w-3.5 h-3.5 text-[#1e6f47]" />
             <span>Structured Progression</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-black text-[#10246f] font-baloo tracking-tight">
+          <h2 className="text-3xl sm:text-4xl font-black text-slate-900 font-baloo tracking-tight">
             Choose Your Grade to Start Practicing
           </h2>
-          <p className="mt-3 text-stone-600 font-nunito text-base sm:text-lg font-medium">
+          <p className="mt-3 text-slate-600 font-nunito text-base sm:text-lg font-medium">
             Every grade features structured learning paths, adaptive visual questions, and instant rewards. Click any grade to see its curriculum focus.
           </p>
         </div>
@@ -156,10 +156,10 @@ export function GradePicker({ selectedGradeId, onSelectGrade, onStartPracticing 
               <button
                 key={grade.id}
                 onClick={() => onSelectGrade(grade.id)}
-                className={`flex flex-col items-center text-center p-3 sm:p-4 rounded-2xl border-2 transition-all duration-200 cursor-pointer select-none group ${
+                className={`flex flex-col items-center text-center p-3 sm:p-4 rounded-2xl border transition-all duration-200 cursor-pointer select-none group ${
                   isSelected
-                    ? `bg-gradient-to-b ${grade.bgGrad} ${grade.borderColor} shadow-lg scale-105 ring-2 ring-[#1a56db]/30`
-                    : 'bg-stone-50/70 border-stone-200/80 hover:bg-white hover:border-blue-300 hover:shadow-md'
+                    ? `bg-gradient-to-b ${grade.bgGrad} ${grade.borderColor} shadow-md scale-105 ring-2 ring-emerald-500/40`
+                    : 'bg-slate-50/70 border-slate-200 hover:bg-white hover:border-emerald-300 hover:shadow-xs'
                 }`}
               >
                 <div className="relative w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center mb-2">
@@ -174,16 +174,16 @@ export function GradePicker({ selectedGradeId, onSelectGrade, onStartPracticing 
                     }}
                   />
                   {isSelected && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#1a56db] text-white rounded-full flex items-center justify-center text-[10px] font-black">
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#1e6f47] text-white rounded-full flex items-center justify-center text-[10px] font-black">
                       ✓
                     </span>
                   )}
                 </div>
 
-                <div className="font-baloo font-black text-sm sm:text-base text-[#10246f] leading-tight">
+                <div className="font-baloo font-black text-sm sm:text-base text-slate-900 leading-tight">
                   {grade.shortLabel}
                 </div>
-                <div className="text-[11px] font-bold text-stone-500 mt-0.5">
+                <div className="text-[11px] font-bold text-slate-500 mt-0.5">
                   {grade.ageRange}
                 </div>
               </button>
@@ -192,9 +192,9 @@ export function GradePicker({ selectedGradeId, onSelectGrade, onStartPracticing 
         </div>
 
         {/* Selected Grade Detail Feature Card */}
-        <div className="mt-8 bg-gradient-to-r from-blue-50 via-white to-amber-50 p-6 sm:p-8 rounded-3xl border-2 border-blue-200/70 shadow-md flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="mt-8 bg-gradient-to-r from-emerald-50/60 via-white to-slate-50 p-6 sm:p-8 rounded-3xl border border-emerald-200/80 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-5">
-            <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-2xl bg-white p-2 shadow-sm border border-stone-200 flex items-center justify-center">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-2xl bg-white p-2 shadow-2xs border border-slate-200 flex items-center justify-center">
               <img
                 src={selectedGrade.icon}
                 alt={selectedGrade.name}
@@ -206,15 +206,15 @@ export function GradePicker({ selectedGradeId, onSelectGrade, onStartPracticing 
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-[#10246f] text-white uppercase tracking-wider">
+                <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-[#1e6f47] text-white uppercase tracking-wider">
                   {selectedGrade.ageRange}
                 </span>
-                <span className="text-xs font-bold text-stone-500">Curriculum Framework</span>
+                <span className="text-xs font-bold text-slate-500">Curriculum Framework</span>
               </div>
-              <h3 className="text-2xl sm:text-3xl font-black text-[#10246f] font-baloo mt-1">
+              <h3 className="text-2xl sm:text-3xl font-black text-slate-900 font-baloo mt-1">
                 {selectedGrade.name}
               </h3>
-              <p className="text-stone-600 font-nunito text-sm sm:text-base font-medium mt-1 max-w-xl">
+              <p className="text-slate-600 font-nunito text-sm sm:text-base font-medium mt-1 max-w-xl">
                 {selectedGrade.tagline}
               </p>
               
@@ -222,9 +222,9 @@ export function GradePicker({ selectedGradeId, onSelectGrade, onStartPracticing 
                 {selectedGrade.skills.map((skill, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg bg-white border border-stone-200 text-stone-700 shadow-2xs"
+                    className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-white border border-slate-200 text-slate-700 shadow-2xs"
                   >
-                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                     {skill}
                   </span>
                 ))}
@@ -235,7 +235,7 @@ export function GradePicker({ selectedGradeId, onSelectGrade, onStartPracticing 
           <div className="shrink-0 w-full md:w-auto">
             <button
               onClick={() => onStartPracticing(selectedGrade.id)}
-              className="w-full md:w-auto px-6 py-3.5 bg-[#1a56db] hover:bg-[#10246f] text-white font-baloo font-black text-base rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer group"
+              className="w-full md:w-auto px-6 py-3.5 bg-[#1e6f47] hover:bg-[#165636] text-white font-baloo font-black text-base rounded-full shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer group"
             >
               <span>Practice {selectedGrade.shortLabel} Now</span>
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />

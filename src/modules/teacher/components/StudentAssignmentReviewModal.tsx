@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { StudentProgress, ClassAssignment, Question, QuestionResult } from '../../../types';
 import { 
   CheckCircle2, 
@@ -223,9 +224,11 @@ export default function StudentAssignmentReviewModal({
     window.print();
   };
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-stone-950/75 backdrop-blur-xs overflow-y-auto overscroll-contain modal-scroll-container print:p-0 print:bg-white print:static"
+      className="fixed inset-0 z-[9990] flex items-center justify-center p-2 sm:p-4 bg-stone-950/75 backdrop-blur-xs overflow-y-auto overscroll-contain modal-scroll-container print:p-0 print:bg-white print:static"
       onClick={onClose}
     >
       <div 
@@ -630,6 +633,7 @@ export default function StudentAssignmentReviewModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -227,38 +227,38 @@ export function QuizCard({ selectedGradeId, onLaunchStudentArena }: QuizCardProp
         
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-black uppercase tracking-wider mb-2">
-            <Trophy className="w-3.5 h-3.5 text-emerald-600" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e6f4ea] text-[#1e6f47] text-xs font-black uppercase tracking-wider mb-2 border border-emerald-200/60">
+            <Trophy className="w-3.5 h-3.5 text-[#1e6f47]" />
             <span>Try It Yourself • Live Interactive Preview</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-black text-[#10246f] font-baloo">
+          <h2 className="text-3xl sm:text-4xl font-black text-slate-900 font-baloo">
             Experience the Joy of Solving!
           </h2>
-          <p className="text-stone-600 font-nunito font-medium text-base mt-1">
+          <p className="text-slate-600 font-nunito font-medium text-base mt-1">
             See how our questions guide students with hints, playful rewards, and crystal-clear feedback.
           </p>
         </div>
 
         {/* The Quiz Box */}
-        <div className="bg-white rounded-3xl border-2 border-blue-200/80 shadow-xl overflow-hidden p-6 sm:p-8 relative">
+        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-md overflow-hidden p-6 sm:p-8 relative">
           
           {/* Top Bar: Grade Badge, Topic & XP counter */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-5 border-b border-stone-200/70">
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-5 border-b border-slate-200/80">
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 rounded-full bg-[#10246f] text-white text-xs font-black uppercase tracking-wide">
+              <span className="px-3 py-1 rounded-full bg-[#1e6f47] text-white text-xs font-black uppercase tracking-wide">
                 {currentQ.gradeBadge}
               </span>
-              <span className="text-sm font-black text-[#1a56db]">
+              <span className="text-sm font-black text-[#1e6f47]">
                 {currentQ.topic}
               </span>
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1 text-xs font-black text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
-                <Star className="w-3.5 h-3.5 fill-amber-400" />
+              <div className="flex items-center gap-1 text-xs font-black text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
+                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
                 <span>{xp} XP</span>
               </div>
-              <div className="text-xs font-bold text-stone-500">
+              <div className="text-xs font-bold text-slate-500">
                 Question { (questionIndex % questions.length) + 1 } of {questions.length}
               </div>
             </div>
@@ -266,13 +266,13 @@ export function QuizCard({ selectedGradeId, onLaunchStudentArena }: QuizCardProp
 
           {/* Question Text */}
           <div className="py-6 text-center">
-            <h3 className="text-xl sm:text-2xl font-black text-[#10246f] font-baloo leading-snug">
+            <h3 className="text-xl sm:text-2xl font-black text-slate-900 font-baloo leading-snug">
               {currentQ.question}
             </h3>
 
             {/* Visual Clue if available */}
             {currentQ.visual && (
-              <div className="my-4 inline-block px-5 py-2.5 rounded-2xl bg-amber-50/80 border border-amber-200/80 font-mono font-black text-2xl sm:text-3xl text-amber-900 tracking-wider">
+              <div className="my-4 inline-block px-5 py-2.5 rounded-2xl bg-[#e6f4ea]/60 border border-emerald-200/70 font-mono font-black text-2xl sm:text-3xl text-emerald-950 tracking-wider">
                 {currentQ.visual}
               </div>
             )}
@@ -285,14 +285,14 @@ export function QuizCard({ selectedGradeId, onLaunchStudentArena }: QuizCardProp
               const isThisSelected = selectedOption === opt;
               const isThisCorrect = opt.trim() === currentQ.answer.trim();
 
-              let btnStyle = 'bg-stone-50 border-stone-200 hover:border-blue-400 hover:bg-blue-50/50 text-[#10246f]';
+              let btnStyle = 'bg-slate-50 border-slate-200 hover:border-emerald-300 hover:bg-[#e6f4ea]/40 text-slate-800';
               if (isAnswered) {
                 if (isThisCorrect) {
-                  btnStyle = 'bg-emerald-50 border-emerald-500 text-emerald-800 ring-2 ring-emerald-500/30';
+                  btnStyle = 'bg-emerald-50 border-emerald-500 text-emerald-900 ring-2 ring-emerald-500/30';
                 } else if (isThisSelected && !isThisCorrect) {
                   btnStyle = 'bg-rose-50 border-rose-400 text-rose-800 ring-2 ring-rose-400/30';
                 } else {
-                  btnStyle = 'bg-stone-50 border-stone-200 opacity-60 text-stone-500';
+                  btnStyle = 'bg-slate-50 border-slate-200 opacity-60 text-slate-400';
                 }
               }
 
@@ -301,14 +301,14 @@ export function QuizCard({ selectedGradeId, onLaunchStudentArena }: QuizCardProp
                   key={idx}
                   disabled={isAnswered}
                   onClick={() => handleSelect(opt)}
-                  className={`flex items-center gap-3 p-4 rounded-2xl border-2 font-baloo font-bold text-lg text-left transition-all duration-150 cursor-pointer select-none ${btnStyle}`}
+                  className={`flex items-center gap-3 p-4 rounded-2xl border font-baloo font-bold text-lg text-left transition-all duration-150 cursor-pointer select-none ${btnStyle}`}
                 >
                   <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 ${
                     isAnswered && isThisCorrect
-                      ? 'bg-emerald-500 text-white'
+                      ? 'bg-[#1e6f47] text-white'
                       : isAnswered && isThisSelected && !isThisCorrect
                       ? 'bg-rose-500 text-white'
-                      : 'bg-stone-200 text-stone-700'
+                      : 'bg-slate-200 text-slate-700'
                   }`}>
                     {letter}
                   </span>
@@ -326,7 +326,7 @@ export function QuizCard({ selectedGradeId, onLaunchStudentArena }: QuizCardProp
 
           {/* Feedback & Explanation Box */}
           {isAnswered && (
-            <div className={`mt-6 p-4 rounded-2xl border-2 animate-in fade-in max-w-xl mx-auto ${
+            <div className={`mt-6 p-4 rounded-2xl border animate-in fade-in max-w-xl mx-auto ${
               isCorrect ? 'bg-emerald-50/90 border-emerald-200 text-emerald-950' : 'bg-amber-50/90 border-amber-200 text-amber-950'
             }`}>
               <div className="flex items-start gap-3">
@@ -348,15 +348,15 @@ export function QuizCard({ selectedGradeId, onLaunchStudentArena }: QuizCardProp
           )}
 
           {/* Bottom Actions: Hint, Next Question & Full Quiz Link */}
-          <div className="mt-8 pt-5 border-t border-stone-200/70 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="mt-8 pt-5 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-4">
             
             {/* Hint toggle */}
             {!isAnswered ? (
               <button
                 onClick={() => setShowHint(!showHint)}
-                className="text-xs font-bold text-amber-700 hover:text-amber-900 flex items-center gap-1.5 cursor-pointer"
+                className="text-xs font-bold text-amber-800 hover:text-amber-950 flex items-center gap-1.5 cursor-pointer"
               >
-                <Lightbulb className="w-4 h-4 text-amber-500" />
+                <Lightbulb className="w-4 h-4 text-amber-600" />
                 <span>{showHint ? 'Hide Hint' : 'Need a Clue?'}</span>
               </button>
             ) : (
@@ -368,7 +368,7 @@ export function QuizCard({ selectedGradeId, onLaunchStudentArena }: QuizCardProp
               {isAnswered ? (
                 <button
                   onClick={handleNext}
-                  className="px-6 py-2.5 bg-[#10246f] hover:bg-[#1a56db] text-white font-baloo font-bold text-sm rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                  className="px-6 py-2.5 bg-[#1e6f47] hover:bg-[#165636] text-white font-baloo font-bold text-sm rounded-full shadow-md transition-all flex items-center gap-2 cursor-pointer"
                 >
                   <span>Next Question</span>
                   <ArrowRight className="w-4 h-4" />
@@ -377,10 +377,10 @@ export function QuizCard({ selectedGradeId, onLaunchStudentArena }: QuizCardProp
 
               <button
                 onClick={onLaunchStudentArena}
-                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-baloo font-bold text-sm rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                className="px-5 py-2.5 bg-[#e6f4ea] hover:bg-[#d4edd9] text-[#1e6f47] border border-emerald-300/80 font-baloo font-bold text-sm rounded-full shadow-2xs transition-all flex items-center gap-2 cursor-pointer"
               >
                 <span>Full Question Arena</span>
-                <Sparkles className="w-4 h-4 text-amber-300" />
+                <Sparkles className="w-4 h-4 text-[#1e6f47]" />
               </button>
             </div>
           </div>

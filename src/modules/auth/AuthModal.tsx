@@ -585,7 +585,7 @@ export default function AuthModal({
                 <Sparkles className="w-3 h-3 text-blue-600" />
                 <span>Authentication Center</span>
               </div>
-              <h2 className="text-lg font-black text-[#10246f]">
+              <h2 className="text-lg font-black text-slate-900">
                 {activeScreen === 'signin' && 'Sign In to Your Account'}
                 {activeScreen === 'register' && 'Create Your P for Pencil Account'}
                 {activeScreen === 'forgot_password' && 'Password Recovery & Verification'}
@@ -597,7 +597,7 @@ export default function AuthModal({
           <button
             id="close-auth-modal-btn"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white border border-[#e1e6f1] text-[#59627a] hover:text-[#10246f] hover:bg-[#f8faff] flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-500 hover:text-[#1e6f47] hover:bg-[#e6f4ea]/30 flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -605,15 +605,15 @@ export default function AuthModal({
 
         {/* Primary Screen Tabs (Sign In vs Register) */}
         {activeScreen !== 'forgot_password' && activeScreen !== 'register_otp' && activeScreen !== 'signin_otp' && (
-          <div className="px-6 pt-3.5 shrink-0 flex gap-2 border-b border-[#e1e6f1] pb-3 bg-white">
+          <div className="px-6 pt-3.5 shrink-0 flex gap-2 border-b border-slate-200 pb-3 bg-white">
             <button
               id="auth-tab-signin"
               type="button"
               onClick={() => setActiveScreen('signin')}
               className={`flex-1 py-2.5 rounded-full font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 activeScreen === 'signin'
-                  ? 'bg-[#10246f] text-white shadow-xs'
-                  : 'bg-[#f8faff] text-[#59627a] hover:bg-[#eef4ff]'
+                  ? 'bg-[#1e6f47] text-white shadow-xs'
+                  : 'bg-slate-50 text-slate-600 hover:bg-[#e6f4ea]/40'
               }`}
             >
               <LogIn className="w-3.5 h-3.5" />
@@ -625,8 +625,8 @@ export default function AuthModal({
               onClick={() => setActiveScreen('register')}
               className={`flex-1 py-2.5 rounded-full font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 activeScreen === 'register'
-                  ? 'bg-blue-600 text-white shadow-xs font-bold'
-                  : 'bg-[#f8faff] text-[#59627a] border border-[#e1e6f1] hover:bg-blue-50/50'
+                  ? 'bg-[#1e6f47] text-white shadow-xs font-bold'
+                  : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-[#e6f4ea]/40'
               }`}
             >
               <UserPlus className="w-3.5 h-3.5" />
@@ -1205,7 +1205,7 @@ export default function AuthModal({
               ) : (
                 /* Adult Mode (Unified Email or Username + Password vs OTP) */
                 <form onSubmit={handleAdultLogin} className="space-y-4">
-                  <div className="bg-[#f8faff] border border-[#e1e6f1] rounded-2xl p-3 text-xs text-[#10246f] flex items-center gap-2.5">
+                  <div className="bg-[#e6f4ea]/70 border border-emerald-200/80 rounded-2xl p-3 text-xs text-[#1e6f47] flex items-center gap-2.5">
                     <span className="text-xl">🔐</span>
                     <span>
                       Log in using your <strong>Registered Email</strong> or your <strong>@username</strong>.
@@ -1223,7 +1223,7 @@ export default function AuthModal({
                       }}
                       className={`flex-1 py-1.5 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                         adultAuthType === 'password'
-                          ? 'bg-white text-[#10246f] shadow-xs'
+                          ? 'bg-white text-[#1e6f47] shadow-xs'
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
@@ -1239,11 +1239,11 @@ export default function AuthModal({
                       }}
                       className={`flex-1 py-1.5 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                         adultAuthType === 'otp'
-                          ? 'bg-white text-blue-600 shadow-xs'
+                          ? 'bg-white text-[#1e6f47] shadow-xs'
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
-                      <Smartphone className="w-3.5 h-3.5 text-blue-600" />
+                      <Smartphone className="w-3.5 h-3.5 text-[#1e6f47]" />
                       <span>Verification Code (OTP)</span>
                     </button>
                   </div>
@@ -1268,7 +1268,7 @@ export default function AuthModal({
                         value={adultIdentifier}
                         onChange={(e) => setAdultIdentifier(e.target.value)}
                         placeholder="e.g. admin@pforpencil.com or david_watson"
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-[#10246f] focus:ring-2 focus:ring-[#10246f]/20 text-sm transition-all"
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-[#1e6f47] focus:ring-2 focus:ring-[#1e6f47]/20 text-sm transition-all"
                       />
                     </div>
                   </div>
@@ -1285,7 +1285,7 @@ export default function AuthModal({
                             setForgotIdentifier(adultIdentifier);
                             setActiveScreen('forgot_password');
                           }}
-                          className="text-xs font-bold text-blue-600 hover:underline cursor-pointer"
+                          className="text-xs font-bold text-[#1e6f47] hover:underline cursor-pointer"
                         >
                           Forgot password?
                         </button>
@@ -1299,7 +1299,7 @@ export default function AuthModal({
                           value={adultPassword}
                           onChange={(e) => setAdultPassword(e.target.value)}
                           placeholder="••••••••"
-                          className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 focus:border-[#10246f] focus:ring-2 focus:ring-[#10246f]/20 text-sm transition-all"
+                          className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 focus:border-[#1e6f47] focus:ring-2 focus:ring-[#1e6f47]/20 text-sm transition-all"
                         />
                         <button
                           type="button"
@@ -1316,7 +1316,7 @@ export default function AuthModal({
                     id="submit-adult-login"
                     type="submit"
                     disabled={isVerifying}
-                    className="w-full py-3.5 px-4 rounded-full bg-[#10246f] hover:bg-[#0c1a52] text-white font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-101 active:scale-99"
+                    className="w-full py-3.5 px-4 rounded-full bg-[#1e6f47] hover:bg-[#165636] text-white font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-101 active:scale-99"
                   >
                     <span>
                       {isVerifying
@@ -1514,7 +1514,7 @@ export default function AuthModal({
 
                   <button
                     type="submit"
-                    className="w-full py-3.5 px-4 rounded-full bg-[#10246f] hover:bg-[#0c1a52] text-white font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-101 active:scale-99"
+                    className="w-full py-3.5 px-4 rounded-full bg-[#1e6f47] hover:bg-[#165636] text-white font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-101 active:scale-99"
                   >
                     <span>Send Verification Code (OTP)</span>
                     <ArrowRight className="w-4 h-4" />
@@ -1616,7 +1616,7 @@ export default function AuthModal({
                     setForgotError('');
                     setActiveScreen('signin');
                   }}
-                  className="text-xs font-bold text-[#10246f] hover:underline inline-flex items-center gap-1 cursor-pointer"
+                  className="text-xs font-bold text-[#1e6f47] hover:underline inline-flex items-center gap-1 cursor-pointer"
                 >
                   <RotateCcw className="w-3 h-3" />
                   <span>Return to Sign In</span>

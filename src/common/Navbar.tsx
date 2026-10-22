@@ -104,12 +104,12 @@ export default function Navbar({
               id="nav-tab-home"
               onClick={() => onNavigateView('home')}
               className={`relative py-2 transition-colors cursor-pointer ${
-                currentView === 'home' ? 'text-slate-950 font-bold' : 'hover:text-slate-950'
+                currentView === 'home' ? 'text-[#1e6f47] font-bold' : 'hover:text-[#1e6f47]'
               }`}
             >
               <span>Home</span>
               {currentView === 'home' && (
-                <span className="absolute -bottom-1 left-0 right-0 h-0.5 rounded-full bg-slate-950" />
+                <span className="absolute -bottom-1 left-0 right-0 h-0.5 rounded-full bg-[#1e6f47]" />
               )}
             </button>
 
@@ -209,25 +209,37 @@ export default function Navbar({
             onClick={toggleSound}
             aria-label="Toggle sound effects"
             title={soundOn ? 'Sound Effects Enabled' : 'Sound Muted'}
-            className="w-8 h-8 rounded-lg border border-stone-200 bg-stone-50 flex items-center justify-center text-slate-700 hover:bg-stone-100 transition-colors cursor-pointer"
+            className="w-9 h-9 rounded-full border border-slate-200 bg-slate-50 flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
           >
             {soundOn ? <Volume2 className="w-4 h-4 text-emerald-600" /> : <VolumeX className="w-4 h-4 text-slate-400" />}
           </button>
+
+          {/* Quick Dashboard Action if user is logged in */}
+          {currentUser && (
+            <button
+              id="nav-go-dashboard-btn"
+              onClick={() => onNavigateView('dashboard')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#e6f4ea] hover:bg-[#d4edd9] text-[#1e6f47] border border-emerald-300/80 font-bold text-xs sm:text-sm shadow-2xs transition-all cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Go to Dashboard</span>
+            </button>
+          )}
 
           {/* Log In Button */}
           <button
             id="nav-login-btn"
             onClick={() => onOpenAuthModal ? onOpenAuthModal({ screen: 'signin' }) : onNavigateView('home')}
-            className="px-3.5 py-1.5 rounded-lg border border-stone-200 text-slate-800 font-bold text-xs sm:text-sm hover:bg-stone-100 transition-all cursor-pointer"
+            className="px-3.5 py-1.5 rounded-full border border-slate-200 text-slate-800 font-bold text-xs sm:text-sm hover:bg-slate-50 transition-all cursor-pointer"
           >
             Log In
           </button>
 
-          {/* Get Started / Sign Up CTA Button */}
+          {/* Get Started / Sign Up CTA Button with Pine/Emerald theme */}
           <button
             id="nav-signup-btn"
             onClick={() => onOpenAuthModal ? onOpenAuthModal({ screen: 'register' }) : onNavigateView('home')}
-            className="px-4 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm shadow-xs transition-all hover:scale-102 active:scale-98 cursor-pointer"
+            className="px-4 py-1.5 rounded-full bg-[#1e6f47] hover:bg-[#165636] text-white font-bold text-xs sm:text-sm shadow-xs transition-all hover:scale-102 active:scale-98 cursor-pointer"
           >
             Get Started
           </button>

@@ -46,7 +46,9 @@ import {
   Trash2,
   X,
   ClipboardList,
-  BarChart2
+  BarChart2,
+  Gamepad2,
+  LayoutGrid
 } from 'lucide-react';
 import { sounds } from '../../utils/audio';
 import { getNextQuestionId, getSchoolPrefix, generateSchoolStudentUsername, getNextRoleId } from '../../utils/idAndUsernameGenerator';
@@ -58,9 +60,13 @@ import EditStudentModal from '../school/components/EditStudentModal';
 import QuestionEditModal from '../admin/components/QuestionEditModal';
 import QuestionPreviewModal from '../admin/components/QuestionPreviewModal';
 import StudentAssignmentReviewModal from './components/StudentAssignmentReviewModal';
+import ActivityPlayerModal from '../activities/ActivityPlayerModal';
 import { ClipartText } from '../../common/ClipartRenderer';
 import { loadCurriculumMaster } from '../../data/curriculumMasterData';
 import { useBodyScrollLock } from '../../utils/useBodyScrollLock';
+import { PortalShell } from '../../common';
+import { PortalMenuItem } from '../../common/PortalShell';
+import TeacherMockupDashboard from './components/TeacherMockupDashboard';
 
 interface TeacherPortalProps {
   currentUser: UserAccount;
@@ -83,6 +89,8 @@ interface TeacherPortalProps {
   onResetCredentials?: (userId: string, newSecret: string, isPin: boolean, newUsername?: string) => void;
   onUpdateUserProfile?: (user: UserAccount) => void;
   onUpdateStudentProgress?: (progress: StudentProgress) => void;
+  onSelectUser?: (user: UserAccount) => void;
+  onNavigateHome?: () => void;
 }
 
 export default function TeacherPortal({
@@ -105,7 +113,9 @@ export default function TeacherPortal({
   onDeleteQuestion,
   onResetCredentials,
   onUpdateUserProfile,
-  onUpdateStudentProgress
+  onUpdateStudentProgress,
+  onSelectUser,
+  onNavigateHome
 }: TeacherPortalProps) {
   const activeCurriculumSubjects: string[] = (subjects && subjects.length > 0)
     ? subjects.filter((s) => s.active).map((s) => s.name)
@@ -152,7 +162,7 @@ export default function TeacherPortal({
   const enrollmentGrades: GradeLevel[] = effectiveTeacherGrades;
 
   const [selectedClassId, setSelectedClassId] = useState<string>(teacherClasses[0]?.id || '');
-  const [activeTab, setActiveTab] = useState<'students' | 'assignments' | 'questions' | 'activities'>('students');
+  const [activeTab, setActiveTab] = useState<string>('dashboard');
 
   // Automatically update selectedClassId if current selection is invalid or classes change
   useEffect(() => {
@@ -182,6 +192,7 @@ export default function TeacherPortal({
     totalQuestions: number;
     percentage: number;
   } | null>(null);
+  const [previewingActivity, setPreviewingActivity] = useState<Activity | null>(null);
 
   // Lock body scroll while any teacher modal is open
   useBodyScrollLock(Boolean(
@@ -194,6 +205,7 @@ export default function TeacherPortal({
     selectedReportStudent || 
     selectedAssignmentDetails ||
     reviewingSubmission ||
+    previewingActivity ||
     resettingUser || 
     editingUser ||
     editingStudentData
@@ -420,20 +432,15 @@ export default function TeacherPortal({
       organizationId: effectiveSchoolId,
       teacherId: currentUser.id,
       level: 1,
-      xp: 100,
-      coins: 20,
-      streakDays: 1,
+      xp: 0,
+      coins: 0,
+      streakDays: 0,
       dailyQuizCompletedToday: false,
-      totalQuizzesTaken: 1,
-      averageScore: 90,
-      subjectMastery: activeCurriculumSubjects.reduce((acc, s) => {
-        acc[s] = 88;
-        return acc;
-      }, {} as Record<string, number>),
+      totalQuizzesTaken: 0,
+      averageScore: 0,
+      subjectMastery: {},
       recentActivities: [],
-      badges: [
-        { id: 'B_NEW', name: `${schoolCodeToUse} Scholar`, icon: '🌟', description: `Enrolled in ${effectiveSchoolName}`, unlockedAt: new Date().toISOString().split('T')[0] }
-      ]
+      badges: []
     };
 
     sounds.playLevelUp();
@@ -549,8 +556,46 @@ export default function TeacherPortal({
     );
   };
 
+  const teacherMenuItems: PortalMenuItem[] = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
+    { id: 'classes', label: 'My Classes', icon: Layers, badge: teacherClasses.length },
+    { id: 'assignments', label: 'Assignments', icon: FileText, badge: assignments.length },
+    { id: 'questions', label: 'Question Bank', icon: BookOpen },
+    { id: 'progress', label: 'Student Progress', icon: BarChart2 },
+    { id: 'reports', label: 'Reports', icon: Award },
+    { id: 'resources', label: 'Resources', icon: Gamepad2 },
+    { id: 'settings', label: 'Settings', icon: Edit3 }
+  ];
+
   return (
-    <div className="space-y-6 pb-12">
+    <PortalShell
+      currentUser={currentUser}
+      allUsers={allUsers}
+      portalRoleTitle="Teacher Portal"
+      menuItems={teacherMenuItems}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      searchPlaceholder="Search students, assignments, or topics..."
+      onSelectUser={onSelectUser}
+      onNavigateHome={onNavigateHome}
+      onOpenUserProfile={() => setEditingUser(currentUser)}
+      footerVariant="teacher"
+    >
+      {activeTab === 'dashboard' ? (
+        <TeacherMockupDashboard
+          currentUser={currentUser}
+          classes={teacherClasses}
+          assignments={assignments}
+          students={students}
+          onNavigateTab={setActiveTab}
+          onOpenCreateAssignment={() => {
+            setActiveTab('assignments');
+            setShowCreateAssignmentModal(true);
+          }}
+          onSelectClass={(clsId) => setSelectedClassId(clsId)}
+        />
+      ) : (
+        <div className="space-y-6">
       {/* Teacher Header Banner */}
       <div className="bg-white rounded-3xl border border-stone-200 p-6 sm:p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
@@ -597,7 +642,7 @@ export default function TeacherPortal({
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setShowCreateClassModal(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#10246f] hover:bg-[#0c1a52] text-white font-bold text-xs transition-all shadow-xs cursor-pointer hover:scale-105 active:scale-95"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#1e6f47] hover:bg-[#165636] text-white font-bold text-xs transition-all shadow-xs cursor-pointer hover:scale-105 active:scale-95"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Create Class</span>
@@ -613,14 +658,14 @@ export default function TeacherPortal({
               setNewStudentPin(String(Math.floor(1000 + Math.random() * 9000)));
               setShowCreateStudentModal(true);
             }}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-xs cursor-pointer hover:scale-102 active:scale-98"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#e6f4ea] text-[#1e6f47] border border-emerald-300/80 hover:bg-[#d8edd9] font-bold text-xs transition-all shadow-xs cursor-pointer hover:scale-102 active:scale-98"
           >
             <Users className="w-3.5 h-3.5" />
             <span>Enroll Student</span>
           </button>
           <button
             onClick={() => setShowCreateQuestionModal(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#13b7ad] hover:bg-[#0fa097] text-white text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-105 active:scale-95"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white text-slate-800 border border-slate-200 hover:border-emerald-300 hover:bg-[#e6f4ea]/40 text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-105 active:scale-95"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Author Custom Question</span>
@@ -706,10 +751,10 @@ export default function TeacherPortal({
       </div>
 
       {/* Active Classroom Selector & Tabs */}
-      <div className="bg-white rounded-3xl border border-[#e1e6f1] p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Class switcher buttons */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold text-[#59627a] uppercase tracking-wider mr-1">
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider mr-1">
             Assigned Classes:
           </span>
           {teacherClasses.length === 0 ? (
@@ -729,33 +774,33 @@ export default function TeacherPortal({
                   }}
                   className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                     isSelected
-                      ? 'bg-[#10246f] text-white shadow-xs'
-                      : 'bg-[#eef4ff] text-[#10246f] hover:bg-[#d7def0]'
+                      ? 'bg-[#1e6f47] text-white shadow-xs'
+                      : 'bg-slate-50 text-slate-700 border border-slate-200/80 hover:bg-[#e6f4ea]/40'
                   }`}
                 >
                   <span>{cls.name}</span>
                   <span className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${
                     isPrimary 
-                      ? (isSelected ? 'bg-blue-400/30 text-white' : 'bg-blue-100 text-blue-800')
+                      ? (isSelected ? 'bg-emerald-400/30 text-white' : 'bg-emerald-100 text-emerald-800')
                       : (isSelected ? 'bg-purple-400/30 text-white' : 'bg-purple-100 text-purple-800')
                   }`}>
                     {isPrimary ? 'Lead' : 'Co-Teacher'}
                   </span>
                   <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold ${
-                    isSelected ? 'bg-white/20 text-white' : 'bg-white text-[#10246f] border border-[#d7def0]'
+                    isSelected ? 'bg-white/20 text-white' : 'bg-white text-[#1e6f47] border border-slate-200'
                   }`}>
                     {cls.grade}
                   </span>
                   {cls.section && (
                     <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
-                      isSelected ? 'bg-white/20 text-white' : 'bg-white text-[#13b7ad]'
+                      isSelected ? 'bg-white/20 text-white' : 'bg-white text-emerald-700'
                     }`}>
                       {cls.section}
                     </span>
                   )}
                   {cls.room && (
                     <span className={`text-[9px] px-1 py-0.2 rounded font-mono opacity-80 ${
-                      isSelected ? 'text-white/80' : 'text-[#59627a]'
+                      isSelected ? 'text-white/80' : 'text-slate-500'
                     }`}>
                       🚪 {cls.room}
                     </span>
@@ -767,13 +812,13 @@ export default function TeacherPortal({
         </div>
 
         {/* View Tabs */}
-        <div className="bg-[#eef4ff] p-1.5 rounded-full border border-[#d7def0] flex items-center gap-1">
+        <div className="bg-slate-100/90 p-1.5 rounded-full border border-slate-200/80 flex items-center gap-1">
           <button
             onClick={() => setActiveTab('students')}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'students'
-                ? 'bg-[#10246f] text-white shadow-xs'
-                : 'text-[#59627a] hover:text-[#10246f]'
+                ? 'bg-[#e6f4ea] text-[#1e6f47] border border-emerald-300/80 shadow-xs font-black'
+                : 'text-slate-600 hover:text-[#1e6f47] hover:bg-white/60'
             }`}
           >
             🎒 Students ({classStudents.length})
@@ -782,8 +827,8 @@ export default function TeacherPortal({
             onClick={() => setActiveTab('assignments')}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'assignments'
-                ? 'bg-[#10246f] text-white shadow-xs'
-                : 'text-[#59627a] hover:text-[#10246f]'
+                ? 'bg-[#e6f4ea] text-[#1e6f47] border border-emerald-300/80 shadow-xs font-black'
+                : 'text-slate-600 hover:text-[#1e6f47] hover:bg-white/60'
             }`}
           >
             📋 Assignments ({classAssignments.length})
@@ -792,8 +837,8 @@ export default function TeacherPortal({
             onClick={() => setActiveTab('questions')}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'questions'
-                ? 'bg-[#10246f] text-white shadow-xs'
-                : 'text-[#59627a] hover:text-[#10246f]'
+                ? 'bg-[#e6f4ea] text-[#1e6f47] border border-emerald-300/80 shadow-xs font-black'
+                : 'text-slate-600 hover:text-[#1e6f47] hover:bg-white/60'
             }`}
           >
             📚 Question Bank ({accessibleQuestions.length})
@@ -802,8 +847,8 @@ export default function TeacherPortal({
             onClick={() => setActiveTab('activities')}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'activities'
-                ? 'bg-[#10246f] text-white shadow-xs'
-                : 'text-[#59627a] hover:text-[#10246f]'
+                ? 'bg-[#e6f4ea] text-[#1e6f47] border border-emerald-300/80 shadow-xs font-black'
+                : 'text-slate-600 hover:text-[#1e6f47] hover:bg-white/60'
             }`}
           >
             ⚡ Activities & Quizzes ({activities.length})
@@ -906,19 +951,28 @@ export default function TeacherPortal({
                           <div className="text-[10px] text-stone-500 font-medium">Mapped Grade: {s.grade}</div>
                         </td>
                         <td className="p-4">
-                          <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                            {s.averageScore}%
-                          </span>
+                          {(() => {
+                            const hasAttempt = (s.totalQuizzesTaken || 0) > 0 || (Array.isArray(s.recentActivities) && s.recentActivities.length > 0);
+                            return hasAttempt ? (
+                              <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                {s.averageScore}%
+                              </span>
+                            ) : (
+                              <span className="font-bold text-stone-600 bg-stone-100 px-2 py-0.5 rounded-full border border-stone-200 text-xs">
+                                Not Evaluated
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td className="p-4 font-medium text-stone-900">
-                          {s.totalQuizzesTaken || 14} Quizzes
+                          {((s.totalQuizzesTaken || 0) > 0 || (Array.isArray(s.recentActivities) && s.recentActivities.length > 0)) ? `${s.totalQuizzesTaken || s.recentActivities?.length || 0} Quizzes` : '0 Quizzes'}
                         </td>
                         <td className="p-4 font-mono font-bold text-amber-700">
-                          +{s.xp} XP
+                          +{((s.totalQuizzesTaken || 0) > 0 || (Array.isArray(s.recentActivities) && s.recentActivities.length > 0)) ? s.xp : 0} XP
                         </td>
                         <td className="p-4">
                           <span className="font-bold text-orange-600">
-                            🔥 {s.streakDays}d
+                            🔥 {((s.totalQuizzesTaken || 0) > 0 || (Array.isArray(s.recentActivities) && s.recentActivities.length > 0)) ? s.streakDays : 0}d
                           </span>
                         </td>
                         <td className="p-4">
@@ -1035,7 +1089,7 @@ export default function TeacherPortal({
         <div className="bg-white rounded-3xl border border-stone-200 overflow-hidden shadow-xs mt-6">
           <div className="p-5 border-b border-stone-100 flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-blue-50/50 via-white to-blue-50/20">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-[#10246f] text-white flex items-center justify-center font-bold text-lg shadow-2xs">
+              <div className="w-10 h-10 rounded-2xl bg-[#1e6f47] text-white flex items-center justify-center font-bold text-lg shadow-2xs">
                 🏫
               </div>
               <div>
@@ -1361,7 +1415,7 @@ export default function TeacherPortal({
                               setSelectedAssignmentDetails(a);
                               setAssignmentSubmissionFilter('all');
                             }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#10246f] hover:bg-[#1b3598] text-white text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-102 active:scale-98"
+                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#1e6f47] hover:bg-[#165636] text-white text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-102 active:scale-98"
                           >
                             <Users className="w-3.5 h-3.5 text-amber-300" />
                             <span>View Scores & Roster</span>
@@ -1934,10 +1988,53 @@ export default function TeacherPortal({
                     </div>
                   </div>
 
-                  <div className="pt-3 border-t border-stone-100 flex items-center justify-between">
+                  <div className="pt-3 border-t border-stone-100 flex items-center justify-between gap-2 flex-wrap">
                     <span className="text-[10px] text-stone-400 uppercase font-bold">
-                      Recurrence: {act.recurrence || 'daily'}
+                      {act.recurrence || 'daily'}
                     </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          sounds.click();
+                          setPreviewingActivity(act);
+                        }}
+                        className="px-3 py-1.5 rounded-xl border border-stone-200 hover:bg-stone-50 text-stone-700 text-xs font-bold transition cursor-pointer flex items-center gap-1.5"
+                        title="Preview & play this activity"
+                      >
+                        <Gamepad2 className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Preview & Play</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!currentClass) return;
+                          const newAssignment: ClassAssignment = {
+                            id: `ASG-${Date.now().toString().slice(-4)}`,
+                            title: act.title,
+                            subject: act.subject,
+                            grade: act.grade,
+                            classId: currentClass.id,
+                            className: currentClass.name,
+                            dueDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+                            createdAt: new Date().toISOString().split('T')[0],
+                            questionIds: act.questionIds || [],
+                            studentIds: currentClass.studentIds || [],
+                            status: 'active'
+                          };
+                          onCreateAssignment(newAssignment);
+                          sounds.playLevelUp();
+                          setNotification(`Activity "${act.title}" assigned to ${currentClass.name}!`);
+                          setTimeout(() => setNotification(''), 4500);
+                        }}
+                        className="px-4 py-2 rounded-full bg-[#1e6f47] hover:bg-[#165636] text-white text-xs font-black transition cursor-pointer flex items-center gap-1.5 shadow-2xs hover:scale-102 active:scale-98"
+                        title="Assign this activity to current class"
+                      >
+                        <Send className="w-3.5 h-3.5 text-emerald-200" />
+                        <span>Assign to Class</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -2393,6 +2490,8 @@ export default function TeacherPortal({
           principalName={linkedSchool?.name ? `Principal / Academic Dean (${linkedSchool.name})` : undefined}
           parentName={selectedReportStudent.parentName || allUsers.find(u => u.id === selectedReportStudent.studentId)?.parentName}
           schoolName={effectiveSchoolName}
+          questions={questions}
+          assignments={assignments}
           onClose={() => setSelectedReportStudent(null)}
           viewerRole="teacher"
         />
@@ -2488,11 +2587,11 @@ export default function TeacherPortal({
             {/* Modal Header */}
             <div className="flex items-start justify-between pb-4 border-b border-stone-100 shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-[#10246f] text-white flex items-center justify-center text-xl shadow-xs shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-[#1e6f47] text-white flex items-center justify-center text-xl shadow-xs shrink-0">
                   📋
                 </div>
                 <div>
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-100 text-[#10246f] text-[10px] font-black uppercase tracking-wider mb-1">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#e6f4ea] text-[#1e6f47] text-[10px] font-black uppercase tracking-wider mb-1 border border-emerald-300/80">
                     Classroom Assignment Gradebook
                   </div>
                   <h3 className="text-lg sm:text-xl font-black text-stone-900 tracking-tight">
@@ -2615,7 +2714,7 @@ export default function TeacherPortal({
                         onClick={() => setAssignmentSubmissionFilter('all')}
                         className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
                           assignmentSubmissionFilter === 'all'
-                            ? 'bg-[#10246f] text-white shadow-xs'
+                            ? 'bg-[#1e6f47] text-white shadow-xs'
                             : 'bg-stone-100 text-stone-600 hover:text-stone-900'
                         }`}
                       >
@@ -2808,6 +2907,20 @@ export default function TeacherPortal({
           onUpdateStudentProgress={onUpdateStudentProgress}
         />
       )}
-    </div>
+
+      {/* ========================================================================= */}
+      {/* MODAL 10: ACTIVITY PLAYER & PREVIEW MODAL */}
+      {/* ========================================================================= */}
+      {previewingActivity && (
+        <ActivityPlayerModal
+          activity={previewingActivity}
+          questions={questions}
+          studentName={`${currentUser.name} (Teacher Preview)`}
+          onClose={() => setPreviewingActivity(null)}
+        />
+      )}
+        </div>
+      )}
+    </PortalShell>
   );
 }

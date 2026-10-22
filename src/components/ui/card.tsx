@@ -16,7 +16,7 @@ export function CardHeader({ className = '', children, ...props }: React.HTMLAtt
 }
 
 export function CardTitle({ className = '', children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return <h3 className={`text-xl font-black text-[#10246f] ${className}`} {...props}>{children}</h3>;
+  return <h3 className={`text-xl font-black text-slate-900 ${className}`} {...props}>{children}</h3>;
 }
 
 export function CardDescription({ className = '', children, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {

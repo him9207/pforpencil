@@ -16,11 +16,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     }[size];
 
     const variantClasses = {
-      default: 'bg-[#10246f] text-white hover:bg-[#0c1a4f] shadow-md hover:shadow-lg',
-      primary: 'bg-[#1a56db] text-white hover:bg-[#10246f] shadow-md hover:shadow-lg',
-      secondary: 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-md',
-      outline: 'border-2 border-[#10246f] text-[#10246f] hover:bg-[#10246f] hover:text-white',
-      ghost: 'text-[#10246f] hover:bg-blue-50',
+      default: 'bg-[#1e6f47] text-white hover:bg-[#165636] shadow-md hover:shadow-lg',
+      primary: 'bg-[#1e6f47] text-white hover:bg-[#165636] shadow-md hover:shadow-lg',
+      secondary: 'bg-[#e6f4ea] text-[#1e6f47] border border-emerald-300/80 hover:bg-[#d8edd9] shadow-xs',
+      outline: 'border-2 border-[#1e6f47] text-[#1e6f47] hover:bg-[#e6f4ea] hover:text-[#165636]',
+      ghost: 'text-[#1e6f47] hover:bg-[#e6f4ea]/60',
       accent: 'bg-amber-400 text-stone-900 hover:bg-amber-300 shadow-md',
     }[variant];
 

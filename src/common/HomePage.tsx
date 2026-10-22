@@ -140,51 +140,51 @@ export default function PForPencilHomePage({
     <div className="min-h-screen bg-white text-stone-900 font-sans selection:bg-[#1a56db] selection:text-white flex flex-col">
       
       {/* Subtle Role Demo Bar for Testers & Reviewers */}
-      <div className="bg-[#10246f] text-white py-1.5 px-4 text-xs font-bold border-b border-blue-900/50 flex flex-wrap items-center justify-between gap-2 select-none">
+      <div className="bg-slate-900 text-white py-2 px-4 text-xs font-semibold border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 select-none">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
-          <span className="text-blue-200">Interactive Demo Preview:</span>
-          <span className="text-white">Active as <span className="text-amber-300 capitalize">{currentUser.name} ({currentUser.role})</span></span>
+          <span className="text-slate-400">Interactive Demo Preview:</span>
+          <span className="text-white">Active as <span className="text-emerald-300 font-bold capitalize">{currentUser.name} ({currentUser.role})</span></span>
         </div>
 
         <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
-          <span className="text-blue-300 text-[11px] mr-1 hidden sm:inline">Switch Portal:</span>
+          <span className="text-slate-400 text-[11px] mr-1 hidden sm:inline">Switch Portal:</span>
           <button
             onClick={() => handleNavigatePortal('student')}
-            className={`px-2 py-0.5 rounded text-[11px] transition-all cursor-pointer ${
-              currentUser.role === 'student' ? 'bg-amber-400 text-stone-900 font-black' : 'bg-blue-950/60 hover:bg-blue-800 text-blue-200'
+            className={`px-2.5 py-1 rounded-full text-[11px] transition-all cursor-pointer ${
+              currentUser.role === 'student' ? 'bg-[#e6f4ea] text-[#1e6f47] font-extrabold shadow-xs' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
             }`}
           >
             🎮 Student
           </button>
           <button
             onClick={() => handleNavigatePortal('parent')}
-            className={`px-2 py-0.5 rounded text-[11px] transition-all cursor-pointer ${
-              currentUser.role === 'parent' ? 'bg-amber-400 text-stone-900 font-black' : 'bg-blue-950/60 hover:bg-blue-800 text-blue-200'
+            className={`px-2.5 py-1 rounded-full text-[11px] transition-all cursor-pointer ${
+              currentUser.role === 'parent' ? 'bg-[#e6f4ea] text-[#1e6f47] font-extrabold shadow-xs' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
             }`}
           >
             👨‍👩‍👧 Parent
           </button>
           <button
             onClick={() => handleNavigatePortal('teacher')}
-            className={`px-2 py-0.5 rounded text-[11px] transition-all cursor-pointer ${
-              currentUser.role === 'teacher' ? 'bg-amber-400 text-stone-900 font-black' : 'bg-blue-950/60 hover:bg-blue-800 text-blue-200'
+            className={`px-2.5 py-1 rounded-full text-[11px] transition-all cursor-pointer ${
+              currentUser.role === 'teacher' ? 'bg-[#e6f4ea] text-[#1e6f47] font-extrabold shadow-xs' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
             }`}
           >
             👩‍🏫 Teacher
           </button>
           <button
             onClick={() => handleNavigatePortal('school')}
-            className={`px-2 py-0.5 rounded text-[11px] transition-all cursor-pointer ${
-              currentUser.role === 'school' ? 'bg-amber-400 text-stone-900 font-black' : 'bg-blue-950/60 hover:bg-blue-800 text-blue-200'
+            className={`px-2.5 py-1 rounded-full text-[11px] transition-all cursor-pointer ${
+              currentUser.role === 'school' ? 'bg-[#e6f4ea] text-[#1e6f47] font-extrabold shadow-xs' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
             }`}
           >
             🏫 School
           </button>
           <button
             onClick={() => handleNavigatePortal('admin')}
-            className={`px-2 py-0.5 rounded text-[11px] transition-all cursor-pointer ${
-              currentUser.role === 'admin' ? 'bg-amber-400 text-stone-900 font-black' : 'bg-blue-950/60 hover:bg-blue-800 text-blue-200'
+            className={`px-2.5 py-1 rounded-full text-[11px] transition-all cursor-pointer ${
+              currentUser.role === 'admin' ? 'bg-[#e6f4ea] text-[#1e6f47] font-extrabold shadow-xs' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
             }`}
           >
             ⚙️ Admin
@@ -233,14 +233,14 @@ export default function PForPencilHomePage({
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-black uppercase tracking-wider mb-3">
-              <Award className="w-3.5 h-3.5" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e6f4ea] text-[#1e6f47] text-xs font-black uppercase tracking-wider mb-3 border border-emerald-200/60">
+              <Award className="w-3.5 h-3.5 text-[#1e6f47]" />
               <span>Evidence-Based Pedagogy</span>
             </div>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#10246f] font-baloo">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 font-baloo">
               Why Children Love Learning with P for Pencil
             </h2>
-            <p className="mt-3 text-stone-600 font-nunito text-base sm:text-lg font-medium">
+            <p className="mt-3 text-slate-600 font-nunito text-base sm:text-lg font-medium">
               We replace memorization anxiety with intuitive discovery, active visual models, and joyful positive reinforcement.
             </p>
           </div>
@@ -251,25 +251,25 @@ export default function PForPencilHomePage({
               return (
                 <div 
                   key={idx}
-                  className="bg-stone-50/80 rounded-3xl p-6 border border-stone-200/80 hover:border-blue-300 hover:shadow-lg transition-all duration-300 flex flex-col justify-between"
+                  className="bg-slate-50/80 rounded-3xl p-6 border border-slate-200/80 hover:border-emerald-300 hover:shadow-md transition-all duration-300 flex flex-col justify-between"
                 >
                   <div>
-                    <div className="w-12 h-12 rounded-2xl bg-[#10246f] text-amber-300 flex items-center justify-center mb-5 shadow-xs">
+                    <div className="w-12 h-12 rounded-2xl bg-[#e6f4ea] text-[#1e6f47] border border-emerald-200/80 flex items-center justify-center mb-5 shadow-2xs">
                       <IconComp className="w-6 h-6" />
                     </div>
-                    <div className="font-mono text-xs font-black text-[#1a56db] tracking-wider mb-1">
+                    <div className="font-mono text-xs font-black text-[#1e6f47] tracking-wider mb-1">
                       STEP {pillar.number}
                     </div>
-                    <h3 className="text-xl font-black text-[#10246f] font-baloo leading-tight">
+                    <h3 className="text-xl font-black text-slate-900 font-baloo leading-tight">
                       {pillar.title}
                     </h3>
-                    <p className="mt-2 text-stone-600 font-nunito text-sm leading-relaxed">
+                    <p className="mt-2 text-slate-600 font-nunito text-sm leading-relaxed">
                       {pillar.description}
                     </p>
                   </div>
 
-                  <div className="pt-6 border-t border-stone-200/60 mt-4 flex items-center gap-1.5 text-xs font-bold text-emerald-700">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  <div className="pt-6 border-t border-slate-200/60 mt-4 flex items-center gap-1.5 text-xs font-bold text-[#1e6f47]">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                     <span>Curriculum Proven</span>
                   </div>
                 </div>
@@ -280,12 +280,12 @@ export default function PForPencilHomePage({
       </section>
 
       {/* 6. Pre-Footer Call to Action Banner */}
-      <section className="bg-gradient-to-r from-[#10246f] via-[#1a56db] to-[#10246f] py-16 text-white text-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-blue-400/20 via-transparent to-transparent pointer-events-none" />
+      <section className="bg-gradient-to-r from-[#165636] via-[#1e6f47] to-[#12422a] py-16 text-white text-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-emerald-400/20 via-transparent to-transparent pointer-events-none" />
         
         <div className="max-w-4xl mx-auto px-4 sm:px-6 relative z-10 space-y-6">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-amber-300 text-xs sm:text-sm font-bold">
-            <Sparkles className="w-4 h-4" />
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-emerald-200 text-xs sm:text-sm font-bold">
+            <Sparkles className="w-4 h-4 text-amber-300" />
             <span>Ready to transform math into joyful playtime?</span>
           </div>
 
@@ -293,14 +293,14 @@ export default function PForPencilHomePage({
             Start Your Child's Learning Adventure Today
           </h2>
 
-          <p className="text-base sm:text-lg text-blue-100 font-nunito max-w-2xl mx-auto font-medium">
+          <p className="text-base sm:text-lg text-emerald-100/90 font-nunito max-w-2xl mx-auto font-medium">
             Join thousands of happy students discovering math confidence. No credit card required to get started.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
             <button
               onClick={handleStartFree}
-              className="w-full sm:w-auto px-8 py-4 bg-amber-400 hover:bg-amber-300 text-stone-900 font-baloo font-black text-lg rounded-2xl shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2 group"
+              className="w-full sm:w-auto px-8 py-4 bg-white hover:bg-emerald-50 text-[#1e6f47] font-baloo font-black text-lg rounded-full shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2 group hover:scale-102"
             >
               <span>Get Started Free</span>
               <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
@@ -308,7 +308,7 @@ export default function PForPencilHomePage({
 
             <button
               onClick={onOpenPricing}
-              className="w-full sm:w-auto px-7 py-4 bg-white/10 hover:bg-white/20 text-white border border-white/30 font-baloo font-black text-lg rounded-2xl transition-all cursor-pointer"
+              className="w-full sm:w-auto px-7 py-4 bg-white/10 hover:bg-white/20 text-white border border-white/30 font-baloo font-black text-lg rounded-full transition-all cursor-pointer"
             >
               <span>View Family & School Plans</span>
             </button>

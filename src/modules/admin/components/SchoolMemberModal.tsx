@@ -191,18 +191,13 @@ export default function SchoolMemberModal({
         schoolOrParent: 'school',
         schoolName: targetSchool.name,
         level: 1,
-        xp: 100,
-        coins: 25,
-        streakDays: 1,
+        xp: 0,
+        coins: 0,
+        streakDays: 0,
         dailyQuizCompletedToday: false,
         totalQuizzesTaken: 0,
-        averageScore: 100,
-        subjectMastery: {
-          'Mathematics': 85,
-          'Science': 85,
-          'English Language': 85,
-          'Logic & Puzzles': 85
-        },
+        averageScore: 0,
+        subjectMastery: {},
         recentActivities: [],
         badges: [
           {

@@ -121,7 +121,9 @@ export function sanitizeStudentProgress(raw: StudentProgress): StudentProgress {
     : [];
 
   // Strictly validate and recalculate averageScore: must be in 0 - 100 range calculated from (correct_answers / total_questions) * 100
-  let safeAvgScore = typeof raw.averageScore === 'number' && !isNaN(raw.averageScore) ? raw.averageScore : 100;
+  let safeAvgScore = (typeof raw.totalQuizzesTaken === 'number' && raw.totalQuizzesTaken > 0 && typeof raw.averageScore === 'number' && !isNaN(raw.averageScore))
+    ? raw.averageScore
+    : 0;
   if (sanitizedActivities.length > 0) {
     let totalCorrect = 0;
     let totalQuestions = 0;
@@ -140,7 +142,9 @@ export function sanitizeStudentProgress(raw: StudentProgress): StudentProgress {
       safeAvgScore = Math.min(100, Math.max(0, Math.round((totalCorrect / totalQuestions) * 100)));
     }
   } else {
-    safeAvgScore = Math.min(100, Math.max(0, Math.round(safeAvgScore)));
+    safeAvgScore = (typeof raw.totalQuizzesTaken === 'number' && raw.totalQuizzesTaken > 0)
+      ? Math.min(100, Math.max(0, Math.round(safeAvgScore)))
+      : 0;
   }
 
   // Sanitize subjectMastery: every subject score must be in 0 - 100 range
@@ -154,15 +158,17 @@ export function sanitizeStudentProgress(raw: StudentProgress): StudentProgress {
     }
   }
 
+  const isNewlyJoinedWithoutQuizzes = sanitizedActivities.length === 0 && (!raw.totalQuizzesTaken || raw.totalQuizzesTaken === 0);
+
   return {
     ...raw,
-    averageScore: safeAvgScore,
+    averageScore: isNewlyJoinedWithoutQuizzes ? 0 : safeAvgScore,
     recentActivities: sanitizedActivities,
-    subjectMastery: sanitizedSubjectMastery,
-    xp: Math.max(0, typeof raw.xp === 'number' && !isNaN(raw.xp) ? Math.round(raw.xp) : 0),
+    subjectMastery: isNewlyJoinedWithoutQuizzes ? {} : sanitizedSubjectMastery,
+    xp: isNewlyJoinedWithoutQuizzes ? 0 : Math.max(0, typeof raw.xp === 'number' && !isNaN(raw.xp) ? Math.round(raw.xp) : 0),
     level: Math.max(1, typeof raw.level === 'number' && !isNaN(raw.level) ? Math.round(raw.level) : 1),
-    coins: Math.max(0, typeof raw.coins === 'number' && !isNaN(raw.coins) ? Math.round(raw.coins) : 0),
-    streakDays: Math.max(0, typeof raw.streakDays === 'number' && !isNaN(raw.streakDays) ? Math.round(raw.streakDays) : 0),
+    coins: isNewlyJoinedWithoutQuizzes ? 0 : Math.max(0, typeof raw.coins === 'number' && !isNaN(raw.coins) ? Math.round(raw.coins) : 0),
+    streakDays: isNewlyJoinedWithoutQuizzes ? 0 : Math.max(0, typeof raw.streakDays === 'number' && !isNaN(raw.streakDays) ? Math.round(raw.streakDays) : 0),
   };
 }
 
@@ -623,7 +629,9 @@ export default function App() {
         safeAvgScore = Math.min(100, Math.max(0, Math.round((totalCorrect / totalQuestions) * 100)));
       }
     } else {
-      safeAvgScore = Math.min(100, Math.max(0, Math.round(safeAvgScore)));
+      safeAvgScore = (typeof raw.totalQuizzesTaken === 'number' && raw.totalQuizzesTaken > 0)
+        ? Math.min(100, Math.max(0, Math.round(safeAvgScore)))
+        : 0;
     }
 
     // Sanitize subjectMastery: every subject score must be in 0 - 100 range
@@ -957,18 +965,13 @@ export default function App() {
         parentId: finalUser.parentId,
         schoolName: resolvedSchoolName,
         level: 1,
-        xp: 100,
-        coins: 20,
-        streakDays: 1,
+        xp: 0,
+        coins: 0,
+        streakDays: 0,
         dailyQuizCompletedToday: false,
         totalQuizzesTaken: 0,
-        averageScore: 100,
-        subjectMastery: {
-          'Mathematics': 85,
-          'Science': 85,
-          'English Language': 85,
-          'Logic & Puzzles': 85
-        },
+        averageScore: 0,
+        subjectMastery: {},
         recentActivities: [],
         badges: [
           { id: 'B_NEW', name: 'Welcome Adventurer', icon: '🌟', description: resolvedSchoolName ? `Enrolled in ${resolvedSchoolName}` : 'Joined PforPencil platform!', unlockedAt: new Date().toISOString().slice(0, 10) }
@@ -1555,18 +1558,13 @@ export default function App() {
             schoolCode: data.school.schoolCode,
             organizationId: data.school.id,
             level: 1,
-            xp: 100,
-            coins: 20,
-            streakDays: 1,
+            xp: 0,
+            coins: 0,
+            streakDays: 0,
             dailyQuizCompletedToday: false,
             totalQuizzesTaken: 0,
-            averageScore: 100,
-            subjectMastery: {
-              'Mathematics': 85,
-              'Science': 85,
-              'English Language': 85,
-              'Logic & Puzzles': 85
-            },
+            averageScore: 0,
+            subjectMastery: {},
             recentActivities: [],
             badges: [
               {
@@ -1739,24 +1737,26 @@ export default function App() {
         currentView === 'home' ? 'bg-white' : 'bg-stone-100/60'
       }`}>
       {/* Top Navbar Header with Brand Logo, Navigation Links, Region Selector, Sound, & Auth Buttons */}
-      <Navbar
-        currentUser={currentUser}
-        allUsers={allUsers}
-        onSelectUser={(user) => {
-          setCurrentUser(user);
-          setCurrentView('dashboard');
-        }}
-        onOpenAuthModal={(opts) => setAuthModalConfig({ 
-          isOpen: true, 
-          initialScreen: opts?.screen || 'signin', 
-          initialRole: opts?.role || 'parent' 
-        })}
-        onOpenPricingModal={() => setCurrentView(currentView === 'pricing' ? 'dashboard' : 'pricing')}
-        onOpenSupabaseModal={() => setSupabaseModalOpen(true)}
-        onOpenRegionModal={() => setRegionModalOpen(true)}
-        currentView={currentView}
-        onNavigateView={(v) => setCurrentView(v)}
-      />
+      {(!(['student', 'parent', 'teacher', 'school'].includes(currentUser.role) && currentView === 'dashboard')) && (
+        <Navbar
+          currentUser={currentUser}
+          allUsers={allUsers}
+          onSelectUser={(user) => {
+            setCurrentUser(user);
+            setCurrentView('dashboard');
+          }}
+          onOpenAuthModal={(opts) => setAuthModalConfig({ 
+            isOpen: true, 
+            initialScreen: opts?.screen || 'signin', 
+            initialRole: opts?.role || 'parent' 
+          })}
+          onOpenPricingModal={() => setCurrentView(currentView === 'pricing' ? 'dashboard' : 'pricing')}
+          onOpenSupabaseModal={() => setSupabaseModalOpen(true)}
+          onOpenRegionModal={() => setRegionModalOpen(true)}
+          currentView={currentView}
+          onNavigateView={(v) => setCurrentView(v)}
+        />
+      )}
 
       {currentView === 'home' ? (
         <HomePage
@@ -1790,18 +1790,18 @@ export default function App() {
         />
       ) : (
         /* Main Container for Dashboards & Portals */
-        <main className={`flex-1 w-full mx-auto px-4 sm:px-6 pt-6 pb-24 ${currentUser.role === 'admin' ? 'max-w-[1680px]' : 'max-w-7xl'}`}>
-          {currentView === 'pricing' ? (
+        currentView === 'pricing' ? (
+          <main className="flex-1 w-full mx-auto px-4 sm:px-6 pt-6 pb-24 max-w-7xl">
             <SubscriptionsView
               currentUser={currentUser}
               vouchers={vouchers}
               onSubscribePlan={handleSubscribePlan}
             />
-          ) : (
-            /* Role-Based Portals matching User Specifications */
-            <>
-              {/* 1. STUDENT PORTAL (Quests, practice, boss battles, level XP) */}
-              {currentUser.role === 'student' && (
+          </main>
+        ) : ['student', 'parent', 'teacher', 'school'].includes(currentUser.role) ? (
+          <div className="flex-1 w-full">
+            {/* 1. STUDENT PORTAL (P for Pencil New Layout) */}
+            {currentUser.role === 'student' && (
               <StudentPortal
                 currentUser={currentUser}
                 studentProgress={currentStudentProgress}
@@ -1811,14 +1811,22 @@ export default function App() {
                 classes={classes}
                 assignments={assignments}
                 onUpdateProgress={handleUpdateStudentProgress}
+                allUsers={allUsers}
+                onSelectUser={(user) => {
+                  setCurrentUser(user);
+                  setCurrentView('dashboard');
+                }}
+                onNavigateHome={() => setCurrentView('home')}
               />
             )}
 
-            {/* 2. PARENT PORTAL (Can see student performance, detail report card, add child up to 3, reset child PIN) */}
+            {/* 2. PARENT PORTAL (P for Pencil New Layout) */}
             {currentUser.role === 'parent' && (
               <ParentPortal
                 currentUser={currentUser}
                 allStudents={Object.values(studentProgressMap)}
+                questions={questions}
+                assignments={assignments}
                 activities={activities}
                 classes={classes}
                 allUsers={allUsers}
@@ -1829,10 +1837,15 @@ export default function App() {
                 onAddChild={handleAddStudent}
                 onResetCredentials={handleResetCredentials}
                 onUpdateUserProfile={handleUpdateUserProfile}
+                onSelectUser={(user) => {
+                  setCurrentUser(user);
+                  setCurrentView('dashboard');
+                }}
+                onNavigateHome={() => setCurrentView('home')}
               />
             )}
 
-            {/* 3. TEACHER PORTAL (Create class, custom question bank, assignments, roster, report cards, PIN reset) */}
+            {/* 3. TEACHER PORTAL (P for Pencil New Layout) */}
             {currentUser.role === 'teacher' && (
               <TeacherPortal
                 currentUser={currentUser}
@@ -1855,10 +1868,15 @@ export default function App() {
                 onResetCredentials={handleResetCredentials}
                 onUpdateUserProfile={handleUpdateUserProfile}
                 onUpdateStudentProgress={handleUpdateStudentProgress}
+                onSelectUser={(user) => {
+                  setCurrentUser(user);
+                  setCurrentView('dashboard');
+                }}
+                onNavigateHome={() => setCurrentView('home')}
               />
             )}
 
-            {/* 4. SCHOOL PORTAL (School-wide classes, teachers, student rosters, report cards, credential resets) */}
+            {/* 4. SCHOOL PORTAL (P for Pencil New Layout) */}
             {currentUser.role === 'school' && (() => {
               const matchedSchool = schools.find(s => 
                 s.id === currentUser.id || 
@@ -1868,17 +1886,18 @@ export default function App() {
               );
 
               const currentSchool = matchedSchool || {
-                id: currentUser.organizationId || `SCH_${currentUser.id}`,
-                name: currentUser.schoolName || currentUser.name || 'Greenwood Academy',
+                id: currentUser.organizationId || 'SCH_GREENWOOD',
+                name: currentUser.schoolName || currentUser.name || 'Greenwood Primary',
+                schoolCode: 'GS',
                 country: currentUser.country || 'United States',
                 state: currentUser.state || 'California',
                 curriculum: currentUser.curriculum || 'Universal Foundational',
-                adminEmail: currentUser.email || '',
-                plan: 'Campus 500',
-                totalSeats: 100,
-                allocatedSeats: 0,
-                activeTeachers: 0,
-                activeClasses: 0,
+                adminEmail: currentUser.email || 'admin@greenwoodprimary.edu',
+                plan: 'Campus 200',
+                totalSeats: 150,
+                allocatedSeats: 120,
+                activeTeachers: 8,
+                activeClasses: 12,
                 validityType: 'yearly',
                 contractDuration: 'yearly',
                 expiresAt: '2027-08-31',
@@ -1904,9 +1923,17 @@ export default function App() {
                   onResetCredentials={handleResetCredentials}
                   onUpdateUserProfile={handleUpdateUserProfile}
                   onOpenPricing={() => setCurrentView('pricing')}
+                  onSelectUser={(user) => {
+                    setCurrentUser(user);
+                    setCurrentView('dashboard');
+                  }}
+                  onNavigateHome={() => setCurrentView('home')}
                 />
               );
             })()}
+          </div>
+        ) : (
+          <main className={`flex-1 w-full mx-auto px-4 sm:px-6 pt-6 pb-24 ${currentUser.role === 'admin' ? 'max-w-[1680px]' : 'max-w-7xl'}`}>
 
             {/* 5. CONTENT MANAGER PORTAL (Manage questions and interactive activities) */}
             {currentUser.role === 'content_manager' && (
@@ -1974,9 +2001,8 @@ export default function App() {
                 onResetCredentials={handleResetCredentials}
               />
             )}
-          </>
-        )}
-      </main>
+          </main>
+        )
       )}
 
       {/* Floating Role-Based Sandbox Switcher Bar (Bottom Bar - only in dashboard/portal views) */}

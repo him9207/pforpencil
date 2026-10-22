@@ -816,16 +816,16 @@ export default function AdminPortal({
                     className="flex items-center justify-between px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-stone-500 cursor-pointer hover:text-stone-900 group select-none"
                   >
                     <div className="flex items-center gap-1.5">
-                      <SectionIcon className={`w-3.5 h-3.5 ${hasActiveItem ? 'text-blue-600' : 'text-stone-500'}`} />
+                      <SectionIcon className={`w-3.5 h-3.5 ${hasActiveItem ? 'text-[#1e6f47]' : 'text-slate-500'}`} />
                       <span>{sec.title}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       {sec.badge !== undefined && (
-                        <span className="px-1.5 py-0.2 rounded-md bg-stone-100 text-stone-600 text-[9px] font-mono font-bold">
+                        <span className="px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-600 text-[9px] font-mono font-bold">
                           {sec.badge}
                         </span>
                       )}
-                      <ChevronDown className={`w-3 h-3 transition-transform ${isSectionCollapsed ? '-rotate-90 text-stone-500' : 'text-stone-600'}`} />
+                      <ChevronDown className={`w-3 h-3 transition-transform ${isSectionCollapsed ? '-rotate-90 text-slate-500' : 'text-slate-600'}`} />
                     </div>
                   </div>
 
@@ -845,21 +845,21 @@ export default function AdminPortal({
                             }}
                             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left cursor-pointer group ${
                               isActive
-                                ? 'bg-[#10246f] text-white shadow-xs font-black'
-                                : 'text-stone-600 hover:text-stone-950 hover:bg-stone-50'
+                                ? 'bg-[#e6f4ea] text-[#1e6f47] border border-emerald-200/80 shadow-2xs font-black'
+                                : 'text-slate-600 hover:text-slate-950 hover:bg-slate-50'
                             }`}
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
                               <ItemIcon className={`w-4 h-4 shrink-0 transition-colors ${
-                                isActive ? 'text-[#ffbf32]' : 'text-stone-500 group-hover:text-stone-900'
+                                isActive ? 'text-[#1e6f47]' : 'text-slate-500 group-hover:text-slate-900'
                               }`} />
                               <span className="truncate">{item.label}</span>
                             </div>
                             {item.count !== undefined && (
                               <span className={`ml-2 px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold shrink-0 ${
                                 isActive
-                                  ? 'bg-white/20 text-white'
-                                  : 'bg-stone-100 text-stone-600 group-hover:bg-stone-200'
+                                  ? 'bg-white text-[#1e6f47] border border-emerald-200/80'
+                                  : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
                               }`}>
                                 {item.count}
                               </span>
@@ -878,18 +878,18 @@ export default function AdminPortal({
         {/* Right Main Content Workspace */}
         <div className="flex-1 min-w-0 w-full space-y-6">
           {/* Active View Header Breadcrumb Card */}
-          <div className="bg-white rounded-3xl border border-stone-200/90 p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
-              <div className="flex items-center gap-2 text-xs font-bold text-[#10246f]">
-                <span className="uppercase tracking-wider text-stone-500 font-extrabold">{currentSection.title}</span>
-                <span className="text-stone-300">/</span>
-                <span className="text-[#10246f] font-black">{currentItem?.label || activeTab}</span>
+              <div className="flex items-center gap-2 text-xs font-bold text-[#1e6f47]">
+                <span className="uppercase tracking-wider text-slate-500 font-extrabold">{currentSection.title}</span>
+                <span className="text-slate-300">/</span>
+                <span className="text-[#1e6f47] font-black">{currentItem?.label || activeTab}</span>
               </div>
-              <h2 className="text-2xl font-black text-stone-900 tracking-tight flex items-center gap-2.5">
-                {currentItem && <currentItem.icon className="w-6 h-6 text-blue-600" />}
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
+                {currentItem && <currentItem.icon className="w-6 h-6 text-[#1e6f47]" />}
                 <span>{currentItem?.label || activeTab}</span>
               </h2>
-              <p className="text-xs text-stone-500">
+              <p className="text-xs text-slate-500">
                 {currentItem?.description || 'Manage system data and administrative operations.'}
               </p>
             </div>

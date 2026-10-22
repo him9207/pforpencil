@@ -122,13 +122,13 @@ export default function TactileActivityLab({ onClose, isModal = false, studentGr
       {/* Header */}
       <div className="flex items-center justify-between gap-4 pb-4 border-b border-[#e1e6f1]">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-blue-700">
+          <div className="flex items-center gap-2 text-xs font-semibold text-[#1e6f47]">
             <span>{studentGrade ? `${studentGrade} Interactive Activities` : 'Interactive Activities'}</span>
             <span aria-hidden="true">·</span>
             <span className="text-slate-500 font-normal">Hands-On Practice</span>
           </div>
-          <h2 className="text-lg sm:text-xl font-black text-[#10246f] mt-0.5 flex items-center gap-2">
-            <Gamepad2 className="w-5 h-5 text-blue-600" />
+          <h2 className="text-lg sm:text-xl font-black text-slate-900 mt-0.5 flex items-center gap-2">
+            <Gamepad2 className="w-5 h-5 text-[#1e6f47]" />
             <span>Interactive Activities</span>
           </h2>
         </div>
@@ -248,11 +248,11 @@ export default function TactileActivityLab({ onClose, isModal = false, studentGr
                 <div
                   key={act.id}
                   onClick={() => handleSelectActivity(act)}
-                  className="bg-white border border-[#e1e6f1] hover:border-blue-400 rounded-2xl p-4 flex flex-col justify-between transition-all cursor-pointer shadow-2xs hover:shadow-sm hover:scale-[1.01] select-none group"
+                  className="bg-white border border-slate-200 hover:border-emerald-400 rounded-2xl p-4 flex flex-col justify-between transition-all cursor-pointer shadow-2xs hover:shadow-sm hover:scale-[1.01] select-none group"
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-2xl p-2 rounded-xl bg-blue-50 border border-blue-100 group-hover:scale-105 transition-transform">
+                      <span className="text-2xl p-2 rounded-xl bg-[#e6f4ea] border border-emerald-200 group-hover:scale-105 transition-transform">
                         {act.icon}
                       </span>
                       <span className="text-[11px] text-slate-500 font-semibold">
@@ -261,7 +261,7 @@ export default function TactileActivityLab({ onClose, isModal = false, studentGr
                     </div>
 
                     <div>
-                      <h4 className="font-extrabold text-sm text-[#10246f] group-hover:text-blue-600 transition-colors">
+                      <h4 className="font-extrabold text-sm text-slate-900 group-hover:text-[#1e6f47] transition-colors">
                         {act.title}
                       </h4>
                       <p className="text-[11px] text-slate-600 mt-0.5 line-clamp-2 leading-relaxed">
@@ -274,7 +274,7 @@ export default function TactileActivityLab({ onClose, isModal = false, studentGr
                     <span className="text-slate-500 font-medium">
                       {act.topic}
                     </span>
-                    <span className="font-bold text-blue-600 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                    <span className="font-bold text-[#1e6f47] flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
                       <span>Play</span>
                       <span>→</span>
                     </span>

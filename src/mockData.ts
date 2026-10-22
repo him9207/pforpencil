@@ -265,6 +265,76 @@ export const INITIAL_USERS: UserAccount[] = [
     grade: 'Grade 2',
     enrolledAt: '2025-04-15',
     status: 'active'
+  },
+  // --- P for Pencil Mockup Personas ---
+  {
+    id: 'SCH_GREENWOOD',
+    role: 'school',
+    name: 'Greenwood Primary Admin',
+    email: 'admin@greenwoodprimary.edu',
+    username: 'greenwood',
+    password: 'Password@123',
+    avatar: 'GS',
+    schoolName: 'Greenwood Primary',
+    schoolCode: 'GS',
+    country: 'United States',
+    state: 'California',
+    curriculum: 'US Common Core State Standards (CCSS)',
+    enrolledAt: '2025-01-15',
+    status: 'active'
+  },
+  {
+    id: 'TEA_TAYLOR',
+    role: 'teacher',
+    name: 'Ms. Taylor',
+    email: 'm.taylor@greenwoodprimary.edu',
+    username: 'ms_taylor',
+    password: 'Password@123',
+    avatar: 'MT',
+    organizationId: 'SCH_GREENWOOD',
+    schoolName: 'Greenwood Primary',
+    schoolCode: 'GS',
+    country: 'United States',
+    state: 'California',
+    curriculum: 'US Common Core State Standards (CCSS)',
+    grade: 'Grade 6',
+    enrolledAt: '2025-02-10',
+    status: 'active',
+    validUntil: '2027-08-31',
+    validityDuration: '365_days'
+  },
+  {
+    id: 'PAR_PRIYA',
+    role: 'parent',
+    name: 'Priya Sharma',
+    email: 'priya.sharma@example.com',
+    username: 'priya',
+    password: 'Password@123',
+    avatar: 'A',
+    country: 'United States',
+    state: 'California',
+    curriculum: 'US Common Core State Standards (CCSS)',
+    studentIds: ['STU_AARAV'],
+    enrolledAt: '2025-03-01',
+    status: 'active'
+  },
+  {
+    id: 'STU_AARAV',
+    role: 'student',
+    name: 'Aarav',
+    username: 'AARAV6',
+    pin: '1234',
+    avatar: 'A',
+    organizationId: 'SCH_GREENWOOD',
+    schoolName: 'Greenwood Primary',
+    schoolCode: 'GS',
+    parentId: 'PAR_PRIYA',
+    country: 'United States',
+    state: 'California',
+    curriculum: 'US Common Core State Standards (CCSS)',
+    grade: 'Grade 6',
+    enrolledAt: '2025-03-05',
+    status: 'active'
   }
 ];
 
@@ -595,6 +665,125 @@ export const INITIAL_STUDENT_PROGRESS: Record<string, StudentProgress> = {
     badges: [
       { id: 'B1', name: '5-Day Streak Star', icon: '🌟', description: 'Dedicated learning streak.', unlockedAt: '2025-04-12' }
     ]
+  },
+  STU_AARAV: {
+    studentId: 'STU_AARAV',
+    studentUsername: 'AARAV6',
+    studentName: 'Aarav',
+    avatar: 'A',
+    grade: 'Grade 6',
+    country: 'United States',
+    state: 'California',
+    curriculum: 'US Common Core State Standards (CCSS)',
+    schoolOrParent: 'school',
+    schoolName: 'Greenwood Primary',
+    parentId: 'PAR_PRIYA',
+    parentName: 'Priya Sharma',
+    level: 6,
+    xp: 2450,
+    coins: 320,
+    streakDays: 7,
+    dailyQuizCompletedToday: true,
+    totalQuizzesTaken: 38,
+    averageScore: 78,
+    averageResponseTimeSeconds: 6.5,
+    totalQuestionsAttempted: 342,
+    subjectMastery: {
+      'Mathematics': 78,
+      'Number & Place Value': 85,
+      'Fractions': 72,
+      'Decimals': 68,
+      'Measurement': 80,
+      'Geometry': 75,
+      'Algebra': 70
+    },
+    skillMastery: {
+      'Number & Place Value': {
+        skill: 'Number & Place Value',
+        category: 'Number Sense',
+        subject: 'Mathematics',
+        grade: 'Grade 6',
+        totalAttempted: 60,
+        correctCount: 51,
+        accuracy: 85,
+        averageTimeSeconds: 6.0,
+        lastPracticed: 'Today'
+      },
+      'Fractions': {
+        skill: 'Fractions',
+        category: 'Rational Numbers',
+        subject: 'Mathematics',
+        grade: 'Grade 6',
+        totalAttempted: 50,
+        correctCount: 36,
+        accuracy: 72,
+        averageTimeSeconds: 7.2,
+        lastPracticed: 'Yesterday'
+      },
+      'Decimals': {
+        skill: 'Decimals',
+        category: 'Decimals & Percentages',
+        subject: 'Mathematics',
+        grade: 'Grade 6',
+        totalAttempted: 45,
+        correctCount: 31,
+        accuracy: 68,
+        averageTimeSeconds: 6.8,
+        lastPracticed: '16 Sep 2026'
+      },
+      'Measurement': {
+        skill: 'Measurement',
+        category: 'Units & Geometry',
+        subject: 'Mathematics',
+        grade: 'Grade 6',
+        totalAttempted: 55,
+        correctCount: 44,
+        accuracy: 80,
+        averageTimeSeconds: 5.9,
+        lastPracticed: '15 Sep 2026'
+      },
+      'Geometry': {
+        skill: 'Geometry',
+        category: 'Spatial Reasoning',
+        subject: 'Mathematics',
+        grade: 'Grade 6',
+        totalAttempted: 52,
+        correctCount: 39,
+        accuracy: 75,
+        averageTimeSeconds: 7.0,
+        lastPracticed: '14 Sep 2026'
+      },
+      'Algebra': {
+        skill: 'Algebra',
+        category: 'Expressions & Equations',
+        subject: 'Mathematics',
+        grade: 'Grade 6',
+        totalAttempted: 80,
+        correctCount: 56,
+        accuracy: 70,
+        averageTimeSeconds: 8.1,
+        lastPracticed: 'Today'
+      }
+    },
+    recentActivities: [
+      { id: 'ACT_ALG', title: 'Completed Algebra Practice', type: 'practice', score: 85, maxScore: 100, timestamp: 'Today, 10:15 AM', averageTimeSeconds: 6.8, correctAnswers: 9, totalQuestions: 10 },
+      { id: 'ACT_FRAC', title: 'Scored 90% in Fractions Quiz', type: 'quiz', score: 90, maxScore: 100, timestamp: '16 Sep 2026', averageTimeSeconds: 6.2, correctAnswers: 9, totalQuestions: 10 },
+      { id: 'ACT_DAILY', title: 'Completed 5 questions', type: 'daily_quiz', score: 100, maxScore: 100, timestamp: '15 Sep 2026', averageTimeSeconds: 5.5, correctAnswers: 5, totalQuestions: 5 }
+    ],
+    badges: [
+      { id: 'B_STREAK7', name: '7-Day Streak', icon: '🔥', description: 'Kept the math flame glowing for 7 days!', unlockedAt: '2026-09-22' },
+      { id: 'B_PROBLEM_SOLVER', name: 'Problem Solver', icon: '⭐', description: 'Solved advanced algebraic equations accurately.', unlockedAt: 'Yesterday, 4:30 PM' },
+      { id: 'B_FRAC_MASTER', name: 'Fraction Specialist', icon: '🥧', description: 'Mastered fraction operations.', unlockedAt: '2026-09-16' },
+      { id: 'B_SPEED_DEMON', name: 'Speed Demon', icon: '⚡', description: 'Answered 5 questions under 30 seconds.', unlockedAt: '2026-09-15' },
+      { id: 'B5', name: 'Math Explorer', icon: '🔢', description: 'Explored all 6 primary math topics.', unlockedAt: '2026-09-10' },
+      { id: 'B6', name: 'High Achiever', icon: '🏆', description: 'Earned 2,000+ total XP points.', unlockedAt: '2026-09-08' },
+      { id: 'B7', name: 'Consistent Learner', icon: '📚', description: 'Practiced 5 days in a row.', unlockedAt: '2026-09-05' },
+      { id: 'B8', name: 'Geometry Whiz', icon: '📐', description: 'Solved area and perimeter problems.', unlockedAt: '2026-09-01' },
+      { id: 'B9', name: 'Decimals Pro', icon: '🎯', description: 'Converted decimals to fractions seamlessly.', unlockedAt: '2026-08-28' },
+      { id: 'B10', name: 'Measurement Maestro', icon: '📏', description: 'Calculated metric unit conversions.', unlockedAt: '2026-08-25' },
+      { id: 'B11', name: 'Number Champion', icon: '🥇', description: 'Mastered place value to millions.', unlockedAt: '2026-08-20' },
+      { id: 'B12', name: 'PforPencil Pioneer', icon: '✏️', description: 'Enrolled in P for Pencil learning platform.', unlockedAt: '2026-08-15' }
+    ]
   }
 };
 
@@ -739,8 +928,88 @@ export const INITIAL_CLASSES: ClassRoom[] = [
     status: 'active',
     room: 'Room 401',
     activeAssignments: ['Pre-Algebra & Geometry Masters']
+  },
+  // --- Greenwood Primary Classes (Ms. Taylor) ---
+  {
+    id: 'CLS_GW_6A',
+    name: 'Grade 6A',
+    grade: 'Grade 6',
+    teacherId: 'TEA_TAYLOR',
+    teacherName: 'Ms. Taylor',
+    subject: 'Mathematics',
+    subjects: ['Mathematics'],
+    schoolId: 'SCH_GREENWOOD',
+    studentIds: ['STU_AARAV'],
+    averageScore: 82,
+    status: 'active',
+    room: 'Room 301',
+    activeAssignments: ['Decimals Quiz', 'Area and Perimeter']
+  },
+  {
+    id: 'CLS_GW_5B',
+    name: 'Grade 5B',
+    grade: 'Grade 5',
+    teacherId: 'TEA_TAYLOR',
+    teacherName: 'Ms. Taylor',
+    subject: 'Mathematics',
+    subjects: ['Mathematics'],
+    schoolId: 'SCH_GREENWOOD',
+    studentIds: [],
+    averageScore: 78,
+    status: 'active',
+    room: 'Room 205',
+    activeAssignments: ['Fractions Practice']
+  },
+  {
+    id: 'CLS_GW_4A',
+    name: 'Grade 4A',
+    grade: 'Grade 4',
+    teacherId: 'TEA_TAYLOR',
+    teacherName: 'Ms. Taylor',
+    subject: 'Mathematics',
+    subjects: ['Mathematics'],
+    schoolId: 'SCH_GREENWOOD',
+    studentIds: [],
+    averageScore: 85,
+    status: 'active',
+    room: 'Room 201',
+    activeAssignments: ['Mixed Operations']
+  },
+  {
+    id: 'CLS_GW_3A',
+    name: 'Grade 3A',
+    grade: 'Grade 3',
+    teacherId: 'TEA_TAYLOR',
+    teacherName: 'Ms. Taylor',
+    subject: 'Mathematics',
+    subjects: ['Mathematics'],
+    schoolId: 'SCH_GREENWOOD',
+    studentIds: [],
+    averageScore: 80,
+    status: 'active',
+    room: 'Room 105',
+    activeAssignments: ['Number & Place Value Basics']
   }
 ];
+
+export const INITIAL_SCHOOL_GREENWOOD: SchoolOrganization = {
+  id: 'SCH_GREENWOOD',
+  schoolCode: 'GS',
+  name: 'Greenwood Primary',
+  adminEmail: 'admin@greenwoodprimary.edu',
+  country: 'United States',
+  state: 'California',
+  curriculum: 'US Common Core State Standards (CCSS)',
+  totalSeats: 150,
+  allocatedSeats: 120,
+  activeTeachers: 8,
+  activeClasses: 12,
+  plan: 'Campus 200',
+  expiresAt: '2027-08-31',
+  contractDuration: 'yearly',
+  validityType: 'yearly',
+  status: 'active'
+};
 
 export const INITIAL_SCHOOL: SchoolOrganization = {
   id: 'SCH000001',
@@ -780,7 +1049,7 @@ export const INITIAL_SCHOOL_DAV: SchoolOrganization = {
   status: 'active'
 };
 
-export const INITIAL_SCHOOLS: SchoolOrganization[] = [INITIAL_SCHOOL, INITIAL_SCHOOL_DAV];
+export const INITIAL_SCHOOLS: SchoolOrganization[] = [INITIAL_SCHOOL_GREENWOOD, INITIAL_SCHOOL, INITIAL_SCHOOL_DAV];
 
 export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
@@ -1036,6 +1305,57 @@ export const INITIAL_AUDIT_LOGS: AuditLog[] = [
 ];
 
 export const INITIAL_ASSIGNMENTS: ClassAssignment[] = [
+  {
+    id: 'ASG-FRAC-5B',
+    title: 'Fractions Practice',
+    classId: 'CLS_GW_5B',
+    className: 'Grade 5B',
+    subject: 'Mathematics',
+    grade: 'Grade 5',
+    questionIds: ['QG3-0001', 'QG3-0002'],
+    dueDate: '20 Sep 2026',
+    status: 'active',
+    createdAt: '2026-09-10',
+    studentIds: ['STU_AARAV']
+  },
+  {
+    id: 'ASG-DEC-6A',
+    title: 'Decimals Quiz',
+    classId: 'CLS_GW_6A',
+    className: 'Grade 6A',
+    subject: 'Mathematics',
+    grade: 'Grade 6',
+    questionIds: ['QG3-0003', 'QG3-0004'],
+    dueDate: '18 Sep 2026',
+    status: 'active',
+    createdAt: '2026-09-08',
+    studentIds: ['STU_AARAV']
+  },
+  {
+    id: 'ASG-AREA-6A',
+    title: 'Area and Perimeter',
+    classId: 'CLS_GW_6A',
+    className: 'Grade 6A',
+    subject: 'Mathematics',
+    grade: 'Grade 6',
+    questionIds: ['QG3-0001'],
+    dueDate: '15 Sep 2026',
+    status: 'active',
+    createdAt: '2026-09-05',
+    studentIds: ['STU_AARAV']
+  },
+  {
+    id: 'ASG-MIX-4A',
+    title: 'Mixed Operations',
+    classId: 'CLS_GW_4A',
+    className: 'Grade 4A',
+    subject: 'Mathematics',
+    grade: 'Grade 4',
+    questionIds: ['QG3-0002'],
+    dueDate: '12 Sep 2026',
+    status: 'active',
+    createdAt: '2026-09-01'
+  },
   {
     id: 'ASG-001',
     title: 'Multiplication & Fractions Sprint',

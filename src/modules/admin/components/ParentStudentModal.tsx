@@ -307,15 +307,13 @@ export default function ParentStudentModal({
         parentId: targetParent!.id,
         parentName: targetParent!.name,
         level: 1,
-        xp: 100,
-        coins: 25,
-        streakDays: 1,
+        xp: 0,
+        coins: 0,
+        streakDays: 0,
         dailyQuizCompletedToday: false,
         totalQuizzesTaken: 0,
-        averageScore: 100,
-        subjectMastery: {
-          'Mathematics': 80
-        },
+        averageScore: 0,
+        subjectMastery: {},
         recentActivities: [],
         badges: [
           {

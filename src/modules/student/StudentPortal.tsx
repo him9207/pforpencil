@@ -50,7 +50,10 @@ import {
   FileText,
   Printer,
   Calendar,
-  Building2
+  Building2,
+  Home,
+  LayoutGrid,
+  Edit3
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { sounds } from '../../utils/audio';
@@ -68,6 +71,9 @@ import { ClipartText } from '../../common/ClipartRenderer';
 import { syncActivityAttemptToSupabase, syncProgressToSupabase, isSupabaseConfigured } from '../../database';
 import { loadQuestionBankMasters } from '../../data/questionBankMasterData';
 import { loadCurriculumMaster } from '../../data/curriculumMasterData';
+import { PortalShell } from '../../common';
+import { PortalMenuItem } from '../../common/PortalShell';
+import StudentMockupHome from './components/StudentMockupHome';
 
 function normalizeCurriculum(name?: string): string {
   if (!name) return '';
@@ -324,6 +330,9 @@ interface StudentPortalProps {
   classes?: ClassRoom[];
   assignments?: ClassAssignment[];
   onUpdateProgress: (updated: StudentProgress) => void;
+  allUsers?: UserAccount[];
+  onSelectUser?: (user: UserAccount) => void;
+  onNavigateHome?: () => void;
 }
 
 export default function StudentPortal({
@@ -334,10 +343,13 @@ export default function StudentPortal({
   activities,
   classes = [],
   assignments = [],
-  onUpdateProgress
+  onUpdateProgress,
+  allUsers = [],
+  onSelectUser,
+  onNavigateHome
 }: StudentPortalProps) {
-  // Navigation Tabs: 1. Teacher Assignments, 2. Regular Question Bank, 3. Interactive Activities, 4. Student Profile & Report, 5. Leaderboard
-  const [activeTab, setActiveTab] = useState<'assignments' | 'skills' | 'tactile' | 'profile' | 'leaderboard'>('skills');
+  // Navigation Tabs matching mockup
+  const [activeTab, setActiveTab] = useState<string>('home');
   const [expandedAssignmentId, setExpandedAssignmentId] = useState<string | null>(null);
   const [assignmentFilter, setAssignmentFilter] = useState<'all' | 'pending' | 'completed'>('all');
 
@@ -967,7 +979,10 @@ export default function StudentPortal({
       correctAnswer: correctAnswerText,
       explanation: currentQ.explanation,
       hint: currentQ.hint,
-      timeSpentSeconds: questionElapsedTime
+      timeSpentSeconds: questionElapsedTime,
+      category: currentQ.category || 'Curriculum Standards',
+      skill: currentQ.skill || 'Problem Solving',
+      subject: currentQ.subject || (activePlayActivity?.subject as any) || 'Mathematics'
     };
     setRecordedQuestionResults((prev) => [...prev, questionResultItem]);
 
@@ -1066,6 +1081,47 @@ export default function StudentPortal({
         timestamp: 'Just now'
       };
 
+      // Update granular skillMastery records for category and skill completion
+      const updatedSkillMastery = { ...(studentProgress.skillMastery || {}) };
+      recordedQuestionResults.forEach((qRes) => {
+        const skillKey = qRes.skill || 'Problem Solving';
+        const existing = updatedSkillMastery[skillKey] || {
+          skill: skillKey,
+          category: qRes.category || 'Curriculum Standards',
+          subject: (qRes.subject || activePlayActivity.subject || 'Mathematics') as any,
+          grade: studentProgress.grade,
+          totalAttempted: 0,
+          correctCount: 0,
+          accuracy: 0,
+          averageTimeSeconds: qRes.timeSpentSeconds || 8,
+          lastPracticed: 'Just now',
+          isCompleted: false
+        };
+
+        const newAttempted = existing.totalAttempted + 1;
+        const newCorrect = existing.correctCount + (qRes.isCorrect ? 1 : 0);
+        const newAccuracy = Math.round((newCorrect / newAttempted) * 100);
+
+        updatedSkillMastery[skillKey] = {
+          ...existing,
+          category: qRes.category || existing.category,
+          totalAttempted: newAttempted,
+          correctCount: newCorrect,
+          accuracy: newAccuracy,
+          averageTimeSeconds: qRes.timeSpentSeconds ? Math.round(((existing.averageTimeSeconds * existing.totalAttempted) + qRes.timeSpentSeconds) / newAttempted) : existing.averageTimeSeconds,
+          lastPracticed: 'Just now',
+          isCompleted: newAccuracy >= 80 && newAttempted >= 1
+        };
+      });
+
+      // Update subjectMastery with actual calculated performance
+      const updatedSubjectMastery = { ...(studentProgress.subjectMastery || {}) };
+      const activeSub = (activePlayActivity.subject || 'Mathematics') as any;
+      const pctScore = Math.min(100, Math.max(0, Math.round((safeCorrectCount / totalQ) * 100)));
+      updatedSubjectMastery[activeSub] = typeof updatedSubjectMastery[activeSub] === 'number'
+        ? Math.round((updatedSubjectMastery[activeSub] + pctScore) / 2)
+        : pctScore;
+
       const updatedProgress = {
         ...studentProgress,
         xp: updatedXp,
@@ -1074,7 +1130,10 @@ export default function StudentPortal({
         streakDays: studentProgress.streakDays + (activePlayActivity.type === 'daily_quiz' && !studentProgress.dailyQuizCompletedToday ? 1 : 0),
         dailyQuizCompletedToday: activePlayActivity.type === 'daily_quiz' ? true : studentProgress.dailyQuizCompletedToday,
         totalQuizzesTaken: studentProgress.totalQuizzesTaken + 1,
-        recentActivities: [newActivityLog, ...studentProgress.recentActivities.slice(0, 5)]
+        totalQuestionsAttempted: (studentProgress.totalQuestionsAttempted || 0) + totalQ,
+        skillMastery: updatedSkillMastery,
+        subjectMastery: updatedSubjectMastery,
+        recentActivities: [newActivityLog, ...studentProgress.recentActivities.slice(0, 49)]
       };
 
       // Evaluate performance milestones and issue achievement badges (e.g. 10 consecutive daily quizzes, 100% score, etc.)
@@ -1329,19 +1388,56 @@ export default function StudentPortal({
     return list.length > 0 ? list : ['Mathematics'];
   }, [gradeLockedActivities]);
 
+  const studentMenuItems: PortalMenuItem[] = [
+    { id: 'home', label: 'Home', icon: Home },
+    { id: 'skills', label: 'Practice', icon: Target },
+    { id: 'assignments', label: 'My Assignments', icon: FileText, badge: allClassAssignments.length > 0 ? allClassAssignments.length : undefined },
+    { id: 'profile', label: 'Progress', icon: BarChart3 },
+    { id: 'leaderboard', label: 'Rewards', icon: Trophy },
+    { id: 'tactile', label: 'My Avatar', icon: Award },
+    { id: 'settings', label: 'Settings', icon: Edit3 }
+  ];
+
   return (
-    <div className="space-y-4 pb-10">
-      {/* Kid Welcome & Gamification Bar - Vibrant, Playful & High Energy */}
-      <div className="bg-gradient-to-r from-blue-50 via-indigo-50/40 to-amber-50/50 border-2 border-blue-200/80 rounded-3xl p-4 sm:p-6 shadow-md relative overflow-hidden">
+    <PortalShell
+      currentUser={currentUser}
+      allUsers={allUsers}
+      portalRoleTitle="Student Portal"
+      menuItems={studentMenuItems}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      searchPlaceholder="Search topics, questions, or practice..."
+      onSelectUser={onSelectUser}
+      onNavigateHome={onNavigateHome}
+      coins={typeof studentProgress.coins === 'number' ? studentProgress.coins : 0}
+      footerVariant="student"
+    >
+      {activeTab === 'home' ? (
+        <StudentMockupHome
+          currentUser={currentUser}
+          studentProgress={studentProgress}
+          currentAssignment={allClassAssignments[0]}
+          onNavigateTab={setActiveTab}
+          onSelectTopic={(topicName) => {
+            sounds.click();
+            setActiveTab('skills');
+          }}
+          onStartAssignment={(asg) => {
+            handleStartClassAssignment(asg);
+          }}
+        />
+      ) : (
+        <div className="space-y-4 pb-10">
+      {/* Kid Welcome & Gamification Bar - Clean Mint & Playful */}
+      <div className="bg-gradient-to-r from-emerald-50/70 via-[#e6f4ea]/40 to-slate-50 border border-emerald-200/80 rounded-3xl p-4 sm:p-6 shadow-xs relative overflow-hidden">
         {/* Soft colorful backdrop accents */}
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 rounded-full bg-amber-200/30 pointer-events-none blur-2xl" />
-        <div className="absolute bottom-0 left-1/3 -mb-10 w-40 h-40 rounded-full bg-emerald-200/30 pointer-events-none blur-xl" />
-        <div className="absolute top-1/2 left-0 -ml-8 w-24 h-24 rounded-full bg-purple-200/30 pointer-events-none blur-lg" />
+        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 rounded-full bg-emerald-100/30 pointer-events-none blur-2xl" />
+        <div className="absolute bottom-0 left-1/3 -mb-10 w-40 h-40 rounded-full bg-teal-100/30 pointer-events-none blur-xl" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           {/* Avatar & Student Name */}
           <div className="flex items-center gap-3.5">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-gradient-to-tr from-amber-400 via-orange-400 to-pink-500 p-1 shadow-md flex items-center justify-center shrink-0 ring-4 ring-white">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-gradient-to-tr from-amber-400 via-emerald-400 to-teal-500 p-1 shadow-md flex items-center justify-center shrink-0 ring-4 ring-white">
               <div className="w-full h-full rounded-2xl bg-white flex items-center justify-center text-4xl sm:text-5xl shadow-inner">
                 {studentProgress.avatar}
               </div>
@@ -1352,79 +1448,79 @@ export default function StudentPortal({
                   <select
                     value={studentGrade}
                     onChange={(e) => setActiveGrade(e.target.value as GradeLevel)}
-                    className="text-[11px] font-black pl-3 pr-7 py-1 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white uppercase tracking-wider cursor-pointer appearance-none transition focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-sm"
+                    className="text-[11px] font-black pl-3 pr-7 py-1 rounded-full bg-[#1e6f47] text-white uppercase tracking-wider cursor-pointer appearance-none transition focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-2xs"
                     title="Switch Grade Level"
                   >
-                    <option value="Preschool" className="bg-white text-stone-900 font-bold">Preschool</option>
-                    <option value="Foundation" className="bg-white text-stone-900 font-bold">Foundation</option>
-                    <option value="Grade 1" className="bg-white text-stone-900 font-bold">Grade 1</option>
-                    <option value="Grade 2" className="bg-white text-stone-900 font-bold">Grade 2</option>
-                    <option value="Grade 3" className="bg-white text-stone-900 font-bold">Grade 3</option>
-                    <option value="Grade 4" className="bg-white text-stone-900 font-bold">Grade 4</option>
-                    <option value="Grade 5" className="bg-white text-stone-900 font-bold">Grade 5</option>
-                    <option value="Grade 6" className="bg-white text-stone-900 font-bold">Grade 6</option>
+                    <option value="Preschool" className="bg-white text-slate-900 font-bold">Preschool</option>
+                    <option value="Foundation" className="bg-white text-slate-900 font-bold">Foundation</option>
+                    <option value="Grade 1" className="bg-white text-slate-900 font-bold">Grade 1</option>
+                    <option value="Grade 2" className="bg-white text-slate-900 font-bold">Grade 2</option>
+                    <option value="Grade 3" className="bg-white text-slate-900 font-bold">Grade 3</option>
+                    <option value="Grade 4" className="bg-white text-slate-900 font-bold">Grade 4</option>
+                    <option value="Grade 5" className="bg-white text-slate-900 font-bold">Grade 5</option>
+                    <option value="Grade 6" className="bg-white text-slate-900 font-bold">Grade 6</option>
                   </select>
                   <ChevronDown className="w-3.5 h-3.5 text-white/90 absolute right-2.5 pointer-events-none" />
                 </div>
-                <span className="text-[11px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 shadow-2xs">
+                <span className="text-[11px] font-black px-2.5 py-1 rounded-full bg-[#e6f4ea] text-[#1e6f47] border border-emerald-200/80 flex items-center gap-1 shadow-2xs">
                   <span>{studentCountry === 'India' ? '🇮🇳' : studentCountry === 'United Kingdom' ? '🇬🇧' : studentCountry === 'Canada' ? '🇨🇦' : studentCountry === 'Australia' ? '🇦🇺' : '🇺🇸'}</span>
                   <span>{studentState}</span>
                 </span>
-                <span className="text-[11px] font-mono bg-white/90 border border-blue-200 text-blue-900 px-2.5 py-1 rounded-full font-black shadow-2xs">
+                <span className="text-[11px] font-mono bg-white/90 border border-slate-200 text-slate-800 px-2.5 py-1 rounded-full font-black shadow-2xs">
                   ID: {studentProgress.studentUsername}
                 </span>
               </div>
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-stone-900 mt-1 flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 mt-1 flex items-center gap-2">
                 <span>{studentProgress.studentName}</span>
                 <span className="text-xl animate-bounce">🌟</span>
               </h1>
-              <div className="flex items-center gap-2 text-xs text-stone-600 font-semibold mt-0.5">
-                <span className="bg-white/80 px-2 py-0.5 rounded-lg border border-stone-200/70 text-stone-800">
+              <div className="flex items-center gap-2 text-xs text-slate-600 font-semibold mt-0.5">
+                <span className="bg-white/80 px-2 py-0.5 rounded-lg border border-slate-200 text-slate-800">
                   {studentProgress.schoolOrParent === 'school' 
                     ? (studentProgress.schoolName || currentUser.schoolName || 'School') 
                     : `Family of ${studentProgress.parentName || currentUser.parentName || 'Parent'}`}
                 </span>
-                <span className="text-indigo-600 font-bold">· {studentCurriculum}</span>
+                <span className="text-emerald-700 font-bold">· {studentCurriculum}</span>
                 <button
                   type="button"
                   id="open-student-id-card-btn"
                   onClick={() => setIsIdCardOpen(true)}
-                  className="inline-flex items-center gap-1 text-[11px] font-black text-blue-700 hover:text-blue-900 bg-blue-100/80 hover:bg-blue-200 px-2 py-0.5 rounded-lg border border-blue-300 transition cursor-pointer ml-1 shadow-2xs"
+                  className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-800 hover:text-emerald-950 bg-[#e6f4ea] hover:bg-[#d4edd9] px-2 py-0.5 rounded-full border border-emerald-300 transition cursor-pointer ml-1 shadow-2xs"
                 >
-                  <Award className="w-3.5 h-3.5 text-blue-700" />
+                  <Award className="w-3.5 h-3.5 text-[#1e6f47]" />
                   <span>View ID Card</span>
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Gamification Stats - Colorful Cards */}
-          <div className="grid grid-cols-3 gap-2.5 bg-white/90 backdrop-blur-xs border-2 border-blue-100 p-2.5 rounded-2xl shadow-sm">
+          {/* Gamification Stats - Clean Themed Cards */}
+          <div className="grid grid-cols-3 gap-2.5 bg-white/95 backdrop-blur-xs border border-slate-200 p-2.5 rounded-2xl shadow-2xs">
             {/* Level Card */}
-            <div className="text-center px-3 py-2 rounded-xl bg-gradient-to-b from-indigo-50 to-blue-50 border-2 border-indigo-200 shadow-2xs hover:scale-105 transition-transform">
-              <div className="flex items-center justify-center gap-1 text-indigo-700 text-[11px] font-black">
-                <Zap className="w-3.5 h-3.5 fill-indigo-600 text-indigo-600 animate-pulse" />
+            <div className="text-center px-3 py-2 rounded-xl bg-slate-50 border border-slate-200/90 shadow-2xs hover:scale-102 transition-transform">
+              <div className="flex items-center justify-center gap-1 text-slate-700 text-[11px] font-black">
+                <Zap className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
                 <span>Level {studentProgress.level}</span>
               </div>
-              <span className="block text-base sm:text-xl font-black text-indigo-950 mt-0.5">
-                {studentProgress.xp} <span className="text-[10px] font-black text-indigo-600">XP</span>
+              <span className="block text-base sm:text-xl font-black text-slate-900 mt-0.5">
+                {studentProgress.xp} <span className="text-[10px] font-black text-slate-500">XP</span>
               </span>
             </div>
 
             {/* Streak Card */}
-            <div className="text-center px-3 py-2 rounded-xl bg-gradient-to-b from-amber-50 to-orange-50 border-2 border-amber-300 shadow-2xs hover:scale-105 transition-transform">
+            <div className="text-center px-3 py-2 rounded-xl bg-amber-50/70 border border-amber-200/80 shadow-2xs hover:scale-102 transition-transform">
               <div className="flex items-center justify-center gap-1 text-orange-700 text-[11px] font-black">
                 <Flame className="w-3.5 h-3.5 fill-orange-500 text-orange-500 animate-pulse" />
                 <span>Streak</span>
               </div>
-              <span className="block text-base sm:text-xl font-black text-orange-950 mt-0.5">
+              <span className="block text-base sm:text-xl font-black text-amber-950 mt-0.5">
                 {studentProgress.streakDays} <span className="text-[10px] font-black text-orange-600">Days</span>
               </span>
             </div>
 
             {/* Coins Card */}
-            <div className="text-center px-3 py-2 rounded-xl bg-gradient-to-b from-emerald-50 to-teal-50 border-2 border-emerald-300 shadow-2xs hover:scale-105 transition-transform">
-              <div className="flex items-center justify-center gap-1 text-emerald-700 text-[11px] font-black">
+            <div className="text-center px-3 py-2 rounded-xl bg-emerald-50/70 border border-emerald-200/80 shadow-2xs hover:scale-102 transition-transform">
+              <div className="flex items-center justify-center gap-1 text-[#1e6f47] text-[11px] font-black">
                 <Coins className="w-3.5 h-3.5 fill-emerald-600 text-emerald-600" />
                 <span>Coins</span>
               </div>
@@ -1437,18 +1533,18 @@ export default function StudentPortal({
         </div>
 
         {/* Level XP Progress Bar */}
-        <div className="mt-3.5 pt-3 border-t border-blue-200/60 flex items-center justify-between gap-3 text-xs font-bold text-stone-600">
-          <span className="font-black text-blue-900 text-[11px] flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
+        <div className="mt-3.5 pt-3 border-t border-emerald-200/60 flex items-center justify-between gap-3 text-xs font-bold text-slate-600">
+          <span className="font-black text-[#1e6f47] text-[11px] flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-600 animate-ping" />
             <span>Level {studentProgress.level} Scholar</span>
           </span>
-          <div className="flex-1 max-w-sm bg-white border-2 border-blue-200 h-3 rounded-full overflow-hidden p-0.5 shadow-inner">
+          <div className="flex-1 max-w-sm bg-white border border-emerald-200 h-3 rounded-full overflow-hidden p-0.5 shadow-inner">
             <div 
-              className="bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 h-full rounded-full transition-all duration-500 shadow-xs"
+              className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 h-full rounded-full transition-all duration-500 shadow-xs"
               style={{ width: `${(studentProgress.xp % 500) / 5}%` }}
             />
           </div>
-          <span className="text-indigo-700 text-[11px] font-black">{500 - (studentProgress.xp % 500)} XP to next level</span>
+          <span className="text-[#1e6f47] text-[11px] font-black">{500 - (studentProgress.xp % 500)} XP to next level</span>
         </div>
       </div>
 
@@ -1504,7 +1600,7 @@ export default function StudentPortal({
       )}
 
       {/* PORTAL NAVIGATION TABS: 1. Teacher Assignments (only if assigned), 2. Regular Question Bank, 3. Interactive Activities, 4. Student Profile & Report, 5. Leaderboard */}
-      <div className="flex items-center gap-2 border-b border-[#e1e6f1] pb-2 overflow-x-auto scrollbar-none">
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto scrollbar-none">
         {/* Only show Teacher Assignments tab if student has tasks assigned by teacher or parent */}
         {allClassAssignments.length > 0 && (
           <button
@@ -1512,15 +1608,15 @@ export default function StudentPortal({
             onClick={() => setActiveTab('assignments')}
             className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-bold transition cursor-pointer whitespace-nowrap ${
               activeTab === 'assignments'
-                ? 'bg-[#10246f] text-white shadow-xs'
-                : 'text-[#59627a] hover:text-[#10246f] hover:bg-[#eef4ff]'
+                ? 'bg-[#e6f4ea] text-[#1e6f47] border border-emerald-300/80 shadow-2xs font-extrabold'
+                : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/80'
             }`}
           >
-            <FileText className="w-4 h-4 text-amber-400" />
+            <FileText className="w-4 h-4 text-emerald-600" />
             <span>📋 Teacher Assignments</span>
             {assignedClassHomework.length > 0 && (
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                activeTab === 'assignments' ? 'bg-amber-400 text-stone-950' : 'bg-rose-500 text-white'
+                activeTab === 'assignments' ? 'bg-[#1e6f47] text-white' : 'bg-rose-500 text-white'
               }`}>
                 {assignedClassHomework.length}
               </span>
@@ -1533,11 +1629,11 @@ export default function StudentPortal({
           onClick={() => setActiveTab('skills')}
           className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-bold transition cursor-pointer whitespace-nowrap ${
             activeTab === 'skills'
-              ? 'bg-[#10246f] text-white shadow-xs'
-              : 'text-[#59627a] hover:text-[#10246f] hover:bg-[#eef4ff]'
+              ? 'bg-[#e6f4ea] text-[#1e6f47] border border-emerald-300/80 shadow-2xs font-extrabold'
+              : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/80'
           }`}
         >
-          <Compass className="w-4 h-4 text-sky-400" />
+          <Compass className="w-4 h-4 text-emerald-600" />
           <span>🧭 Regular Question Bank</span>
         </button>
 
@@ -1546,11 +1642,11 @@ export default function StudentPortal({
           onClick={() => setActiveTab('tactile')}
           className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-bold transition cursor-pointer whitespace-nowrap ${
             activeTab === 'tactile'
-              ? 'bg-[#10246f] text-white shadow-xs'
-              : 'text-[#59627a] hover:text-[#10246f] hover:bg-[#eef4ff]'
+              ? 'bg-[#e6f4ea] text-[#1e6f47] border border-emerald-300/80 shadow-2xs font-extrabold'
+              : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/80'
           }`}
         >
-          <Gamepad2 className="w-4 h-4 text-emerald-400" />
+          <Gamepad2 className="w-4 h-4 text-emerald-600" />
           <span>🎮 Interactive Activities</span>
         </button>
 
@@ -1559,11 +1655,11 @@ export default function StudentPortal({
           onClick={() => setActiveTab('profile')}
           className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-bold transition cursor-pointer whitespace-nowrap ${
             activeTab === 'profile'
-              ? 'bg-[#10246f] text-white shadow-xs'
-              : 'text-[#59627a] hover:text-[#10246f] hover:bg-[#eef4ff]'
+              ? 'bg-[#e6f4ea] text-[#1e6f47] border border-emerald-300/80 shadow-2xs font-extrabold'
+              : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/80'
           }`}
         >
-          <GraduationCap className="w-4 h-4 text-purple-400" />
+          <GraduationCap className="w-4 h-4 text-emerald-600" />
           <span>👤 Student Profile & Report</span>
         </button>
 
@@ -1572,11 +1668,11 @@ export default function StudentPortal({
           onClick={() => setActiveTab('leaderboard')}
           className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-bold transition cursor-pointer whitespace-nowrap ${
             activeTab === 'leaderboard'
-              ? 'bg-[#10246f] text-white shadow-xs'
-              : 'text-[#59627a] hover:text-[#10246f] hover:bg-[#eef4ff]'
+              ? 'bg-[#e6f4ea] text-[#1e6f47] border border-emerald-300/80 shadow-2xs font-extrabold'
+              : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/80'
           }`}
         >
-          <Trophy className="w-4 h-4 text-amber-400" />
+          <Trophy className="w-4 h-4 text-amber-500" />
           <span>🏆 Leaderboard</span>
         </button>
       </div>
@@ -2800,6 +2896,8 @@ export default function StudentPortal({
           </div>
         </div>
       )}
-    </div>
+        </div>
+      )}
+    </PortalShell>
   );
 }

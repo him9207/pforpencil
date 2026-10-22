@@ -88,7 +88,8 @@ export default function ActivityPlayerModal({ activity, questions, studentName, 
     // Final Celebration
     sounds.playVictory();
     confetti({ particleCount: 160, spread: 90, origin: { y: 0.6 } });
-    onComplete?.(score + lastPoints, maxScore);
+    const safeFinalScore = Math.min(maxScore, Math.max(0, score));
+    onComplete?.(safeFinalScore, maxScore);
     onClose();
   };
 

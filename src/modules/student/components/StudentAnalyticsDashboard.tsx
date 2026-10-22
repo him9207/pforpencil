@@ -55,34 +55,34 @@ export default function StudentAnalyticsDashboard({
   const [skillFilterStatus, setSkillFilterStatus] = useState<'all' | 'mastered' | 'progress' | 'review'>('all');
   const [historyTypeFilter, setHistoryTypeFilter] = useState<'all' | 'daily_quiz' | 'boss_battle' | 'game' | 'challenge'>('all');
 
-  // Derived metrics
-  const accuracy = studentProgress.averageScore || 85;
-  const avgSpeed = studentProgress.averageResponseTimeSeconds || 7.4;
-  const totalQuizzes = studentProgress.totalQuizzesTaken || 1;
-  const streak = studentProgress.streakDays || 0;
-  const xp = studentProgress.xp || 0;
+  // Derived metrics - respect zero-state for new students without attempts
+  const hasAssessments = (typeof studentProgress.totalQuizzesTaken === 'number' && studentProgress.totalQuizzesTaken > 0) ||
+    (Array.isArray(studentProgress.recentActivities) && studentProgress.recentActivities.length > 0);
+  const accuracy = hasAssessments ? (studentProgress.averageScore || 0) : 0;
+  const avgSpeed = studentProgress.averageResponseTimeSeconds || 0;
+  const totalQuizzes = hasAssessments ? (studentProgress.totalQuizzesTaken || 0) : 0;
+  const streak = hasAssessments ? (studentProgress.streakDays || 0) : 0;
+  const xp = hasAssessments ? (studentProgress.xp || 0) : 0;
   const level = studentProgress.level || 1;
   const nextLevelXp = level * 500;
   const currentLevelXp = xp % 500;
-  const totalQuestions = studentProgress.totalQuestionsAttempted || (totalQuizzes * 5);
+  const totalQuestions = hasAssessments ? (studentProgress.totalQuestionsAttempted || (totalQuizzes * 5)) : 0;
 
   // Speed rating label
   const speedRating = useMemo(() => {
+    if (!hasAssessments || avgSpeed === 0) return { label: 'Pending Assessment ⏳', color: 'text-stone-700 bg-stone-100 border-stone-200' };
     if (avgSpeed <= 6) return { label: 'Lightning Fast ⚡', color: 'text-amber-800 bg-amber-100 border-amber-300' };
     if (avgSpeed <= 9) return { label: 'Swift Thinker 🚀', color: 'text-blue-800 bg-blue-100 border-blue-300' };
     if (avgSpeed <= 14) return { label: 'Steady & Accurate 🎯', color: 'text-emerald-800 bg-emerald-100 border-emerald-300' };
     return { label: 'Deliberate Solver 🔍', color: 'text-stone-800 bg-stone-100 border-stone-300' };
-  }, [avgSpeed]);
+  }, [hasAssessments, avgSpeed]);
 
   // Subject Mastery list
   const subjectsList = useMemo(() => {
     const entries = Object.entries(studentProgress.subjectMastery || {});
-    if (entries.length === 0) {
-      return [{ subject: 'Mathematics', score: 88 }];
-    }
     return entries.map(([subject, score]) => ({
       subject,
-      score: typeof score === 'number' ? score : 85
+      score: typeof score === 'number' ? score : 0
     }));
   }, [studentProgress.subjectMastery]);
 

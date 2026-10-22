@@ -173,7 +173,7 @@ export interface Question {
   isCustom?: boolean; // True if custom created by teacher
 }
 
-export type ActivityType = 'daily_quiz' | 'game' | 'challenge' | 'boss_battle';
+export type ActivityType = 'daily_quiz' | 'game' | 'challenge' | 'boss_battle' | 'practice' | 'quiz';
 
 export type RecurrenceType = 'daily' | 'weekly' | 'permanent' | 'challenge';
 
@@ -278,6 +278,7 @@ export interface SkillMasteryRecord {
   accuracy: number; // 0 - 100%
   averageTimeSeconds: number; // e.g. 8.4 seconds
   lastPracticed?: string;
+  isCompleted?: boolean;
 }
 
 export interface QuestionResult {
@@ -289,6 +290,9 @@ export interface QuestionResult {
   explanation?: string;
   hint?: string;
   timeSpentSeconds?: number;
+  category?: string;
+  skill?: string;
+  subject?: Subject;
 }
 
 export interface StudentProgress {

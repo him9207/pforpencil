@@ -35,7 +35,10 @@ import {
   Globe,
   MapPin,
   Sparkles,
-  ArrowRightLeft
+  ArrowRightLeft,
+  LayoutGrid,
+  HelpCircle,
+  BarChart2
 } from 'lucide-react';
 import { sounds } from '../../utils/audio';
 import { getSchoolPrefix, generateSchoolStudentUsername, getNextRoleId, commitAccountId } from '../../utils/idAndUsernameGenerator';
@@ -48,6 +51,9 @@ import EditStudentModal from './components/EditStudentModal';
 import SchoolSubscriptionModal from './components/SchoolSubscriptionModal';
 import EditUserProfileModal from '../admin/components/EditUserProfileModal';
 import { useBodyScrollLock } from '../../utils/useBodyScrollLock';
+import { PortalShell } from '../../common';
+import { PortalMenuItem } from '../../common/PortalShell';
+import SchoolMockupDashboard from './components/SchoolMockupDashboard';
 
 interface SchoolPortalProps {
   currentUser: UserAccount;
@@ -67,6 +73,8 @@ interface SchoolPortalProps {
   onOpenPricing: () => void;
   onResetCredentials?: (userId: string, newSecret: string, isPin: boolean, newUsername?: string) => void;
   onUpdateUserProfile?: (user: UserAccount) => void;
+  onSelectUser?: (user: UserAccount) => void;
+  onNavigateHome?: () => void;
 }
 
 export default function SchoolPortal({
@@ -86,13 +94,15 @@ export default function SchoolPortal({
   onAddStudent,
   onOpenPricing,
   onResetCredentials,
-  onUpdateUserProfile
+  onUpdateUserProfile,
+  onSelectUser,
+  onNavigateHome
 }: SchoolPortalProps) {
   const activeCurriculumSubjects: string[] = (subjects && subjects.length > 0)
     ? subjects.filter((s) => s.active).map((s) => s.name)
     : ['Mathematics', 'Science', 'English Language', 'Logic & Puzzles'];
 
-  const [activeTab, setActiveTab] = useState<'classes' | 'teachers' | 'students' | 'overview'>('classes');
+  const [activeTab, setActiveTab] = useState<string>('dashboard');
 
   // Strictly isolate this school's resources
   const schoolClasses = classes.filter(c => c.schoolId === school.id);
@@ -368,20 +378,15 @@ export default function SchoolPortal({
       schoolCode: schoolPrefix,
       organizationId: school.id,
       level: 1,
-      xp: 100,
-      coins: 20,
-      streakDays: 1,
+      xp: 0,
+      coins: 0,
+      streakDays: 0,
       dailyQuizCompletedToday: false,
       totalQuizzesTaken: 0,
-      averageScore: 100,
-      subjectMastery: activeCurriculumSubjects.reduce((acc, s) => {
-        acc[s] = 85;
-        return acc;
-      }, {} as Record<string, number>),
+      averageScore: 0,
+      subjectMastery: {},
       recentActivities: [],
-      badges: [
-        { id: 'B_NEW', name: `${schoolPrefix} Scholar`, icon: '🌟', description: `Enrolled in ${school.name}`, unlockedAt: new Date().toISOString().split('T')[0] }
-      ]
+      badges: []
     };
 
     sounds.playLevelUp();
@@ -402,8 +407,62 @@ export default function SchoolPortal({
     setTimeout(() => setSuccessBanner(''), 5000);
   };
 
+  const schoolMenuItems: PortalMenuItem[] = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
+    { id: 'students', label: 'Students', icon: Users, badge: schoolStudents.length },
+    { id: 'teachers', label: 'Teachers', icon: GraduationCap, badge: schoolTeachers.length },
+    { id: 'classes', label: 'Classes', icon: Layers, badge: schoolClasses.length },
+    { id: 'assignments', label: 'Assignments', icon: FileText },
+    { id: 'questions', label: 'Question Bank', icon: BookOpen },
+    { id: 'reports', label: 'Reports', icon: Award },
+    { id: 'subscription', label: 'Subscription', icon: ShieldCheck },
+    { id: 'settings', label: 'Settings', icon: Edit3 }
+  ];
+
+  const portalHeaderExtra = (
+    <div className="flex items-center gap-2.5 px-3 pt-2">
+      <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+        <Building2 className="w-4 h-4 text-emerald-700" />
+      </div>
+      <div className="min-w-0">
+        <h2 className="text-sm font-black text-slate-900 leading-tight truncate">
+          {school.name || 'Greenwood Primary'}
+        </h2>
+        <span className="text-[11px] font-medium text-slate-500 block leading-tight">
+          School Portal
+        </span>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="space-y-8 pb-12">
+    <PortalShell
+      currentUser={currentUser}
+      allUsers={allUsers}
+      portalRoleTitle="School Portal"
+      portalHeaderExtra={portalHeaderExtra}
+      menuItems={schoolMenuItems}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      searchPlaceholder="Search students, teachers, classes..."
+      onSelectUser={onSelectUser}
+      onNavigateHome={onNavigateHome}
+      onOpenUserProfile={() => setEditingUserProfile(currentUser)}
+      footerVariant="school"
+    >
+      {activeTab === 'dashboard' ? (
+        <SchoolMockupDashboard
+          school={school}
+          classes={schoolClasses}
+          teachers={schoolTeachers}
+          students={schoolStudents}
+          onNavigateTab={setActiveTab}
+          onOpenAddClass={() => setShowAddClassModal(true)}
+          onOpenAddTeacher={() => setShowAddTeacherModal(true)}
+          onOpenAddStudent={() => setShowAddStudentModal(true)}
+        />
+      ) : (
+        <div className="space-y-6">
       {/* School Header Banner - Clean, Modern & Well-Organized */}
       <div className="bg-white rounded-2xl border border-stone-200/90 p-5 sm:p-6 shadow-xs space-y-4">
         {/* Top Row: School Identity & Clean Action Buttons */}
@@ -840,7 +899,7 @@ export default function SchoolPortal({
                             <p className="text-[10px] text-stone-400 font-mono">Class ID: {cls.id}</p>
                           </div>
                           <span className="text-xs font-mono font-bold px-2 py-1 rounded bg-stone-100 text-stone-700 shrink-0">
-                            {cls.averageScore || 88}% Avg
+                            {cls.averageScore > 0 ? `${cls.averageScore}% Avg` : 'Pending Assessment'}
                           </span>
                         </div>
 
@@ -2414,6 +2473,8 @@ export default function SchoolPortal({
           canEditStatus={false}
         />
       )}
-    </div>
+        </div>
+      )}
+    </PortalShell>
   );
 }
